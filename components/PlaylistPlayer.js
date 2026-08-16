@@ -16,6 +16,13 @@ export default function PlaylistPlayer({
         useRef(null);
 
 
+    /*
+     * 반복 방식
+     *
+     * one      = 1곡 반복
+     * all      = 전체 반복
+     * selected = 선택곡 반복
+     */
     const [
         mode,
         setMode
@@ -23,9 +30,23 @@ export default function PlaylistPlayer({
         useState('all');
 
 
+    /*
+     * 아직 플레이리스트에 담기 전
+     * 사용자가 체크한 곡
+     */
     const [
         selectedSlugs,
         setSelectedSlugs
+    ] =
+        useState([]);
+
+
+    /*
+     * 실제 재생 목록
+     */
+    const [
+        playlist,
+        setPlaylist
     ] =
         useState([]);
 
@@ -65,6 +86,9 @@ export default function PlaylistPlayer({
         useState('');
 
 
+    /*
+     * 현재 회원이 재생할 수 있는 곡만
+     */
     const playableSongs =
         songs.filter(
             song =>
@@ -74,29 +98,17 @@ export default function PlaylistPlayer({
         );
 
 
-    const selectedSongs =
-        playableSongs.filter(
-            song =>
-                selectedSlugs.includes(
-                    song.slug
-                )
-        );
-
-
-    const queue =
-        mode === 'selected'
-            ? selectedSongs
-            : playableSongs;
-
-
     const currentSong =
-        playableSongs.find(
+        playlist.find(
             song =>
                 song.slug ===
                 currentSlug
         ) || null;
 
 
+    /*
+     * signed URL
+     */
     async function getAudioUrl(
         slug
     ) {
@@ -171,6 +183,9 @@ export default function PlaylistPlayer({
     }
 
 
+    /*
+     * 특정 곡 바로 재생
+     */
     async function playSong(
         song
     ) {
@@ -178,11 +193,6 @@ export default function PlaylistPlayer({
         if (!song) {
             return;
         }
-
-
-        setError(
-            ''
-        );
 
 
         const url =
@@ -207,6 +217,9 @@ export default function PlaylistPlayer({
     }
 
 
+    /*
+     * URL이 바뀌면 자동 재생
+     */
     useEffect(
         () => {
 
@@ -258,10 +271,43 @@ export default function PlaylistPlayer({
     );
 
 
+    /*
+     * 곡 선택
+     */
     function toggleSelected(
         slug
     ) {
 
+        /*
+         * 1곡 반복은
+         * 하나만 선택 가능
+         */
+        if (
+            mode ===
+            'one'
+        ) {
+
+            setSelectedSlugs(
+                previous =>
+                    previous.includes(
+                        slug
+                    )
+                        ? []
+                        : [
+                            slug
+                        ]
+            );
+
+
+            return;
+
+        }
+
+
+        /*
+         * 선택곡 반복은
+         * 여러 개 선택 가능
+         */
         setSelectedSlugs(
             previous => {
 
@@ -290,17 +336,126 @@ export default function PlaylistPlayer({
     }
 
 
-    async function startPlaylist() {
+    /*
+     * 반복 모드 변경
+     */
+    function changeMode(
+        nextMode
+    ) {
+
+        setMode(
+            nextMode
+        );
+
+
+        /*
+         * 새로운 모드를 선택하면
+         * 체크 목록 초기화
+         */
+        setSelectedSlugs(
+            []
+        );
+
+    }
+
+
+    /*
+     * 설정한 곡을
+     * 실제 플레이리스트에 담고 재생
+     */
+    async function makePlaylistAndPlay() {
+
+        let nextPlaylist =
+            [];
+
+
+        /*
+         * 전체 반복
+         */
+        if (
+            mode ===
+            'all'
+        ) {
+
+            nextPlaylist =
+                playableSongs;
+
+        }
+
+
+        /*
+         * 1곡 반복
+         */
+        if (
+            mode ===
+            'one'
+        ) {
+
+            if (
+                selectedSlugs.length !==
+                1
+            ) {
+
+                setError(
+                    '반복할 노래 한 곡을 선택해주세요.'
+                );
+
+                return;
+
+            }
+
+
+            nextPlaylist =
+                playableSongs.filter(
+                    song =>
+                        selectedSlugs.includes(
+                            song.slug
+                        )
+                );
+
+        }
+
+
+        /*
+         * 선택곡 반복
+         */
+        if (
+            mode ===
+            'selected'
+        ) {
+
+            if (
+                selectedSlugs.length ===
+                0
+            ) {
+
+                setError(
+                    '반복할 노래를 선택해주세요.'
+                );
+
+                return;
+
+            }
+
+
+            nextPlaylist =
+                playableSongs.filter(
+                    song =>
+                        selectedSlugs.includes(
+                            song.slug
+                        )
+                );
+
+        }
+
 
         if (
-            queue.length ===
+            nextPlaylist.length ===
             0
         ) {
 
             setError(
-                mode === 'selected'
-                    ? '반복할 노래를 먼저 선택해주세요.'
-                    : '재생 가능한 노래가 없습니다.'
+                '재생할 수 있는 노래가 없습니다.'
             );
 
             return;
@@ -308,20 +463,38 @@ export default function PlaylistPlayer({
         }
 
 
+        setError(
+            ''
+        );
+
+
+        setPlaylist(
+            nextPlaylist
+        );
+
+
         await playSong(
-            queue[0]
+            nextPlaylist[0]
         );
 
     }
 
 
+    /*
+     * 재생 / 일시정지
+     */
     async function togglePlay() {
 
+        /*
+         * 아직 실제 playlist가 없으면
+         * 먼저 만들어서 재생
+         */
         if (
-            !currentSong
+            playlist.length ===
+            0
         ) {
 
-            await startPlaylist();
+            await makePlaylistAndPlay();
 
             return;
 
@@ -333,7 +506,13 @@ export default function PlaylistPlayer({
 
 
         if (!audio) {
+
+            await playSong(
+                playlist[0]
+            );
+
             return;
+
         }
 
 
@@ -362,9 +541,9 @@ export default function PlaylistPlayer({
     }
 
 
-    function currentQueueIndex() {
+    function currentIndex() {
 
-        return queue.findIndex(
+        return playlist.findIndex(
             song =>
                 song.slug ===
                 currentSlug
@@ -373,30 +552,51 @@ export default function PlaylistPlayer({
     }
 
 
+    /*
+     * 다음곡
+     */
     async function nextSong() {
 
         if (
-            queue.length ===
+            playlist.length ===
             0
         ) {
             return;
         }
 
 
+        /*
+         * 한 곡 반복
+         */
+        if (
+            mode ===
+            'one'
+        ) {
+
+            await playSong(
+                currentSong ||
+                playlist[0]
+            );
+
+            return;
+
+        }
+
+
         const index =
-            currentQueueIndex();
+            currentIndex();
 
 
         const nextIndex =
             index < 0 ||
             index >=
-                queue.length - 1
+                playlist.length - 1
                 ? 0
                 : index + 1;
 
 
         await playSong(
-            queue[
+            playlist[
                 nextIndex
             ]
         );
@@ -404,28 +604,46 @@ export default function PlaylistPlayer({
     }
 
 
+    /*
+     * 이전곡
+     */
     async function previousSong() {
 
         if (
-            queue.length ===
+            playlist.length ===
             0
         ) {
             return;
         }
 
 
+        if (
+            mode ===
+            'one'
+        ) {
+
+            await playSong(
+                currentSong ||
+                playlist[0]
+            );
+
+            return;
+
+        }
+
+
         const index =
-            currentQueueIndex();
+            currentIndex();
 
 
         const previousIndex =
             index <= 0
-                ? queue.length - 1
+                ? playlist.length - 1
                 : index - 1;
 
 
         await playSong(
-            queue[
+            playlist[
                 previousIndex
             ]
         );
@@ -433,13 +651,25 @@ export default function PlaylistPlayer({
     }
 
 
+    /*
+     * 곡 끝났을 때
+     */
     async function handleEnded() {
+
+        if (
+            playlist.length ===
+            0
+        ) {
+            return;
+        }
+
 
         /*
          * 한 곡 반복
          */
         if (
-            mode === 'one'
+            mode ===
+            'one'
         ) {
 
             const audio =
@@ -473,9 +703,118 @@ export default function PlaylistPlayer({
 
 
         /*
-         * 전체 반복 / 선택곡 반복
+         * 전체 / 선택곡 반복
          */
         await nextSong();
+
+    }
+
+
+    /*
+     * 플레이리스트에서 삭제
+     */
+    async function removeFromPlaylist(
+        slug
+    ) {
+
+        const removeIndex =
+            playlist.findIndex(
+                song =>
+                    song.slug ===
+                    slug
+            );
+
+
+        const wasCurrent =
+            slug ===
+            currentSlug;
+
+
+        const nextPlaylist =
+            playlist.filter(
+                song =>
+                    song.slug !==
+                    slug
+            );
+
+
+        setPlaylist(
+            nextPlaylist
+        );
+
+
+        /*
+         * 선택 상태에서도 같이 제거
+         */
+        setSelectedSlugs(
+            previous =>
+                previous.filter(
+                    item =>
+                        item !== slug
+                )
+        );
+
+
+        /*
+         * 현재 재생곡이 아니라면
+         * 목록만 삭제
+         */
+        if (!wasCurrent) {
+            return;
+        }
+
+
+        /*
+         * 현재곡을 삭제했고
+         * 남은 곡도 없다면 정지
+         */
+        if (
+            nextPlaylist.length ===
+            0
+        ) {
+
+            if (
+                audioRef.current
+            ) {
+
+                audioRef.current.pause();
+
+            }
+
+
+            setCurrentSlug(
+                ''
+            );
+
+            setAudioUrl(
+                ''
+            );
+
+            setPlaying(
+                false
+            );
+
+
+            return;
+
+        }
+
+
+        /*
+         * 삭제한 다음 위치의 곡 재생
+         */
+        const nextIndex =
+            removeIndex >=
+            nextPlaylist.length
+                ? 0
+                : removeIndex;
+
+
+        await playSong(
+            nextPlaylist[
+                nextIndex
+            ]
+        );
 
     }
 
@@ -518,23 +857,20 @@ export default function PlaylistPlayer({
                         0,
 
                     marginBottom:
-                        6,
+                        5,
 
                     fontSize:
                         22
                 }}
             >
-                플레이리스트
+                나만의 플레이리스트
             </h2>
 
 
             <p
                 style={{
-                    marginTop:
-                        0,
-
-                    marginBottom:
-                        16,
+                    margin:
+                        '0 0 16px',
 
                     color:
                         '#8d8175',
@@ -546,12 +882,14 @@ export default function PlaylistPlayer({
                         1.6
                 }}
             >
-                원하는 방식으로 노래를
-                연속해서 들어보세요.
+                반복 방식을 고르고
+                원하는 노래를 담아보세요.
             </p>
 
 
-            {/* 반복 모드 */}
+            {/* ============================
+                반복 방식
+            ============================ */}
 
             <div
                 style={{
@@ -559,7 +897,7 @@ export default function PlaylistPlayer({
                         'grid',
 
                     gridTemplateColumns:
-                        'repeat(3, 1fr)',
+                        'repeat(3, minmax(0, 1fr))',
 
                     gap:
                         7,
@@ -575,7 +913,7 @@ export default function PlaylistPlayer({
                         'one'
                     }
                     onClick={() =>
-                        setMode(
+                        changeMode(
                             'one'
                         )
                     }
@@ -593,7 +931,7 @@ export default function PlaylistPlayer({
                         'all'
                     }
                     onClick={() =>
-                        setMode(
+                        changeMode(
                             'all'
                         )
                     }
@@ -611,7 +949,7 @@ export default function PlaylistPlayer({
                         'selected'
                     }
                     onClick={() =>
-                        setMode(
+                        changeMode(
                             'selected'
                         )
                     }
@@ -625,16 +963,22 @@ export default function PlaylistPlayer({
             </div>
 
 
-            {/* 선택곡 설정 */}
+            {/* ============================
+                선택할 노래
+            ============================ */}
 
             {
-                mode ===
-                'selected' && (
+                (
+                    mode ===
+                    'one' ||
+                    mode ===
+                    'selected'
+                ) && (
 
                     <div
                         style={{
                             marginBottom:
-                                16,
+                                14,
 
                             padding:
                                 12,
@@ -643,7 +987,7 @@ export default function PlaylistPlayer({
                                 16,
 
                             background:
-                                '#ffffff'
+                                '#fff'
                         }}
                     >
 
@@ -653,13 +997,18 @@ export default function PlaylistPlayer({
                                     'block',
 
                                 marginBottom:
-                                    10,
+                                    9,
 
                                 fontSize:
                                     14
                             }}
                         >
-                            반복할 노래 선택
+                            {
+                                mode ===
+                                'one'
+                                    ? '반복할 노래 한 곡 선택'
+                                    : '반복할 노래 선택'
+                            }
                         </strong>
 
 
@@ -672,7 +1021,7 @@ export default function PlaylistPlayer({
                                     7,
 
                                 maxHeight:
-                                    240,
+                                    260,
 
                                 overflowY:
                                     'auto'
@@ -730,6 +1079,9 @@ export default function PlaylistPlayer({
                                                             ? '#fff3cf'
                                                             : '#fff',
 
+                                                    color:
+                                                        '#3d3026',
+
                                                     textAlign:
                                                         'left',
 
@@ -780,6 +1132,15 @@ export default function PlaylistPlayer({
                                                         minWidth:
                                                             0,
 
+                                                        overflow:
+                                                            'hidden',
+
+                                                        textOverflow:
+                                                            'ellipsis',
+
+                                                        whiteSpace:
+                                                            'nowrap',
+
                                                         fontSize:
                                                             13,
 
@@ -787,9 +1148,7 @@ export default function PlaylistPlayer({
                                                             750
                                                     }}
                                                 >
-                                                    {
-                                                        song.title
-                                                    }
+                                                    {song.title}
                                                 </span>
 
                                             </button>
@@ -818,9 +1177,7 @@ export default function PlaylistPlayer({
                                     800
                             }}
                         >
-                            {
-                                selectedSlugs.length
-                            }곡 선택됨
+                            {selectedSlugs.length}곡 선택됨
                         </p>
 
                     </div>
@@ -828,6 +1185,56 @@ export default function PlaylistPlayer({
                 )
             }
 
+
+            {/* 플레이리스트 만들기 */}
+
+            <button
+                type="button"
+                onClick={
+                    makePlaylistAndPlay
+                }
+                disabled={
+                    loading
+                }
+                style={{
+                    width:
+                        '100%',
+
+                    marginBottom:
+                        18,
+
+                    padding:
+                        '13px 15px',
+
+                    border:
+                        'none',
+
+                    borderRadius:
+                        14,
+
+                    background:
+                        '#f9b846',
+
+                    color:
+                        '#3d3026',
+
+                    fontWeight:
+                        900,
+
+                    cursor:
+                        'pointer'
+                }}
+            >
+                {
+                    mode ===
+                    'all'
+                        ? '전체곡 플레이리스트 재생 ▶'
+                        : '플레이리스트에 담고 재생 ▶'
+                }
+            </button>
+
+
+            {/* 실제 audio */}
 
             <audio
                 ref={
@@ -854,10 +1261,15 @@ export default function PlaylistPlayer({
             />
 
 
-            {/* 현재 재생곡 */}
+            {/* ============================
+                현재 재생
+            ============================ */}
 
             <div
                 style={{
+                    marginBottom:
+                        14,
+
                     padding:
                         14,
 
@@ -872,96 +1284,46 @@ export default function PlaylistPlayer({
                 }}
             >
 
-                <div
+                <small
                     style={{
                         display:
-                            'flex',
+                            'block',
 
-                        alignItems:
-                            'center',
+                        marginBottom:
+                            4,
 
-                        gap:
-                            12
+                        opacity:
+                            0.7
                     }}
                 >
-
-                    <div
-                        style={{
-                            minWidth:
-                                0,
-
-                            flex:
-                                1
-                        }}
-                    >
-
-                        <small
-                            style={{
-                                display:
-                                    'block',
-
-                                marginBottom:
-                                    3,
-
-                                opacity:
-                                    0.7
-                            }}
-                        >
-                            {
-                                currentSong
-                                    ? '현재 재생'
-                                    : '재생할 노래'
-                            }
-                        </small>
+                    NOW PLAYING
+                </small>
 
 
-                        <strong
-                            style={{
-                                display:
-                                    'block',
+                <strong
+                    style={{
+                        display:
+                            'block',
 
-                                overflow:
-                                    'hidden',
+                        minHeight:
+                            22,
 
-                                textOverflow:
-                                    'ellipsis',
+                        overflow:
+                            'hidden',
 
-                                whiteSpace:
-                                    'nowrap'
-                            }}
-                        >
-                            {
-                                currentSong
-                                    ? currentSong.title
-                                    : mode ===
-                                        'selected'
-                                        ? `${selectedSongs.length}곡 선택됨`
-                                        : `${playableSongs.length}곡 재생 가능`
-                            }
-                        </strong>
+                        textOverflow:
+                            'ellipsis',
 
-                    </div>
-
-
-                    <span
-                        style={{
-                            fontSize:
-                                12,
-
-                            opacity:
-                                0.75
-                        }}
-                    >
-                        {
-                            mode === 'one'
-                                ? '🔂 1곡'
-                                : mode === 'selected'
-                                    ? '🔁 선택곡'
-                                    : '🔁 전체'
-                        }
-                    </span>
-
-                </div>
+                        whiteSpace:
+                            'nowrap'
+                    }}
+                >
+                    {
+                        currentSong
+                            ? `${currentSong.emoji || '🎵'} ${currentSong.title}`
+                            : '재생 중인 노래가 없어요'
+                    }
+                </strong>
 
 
                 <div
@@ -1021,6 +1383,309 @@ export default function PlaylistPlayer({
             </div>
 
 
+            {/* ============================
+                실제 플레이리스트 화면
+            ============================ */}
+
+            <div
+                style={{
+                    padding:
+                        13,
+
+                    border:
+                        '1px solid #eee3d5',
+
+                    borderRadius:
+                        16,
+
+                    background:
+                        '#fff'
+                }}
+            >
+
+                <div
+                    style={{
+                        display:
+                            'flex',
+
+                        justifyContent:
+                            'space-between',
+
+                        alignItems:
+                            'center',
+
+                        gap:
+                            10,
+
+                        marginBottom:
+                            10
+                    }}
+                >
+
+                    <strong>
+                        재생 목록
+                    </strong>
+
+
+                    <span
+                        style={{
+                            color:
+                                '#8d8175',
+
+                            fontSize:
+                                12
+                        }}
+                    >
+                        {playlist.length}곡
+                    </span>
+
+                </div>
+
+
+                {
+                    playlist.length ===
+                    0 ? (
+
+                        <p
+                            style={{
+                                margin:
+                                    '18px 0',
+
+                                textAlign:
+                                    'center',
+
+                                color:
+                                    '#a3978c',
+
+                                fontSize:
+                                    13
+                            }}
+                        >
+                            아직 담긴 노래가 없어요.
+                        </p>
+
+                    ) : (
+
+                        <div
+                            style={{
+                                display:
+                                    'grid',
+
+                                gap:
+                                    7
+                            }}
+                        >
+
+                            {
+                                playlist.map(
+                                    (
+                                        song,
+                                        index
+                                    ) => {
+
+                                        const active =
+                                            song.slug ===
+                                            currentSlug;
+
+
+                                        return (
+
+                                            <div
+                                                key={
+                                                    song.slug
+                                                }
+                                                style={{
+                                                    display:
+                                                        'grid',
+
+                                                    gridTemplateColumns:
+                                                        'minmax(0, 1fr) 36px',
+
+                                                    gap:
+                                                        6,
+
+                                                    alignItems:
+                                                        'center'
+                                                }}
+                                            >
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        playSong(
+                                                            song
+                                                        )
+                                                    }
+                                                    style={{
+                                                        display:
+                                                            'flex',
+
+                                                        alignItems:
+                                                            'center',
+
+                                                        gap:
+                                                            10,
+
+                                                        minWidth:
+                                                            0,
+
+                                                        padding:
+                                                            '10px 11px',
+
+                                                        border:
+                                                            active
+                                                                ? '1px solid #f9b846'
+                                                                : '1px solid #f1e7dc',
+
+                                                        borderRadius:
+                                                            12,
+
+                                                        background:
+                                                            active
+                                                                ? '#fff3cf'
+                                                                : '#fffaf5',
+
+                                                        color:
+                                                            '#3d3026',
+
+                                                        textAlign:
+                                                            'left',
+
+                                                        cursor:
+                                                            'pointer'
+                                                    }}
+                                                >
+
+                                                    <span
+                                                        style={{
+                                                            width:
+                                                                21,
+
+                                                            flexShrink:
+                                                                0,
+
+                                                            color:
+                                                                active
+                                                                    ? '#b7771f'
+                                                                    : '#a3978c',
+
+                                                            fontSize:
+                                                                12,
+
+                                                            fontWeight:
+                                                                900,
+
+                                                            textAlign:
+                                                                'center'
+                                                        }}
+                                                    >
+                                                        {
+                                                            active
+                                                                ? '▶'
+                                                                : index + 1
+                                                        }
+                                                    </span>
+
+
+                                                    <span
+                                                        style={{
+                                                            fontSize:
+                                                                18
+                                                        }}
+                                                    >
+                                                        {
+                                                            song.emoji ||
+                                                            '🎵'
+                                                        }
+                                                    </span>
+
+
+                                                    <span
+                                                        style={{
+                                                            minWidth:
+                                                                0,
+
+                                                            overflow:
+                                                                'hidden',
+
+                                                            textOverflow:
+                                                                'ellipsis',
+
+                                                            whiteSpace:
+                                                                'nowrap',
+
+                                                            fontSize:
+                                                                13,
+
+                                                            fontWeight:
+                                                                active
+                                                                    ? 900
+                                                                    : 700
+                                                        }}
+                                                    >
+                                                        {song.title}
+                                                    </span>
+
+                                                </button>
+
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        removeFromPlaylist(
+                                                            song.slug
+                                                        )
+                                                    }
+                                                    aria-label={`${song.title} 플레이리스트에서 삭제`}
+                                                    title="플레이리스트에서 삭제"
+                                                    style={{
+                                                        width:
+                                                            36,
+
+                                                        height:
+                                                            36,
+
+                                                        border:
+                                                            'none',
+
+                                                        borderRadius:
+                                                            '50%',
+
+                                                        background:
+                                                            '#f4eee6',
+
+                                                        color:
+                                                            '#8d8175',
+
+                                                        cursor:
+                                                            'pointer',
+
+                                                        fontSize:
+                                                            15,
+
+                                                        fontWeight:
+                                                            900
+                                                    }}
+                                                >
+                                                    ×
+                                                </button>
+
+                                            </div>
+
+                                        );
+
+                                    }
+                                )
+                            }
+
+                        </div>
+
+                    )
+                }
+
+            </div>
+
+
             {error && (
 
                 <p
@@ -1070,7 +1735,7 @@ function ModeButton({
                     4,
 
                 padding:
-                    '11px 5px',
+                    '11px 4px',
 
                 border:
                     active
