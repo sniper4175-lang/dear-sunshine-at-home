@@ -10,9 +10,9 @@ export const metadata = {
   manifest: "/manifest.webmanifest",
 
   icons: {
-    icon: "/icon-192.png",
+    icon: "/Dear_Sunshine_logo.png",
 
-    apple: "/apple-touch-icon.png",
+    apple: "/Dear_Sunshine_logo.png",
   },
 
   appleWebApp: {
