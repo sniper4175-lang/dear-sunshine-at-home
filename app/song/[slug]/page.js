@@ -75,7 +75,8 @@ export default async function SongPage({ params }) {
     if (song.premiumOnly) {
       lockedTitle = "Premium 전용 노래예요";
 
-      lockedDescription = "이 콘텐츠는 Premium 멤버십에서 이용할 수 있어요.";
+      lockedDescription =
+        "이 콘텐츠는 Premium 멤버십에서 이용할 수 있어요.";
     } else {
       lockedTitle = "Premium에서 전체 음원을 만나보세요";
 
@@ -104,7 +105,9 @@ export default async function SongPage({ params }) {
 
       {/* 프로그램 */}
 
-      {song.program && <p className="eyebrow">{song.program}</p>}
+      {song.program && (
+        <p className="eyebrow">{song.program}</p>
+      )}
 
       {/* 카테고리 */}
 
@@ -125,7 +128,9 @@ export default async function SongPage({ params }) {
 
       {/* 설명 */}
 
-      {song.subtitle && <p className="page-copy">{song.subtitle}</p>}
+      {song.subtitle && (
+        <p className="page-copy">{song.subtitle}</p>
+      )}
 
       {/* =====================================
                 접근 가능
@@ -133,7 +138,10 @@ export default async function SongPage({ params }) {
 
       {accessible ? (
         <>
-          <AudioPlayer title={song.title} slug={song.slug} />
+          <AudioPlayer
+            title={song.title}
+            slug={song.slug}
+          />
 
           {membership?.plan === "premium" && (
             <div
@@ -160,7 +168,8 @@ export default async function SongPage({ params }) {
               <h2>활동자료</h2>
 
               <p className="page-copy">
-                노래를 들으며 집에서도 함께 영어놀이를 이어가 보세요.
+                노래를 들으며 집에서도 함께 영어놀이를
+                이어가 보세요.
               </p>
 
               <PrintableButton slug={song.slug} />
@@ -168,7 +177,10 @@ export default async function SongPage({ params }) {
           )}
 
           {song.lyricsPath && (
-            <LyricsSheet slug={song.slug} title={song.title} />
+            <LyricsSheet
+              slug={song.slug}
+              title={song.title}
+            />
           )}
 
           {song.lyrics && song.lyrics.length > 0 && (
@@ -185,27 +197,33 @@ export default async function SongPage({ params }) {
             </section>
           )}
 
-          {song.activities && song.activities.length > 0 && (
-            <section className="content-card">
-              <p className="eyebrow">PLAY AT HOME</p>
+          {song.activities &&
+            song.activities.length > 0 && (
+              <section className="content-card">
+                <p className="eyebrow">PLAY AT HOME</p>
 
-              <h2>이 노래로 놀아요</h2>
+                <h2>이 노래로 놀아요</h2>
 
-              <div className="steps">
-                {song.activities.map((activity, index) => (
-                  <div className="step" key={`${song.slug}-${index}`}>
-                    <span>{index + 1}</span>
+                <div className="steps">
+                  {song.activities.map(
+                    (activity, index) => (
+                      <div
+                        className="step"
+                        key={`${song.slug}-${index}`}
+                      >
+                        <span>{index + 1}</span>
 
-                    <div>
-                      <strong>{activity.title}</strong>
+                        <div>
+                          <strong>{activity.title}</strong>
 
-                      <p>{activity.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+                          <p>{activity.description}</p>
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
+              </section>
+            )}
         </>
       ) : (
         /*
@@ -263,7 +281,10 @@ export default async function SongPage({ params }) {
             {lockedDescription}
           </p>
 
-          <Link href={lockedHref} className="primary-button">
+          <Link
+            href={lockedHref}
+            className="primary-button"
+          >
             {lockedButton}
           </Link>
         </section>
