@@ -77,7 +77,8 @@ function monthsAgo(
 function canAccessSong(
     song,
     loggedIn,
-    membership
+    membership,
+    userPrograms
 ) {
 
     if (
@@ -88,6 +89,25 @@ function canAccessSong(
     }
 
 
+    /*
+     * 해당 수업을 현재 수강하고 있는지
+     * 가장 먼저 확인
+     */
+    if (
+        !userPrograms.includes(
+            song.program
+        )
+    ) {
+        return false;
+    }
+
+
+    /*
+     * Premium
+     *
+     * 수강 중인 프로그램 안에서는
+     * 전체 곡 이용 가능
+     */
     if (
         membership.plan ===
         'premium'
@@ -104,6 +124,9 @@ function canAccessSong(
     }
 
 
+    /*
+     * Basic은 Premium 전용곡 제외
+     */
     if (
         song.premiumOnly
     ) {
@@ -135,13 +158,14 @@ function canAccessSong(
         song.releaseDate <=
             today
     );
-}
 
+}
 
 export default function LibraryClient({
     songs,
     loggedIn,
-    membership
+    membership,
+    userPrograms
 }) {
 
     const [
@@ -198,7 +222,8 @@ export default function LibraryClient({
                             canAccessSong(
                                 song,
                                 loggedIn,
-                                membership
+                                membership,
+                                userPrograms
                             )
                     )
                     .map(
@@ -483,7 +508,8 @@ export default function LibraryClient({
                                 canAccessSong(
                                     song,
                                     loggedIn,
-                                    membership
+                                    membership,
+                                    userPrograms
                                 );
 
 
