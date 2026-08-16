@@ -1,0 +1,115 @@
+import {
+    createServerClient
+} from '@supabase/ssr';
+
+import {
+    NextResponse
+} from 'next/server';
+
+
+export async function updateSession(
+    request
+) {
+
+    let supabaseResponse =
+        NextResponse.next({
+            request
+        });
+
+
+    const supabase =
+        createServerClient(
+            process.env
+                .NEXT_PUBLIC_SUPABASE_URL,
+
+            process.env
+                .NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+
+            {
+                cookies: {
+
+                    getAll() {
+
+                        return request
+                            .cookies
+                            .getAll();
+
+                    },
+
+
+                    setAll(
+                        cookiesToSet
+                    ) {
+
+                        /*
+                         * Server Component가 읽는
+                         * request cookie도 갱신
+                         */
+                        cookiesToSet.forEach(
+                            ({
+                                name,
+                                value
+                            }) => {
+
+                                request.cookies.set(
+                                    name,
+                                    value
+                                );
+
+                            }
+                        );
+
+
+                        /*
+                         * 갱신된 request를 이용해
+                         * response 다시 생성
+                         */
+                        supabaseResponse =
+                            NextResponse.next({
+                                request
+                            });
+
+
+                        /*
+                         * 브라우저에도
+                         * 갱신된 쿠키 전달
+                         */
+                        cookiesToSet.forEach(
+                            ({
+                                name,
+                                value,
+                                options
+                            }) => {
+
+                                supabaseResponse
+                                    .cookies
+                                    .set(
+                                        name,
+                                        value,
+                                        options
+                                    );
+
+                            }
+                        );
+
+                    }
+
+                }
+            }
+        );
+
+
+    /*
+     * 중요:
+     * 세션 토큰 검증 및 필요 시 갱신
+     *
+     * createServerClient와 getUser 사이에는
+     * 다른 코드를 넣지 않는 것이 좋음
+     */
+    await supabase
+        .auth
+        .getUser();
+
+
+    return supabaseResponse;
+}
