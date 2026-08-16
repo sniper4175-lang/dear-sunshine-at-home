@@ -27,12 +27,14 @@ export default function PlaylistPlayer({
         mode,
         setMode
     ] =
-        useState('all');
+        useState(
+            'all'
+        );
 
 
     /*
-     * 아직 플레이리스트에 담기 전
-     * 사용자가 체크한 곡
+     * 플레이리스트에 담기 전
+     * 사용자가 선택한 곡
      */
     const [
         selectedSlugs,
@@ -87,7 +89,7 @@ export default function PlaylistPlayer({
 
 
     /*
-     * 현재 회원이 재생할 수 있는 곡만
+     * 현재 회원이 재생 가능한 곡만
      */
     const playableSongs =
         songs.filter(
@@ -98,6 +100,9 @@ export default function PlaylistPlayer({
         );
 
 
+    /*
+     * 현재 재생 중인 곡
+     */
     const currentSong =
         playlist.find(
             song =>
@@ -106,8 +111,11 @@ export default function PlaylistPlayer({
         ) || null;
 
 
+
     /*
-     * signed URL
+     * =====================================
+     * signed URL 가져오기
+     * =====================================
      */
     async function getAudioUrl(
         slug
@@ -183,8 +191,11 @@ export default function PlaylistPlayer({
     }
 
 
+
     /*
+     * =====================================
      * 특정 곡 바로 재생
+     * =====================================
      */
     async function playSong(
         song
@@ -210,11 +221,13 @@ export default function PlaylistPlayer({
             song.slug
         );
 
+
         setAudioUrl(
             url
         );
 
     }
+
 
 
     /*
@@ -255,6 +268,7 @@ export default function PlaylistPlayer({
                                 e
                             );
 
+
                             setError(
                                 '음원을 재생하지 못했습니다.'
                             );
@@ -271,8 +285,11 @@ export default function PlaylistPlayer({
     );
 
 
+
     /*
+     * =====================================
      * 곡 선택
+     * =====================================
      */
     function toggleSelected(
         slug
@@ -306,7 +323,7 @@ export default function PlaylistPlayer({
 
         /*
          * 선택곡 반복은
-         * 여러 개 선택 가능
+         * 여러 곡 선택 가능
          */
         setSelectedSlugs(
             previous => {
@@ -336,8 +353,11 @@ export default function PlaylistPlayer({
     }
 
 
+
     /*
+     * =====================================
      * 반복 모드 변경
+     * =====================================
      */
     function changeMode(
         nextMode
@@ -348,10 +368,6 @@ export default function PlaylistPlayer({
         );
 
 
-        /*
-         * 새로운 모드를 선택하면
-         * 체크 목록 초기화
-         */
         setSelectedSlugs(
             []
         );
@@ -359,11 +375,13 @@ export default function PlaylistPlayer({
     }
 
 
+
     /*
-     * 설정한 곡을
-     * 실제 플레이리스트에 담고 재생
+     * =====================================
+     * 선택 상태를 실제 playlist로 변환
+     * =====================================
      */
-    async function makePlaylistAndPlay() {
+    function buildPlaylist() {
 
         let nextPlaylist =
             [];
@@ -397,10 +415,11 @@ export default function PlaylistPlayer({
             ) {
 
                 setError(
-                    '반복할 노래 한 곡을 선택해주세요.'
+                    '플레이리스트에 담을 노래 한 곡을 선택해주세요.'
                 );
 
-                return;
+
+                return null;
 
             }
 
@@ -430,10 +449,11 @@ export default function PlaylistPlayer({
             ) {
 
                 setError(
-                    '반복할 노래를 선택해주세요.'
+                    '플레이리스트에 담을 노래를 선택해주세요.'
                 );
 
-                return;
+
+                return null;
 
             }
 
@@ -455,10 +475,11 @@ export default function PlaylistPlayer({
         ) {
 
             setError(
-                '재생할 수 있는 노래가 없습니다.'
+                '플레이리스트에 담을 수 있는 노래가 없습니다.'
             );
 
-            return;
+
+            return null;
 
         }
 
@@ -466,6 +487,56 @@ export default function PlaylistPlayer({
         setError(
             ''
         );
+
+
+        return nextPlaylist;
+
+    }
+
+
+
+    /*
+     * =====================================
+     * 플레이리스트에 담기만
+     * =====================================
+     */
+    function addToPlaylistOnly() {
+
+        const nextPlaylist =
+            buildPlaylist();
+
+
+        if (!nextPlaylist) {
+            return;
+        }
+
+
+        setPlaylist(
+            nextPlaylist
+        );
+
+    }
+
+
+
+    /*
+     * =====================================
+     * 플레이리스트에 담고 바로 재생
+     * =====================================
+     */
+    async function addToPlaylistAndPlay() {
+
+        const nextPlaylist =
+            buildPlaylist();
+
+
+        if (
+            !nextPlaylist ||
+            nextPlaylist.length ===
+            0
+        ) {
+            return;
+        }
 
 
         setPlaylist(
@@ -480,21 +551,24 @@ export default function PlaylistPlayer({
     }
 
 
+
     /*
+     * =====================================
      * 재생 / 일시정지
+     * =====================================
      */
     async function togglePlay() {
 
         /*
-         * 아직 실제 playlist가 없으면
-         * 먼저 만들어서 재생
+         * playlist가 비어 있으면
+         * 현재 설정으로 playlist를 만들어 재생
          */
         if (
             playlist.length ===
             0
         ) {
 
-            await makePlaylistAndPlay();
+            await addToPlaylistAndPlay();
 
             return;
 
@@ -510,6 +584,7 @@ export default function PlaylistPlayer({
             await playSong(
                 playlist[0]
             );
+
 
             return;
 
@@ -541,6 +616,7 @@ export default function PlaylistPlayer({
     }
 
 
+
     function currentIndex() {
 
         return playlist.findIndex(
@@ -552,8 +628,11 @@ export default function PlaylistPlayer({
     }
 
 
+
     /*
-     * 다음곡
+     * =====================================
+     * 다음 곡
+     * =====================================
      */
     async function nextSong() {
 
@@ -566,7 +645,7 @@ export default function PlaylistPlayer({
 
 
         /*
-         * 한 곡 반복
+         * 1곡 반복
          */
         if (
             mode ===
@@ -577,6 +656,7 @@ export default function PlaylistPlayer({
                 currentSong ||
                 playlist[0]
             );
+
 
             return;
 
@@ -604,8 +684,11 @@ export default function PlaylistPlayer({
     }
 
 
+
     /*
-     * 이전곡
+     * =====================================
+     * 이전 곡
+     * =====================================
      */
     async function previousSong() {
 
@@ -626,6 +709,7 @@ export default function PlaylistPlayer({
                 currentSong ||
                 playlist[0]
             );
+
 
             return;
 
@@ -651,8 +735,11 @@ export default function PlaylistPlayer({
     }
 
 
+
     /*
-     * 곡 끝났을 때
+     * =====================================
+     * 곡 재생 완료
+     * =====================================
      */
     async function handleEnded() {
 
@@ -665,7 +752,7 @@ export default function PlaylistPlayer({
 
 
         /*
-         * 한 곡 반복
+         * 1곡 반복
          */
         if (
             mode ===
@@ -703,15 +790,19 @@ export default function PlaylistPlayer({
 
 
         /*
-         * 전체 / 선택곡 반복
+         * 전체 반복 /
+         * 선택곡 반복
          */
         await nextSong();
 
     }
 
 
+
     /*
-     * 플레이리스트에서 삭제
+     * =====================================
+     * 플레이리스트 곡 삭제
+     * =====================================
      */
     async function removeFromPlaylist(
         slug
@@ -756,7 +847,7 @@ export default function PlaylistPlayer({
 
 
         /*
-         * 현재 재생곡이 아니라면
+         * 현재 재생곡이 아니면
          * 목록만 삭제
          */
         if (!wasCurrent) {
@@ -765,8 +856,7 @@ export default function PlaylistPlayer({
 
 
         /*
-         * 현재곡을 삭제했고
-         * 남은 곡도 없다면 정지
+         * 남은 곡 없음
          */
         if (
             nextPlaylist.length ===
@@ -786,9 +876,11 @@ export default function PlaylistPlayer({
                 ''
             );
 
+
             setAudioUrl(
                 ''
             );
+
 
             setPlaying(
                 false
@@ -801,7 +893,8 @@ export default function PlaylistPlayer({
 
 
         /*
-         * 삭제한 다음 위치의 곡 재생
+         * 현재곡 삭제 후
+         * 다음 곡 자동 재생
          */
         const nextIndex =
             removeIndex >=
@@ -817,6 +910,7 @@ export default function PlaylistPlayer({
         );
 
     }
+
 
 
     return (
@@ -887,9 +981,10 @@ export default function PlaylistPlayer({
             </p>
 
 
-            {/* ============================
+
+            {/* =====================================
                 반복 방식
-            ============================ */}
+            ====================================== */}
 
             <div
                 style={{
@@ -919,6 +1014,7 @@ export default function PlaylistPlayer({
                     }
                 >
                     🔂
+
                     <small>
                         1곡 반복
                     </small>
@@ -937,6 +1033,7 @@ export default function PlaylistPlayer({
                     }
                 >
                     🔁
+
                     <small>
                         전체 반복
                     </small>
@@ -955,6 +1052,7 @@ export default function PlaylistPlayer({
                     }
                 >
                     ✓
+
                     <small>
                         선택곡 반복
                     </small>
@@ -963,9 +1061,10 @@ export default function PlaylistPlayer({
             </div>
 
 
-            {/* ============================
+
+            {/* =====================================
                 선택할 노래
-            ============================ */}
+            ====================================== */}
 
             {
                 (
@@ -1186,52 +1285,110 @@ export default function PlaylistPlayer({
             }
 
 
-            {/* 플레이리스트 만들기 */}
 
-            <button
-                type="button"
-                onClick={
-                    makePlaylistAndPlay
-                }
-                disabled={
-                    loading
-                }
+            {/* =====================================
+                플레이리스트 버튼
+            ====================================== */}
+
+            <div
                 style={{
-                    width:
-                        '100%',
+                    display:
+                        'grid',
+
+                    gridTemplateColumns:
+                        '1fr 1fr',
+
+                    gap:
+                        8,
 
                     marginBottom:
-                        18,
-
-                    padding:
-                        '13px 15px',
-
-                    border:
-                        'none',
-
-                    borderRadius:
-                        14,
-
-                    background:
-                        '#f9b846',
-
-                    color:
-                        '#3d3026',
-
-                    fontWeight:
-                        900,
-
-                    cursor:
-                        'pointer'
+                        18
                 }}
             >
-                {
-                    mode ===
-                    'all'
-                        ? '전체곡 플레이리스트 재생 ▶'
-                        : '플레이리스트에 담고 재생 ▶'
-                }
-            </button>
+
+                <button
+                    type="button"
+                    onClick={
+                        addToPlaylistOnly
+                    }
+                    disabled={
+                        loading
+                    }
+                    style={{
+                        width:
+                            '100%',
+
+                        padding:
+                            '13px 8px',
+
+                        border:
+                            '1px solid #e5d6c4',
+
+                        borderRadius:
+                            14,
+
+                        background:
+                            '#fff',
+
+                        color:
+                            '#3d3026',
+
+                        fontSize:
+                            13,
+
+                        fontWeight:
+                            900,
+
+                        cursor:
+                            'pointer'
+                    }}
+                >
+                    ＋ 플레이리스트에 담기
+                </button>
+
+
+                <button
+                    type="button"
+                    onClick={
+                        addToPlaylistAndPlay
+                    }
+                    disabled={
+                        loading
+                    }
+                    style={{
+                        width:
+                            '100%',
+
+                        padding:
+                            '13px 8px',
+
+                        border:
+                            'none',
+
+                        borderRadius:
+                            14,
+
+                        background:
+                            '#f9b846',
+
+                        color:
+                            '#3d3026',
+
+                        fontSize:
+                            13,
+
+                        fontWeight:
+                            900,
+
+                        cursor:
+                            'pointer'
+                    }}
+                >
+                    담고 바로 재생 ▶
+                </button>
+
+            </div>
+
 
 
             {/* 실제 audio */}
@@ -1261,9 +1418,10 @@ export default function PlaylistPlayer({
             />
 
 
-            {/* ============================
+
+            {/* =====================================
                 현재 재생
-            ============================ */}
+            ====================================== */}
 
             <div
                 style={{
@@ -1383,9 +1541,10 @@ export default function PlaylistPlayer({
             </div>
 
 
-            {/* ============================
-                실제 플레이리스트 화면
-            ============================ */}
+
+            {/* =====================================
+                실제 플레이리스트
+            ====================================== */}
 
             <div
                 style={{
@@ -1711,6 +1870,7 @@ export default function PlaylistPlayer({
 }
 
 
+
 function ModeButton({
     active,
     onClick,
@@ -1768,6 +1928,7 @@ function ModeButton({
 
     );
 }
+
 
 
 function PlayerButton({
