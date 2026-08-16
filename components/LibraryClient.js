@@ -8,6 +8,8 @@ import {
 import SongCard
     from './SongCard';
 
+import PlaylistPlayer
+    from './PlaylistPlayer';
 
 function todayKST() {
 
@@ -187,6 +189,28 @@ export default function LibraryClient({
                     ? 'Premium'
                     : 'Basic';
 
+    const accessibleSlugs =
+        useMemo(
+            () =>
+                filteredSongs
+                    .filter(
+                        song =>
+                            canAccessSong(
+                                song,
+                                loggedIn,
+                                membership
+                            )
+                    )
+                    .map(
+                        song =>
+                            song.slug
+                    ),
+            [
+                filteredSongs,
+                loggedIn,
+                membership
+            ]
+        );
 
     return (
 
@@ -435,6 +459,14 @@ export default function LibraryClient({
 
             </div>
 
+            <PlaylistPlayer
+                songs={
+                    filteredSongs
+                }
+                accessibleSlugs={
+                    accessibleSlugs
+                }
+            />
 
 
             {/* 곡 목록 */}
