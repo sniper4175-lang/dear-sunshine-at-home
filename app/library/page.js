@@ -2,12 +2,12 @@ import LibraryClient
     from '../../components/LibraryClient';
 
 import {
-    createServerSupabase
+    createAdminSupabase
 } from '../../lib/supabase-server';
 
 import {
-    adminDb
-} from '../../lib/supabase-admin';
+    getCurrentMembership
+} from '../../lib/membership';
 
 
 export const dynamic =
@@ -81,13 +81,6 @@ function mapSong(
 
 
 
-/*
- * ==========================================
- * 현재 로그인 사용자의 수강 프로그램 조회
- *
- * ds_active_user_programs VIEW 사용
- * ==========================================
- */
 async function getUserPrograms(
     db,
     userId
@@ -104,7 +97,7 @@ async function getUserPrograms(
     } =
         await db
             .from(
-                'ds_active_user_programs'
+                'ds_user_program_access'
             )
             .select(
                 'program'
@@ -119,7 +112,19 @@ async function getUserPrograms(
 
         console.error(
             'getUserPrograms error:',
-            error
+            {
+                message:
+                    error?.message,
+
+                code:
+                    error?.code,
+
+                details:
+                    error?.details,
+
+                hint:
+                    error?.hint
+            }
         );
 
 
@@ -152,35 +157,15 @@ export default async function LibraryPage() {
 
     /*
      * ==========================================
-     * 로그인 사용자 확인
+     * 로그인 사용자 + 유효 멤버십
      * ==========================================
      */
 
-    const supabase =
-        await createServerSupabase();
-
-
     const {
-        data: {
-            user
-        },
-        error: userError
+        user,
+        membership
     } =
-        await supabase
-            .auth
-            .getUser();
-
-
-    if (
-        userError
-    ) {
-
-        console.error(
-            'Library getUser error:',
-            userError
-        );
-
-    }
+        await getCurrentMembership();
 
 
     const loggedIn =
@@ -192,21 +177,18 @@ export default async function LibraryPage() {
 
     /*
      * ==========================================
-     * 서버 DB
-     *
-     * 공개 콘텐츠 / 멤버십 /
-     * 수강 프로그램 조회
+     * 관리자 DB
      * ==========================================
      */
 
     const db =
-        adminDb();
+        createAdminSupabase();
 
 
 
     /*
      * ==========================================
-     * 공개 노래 조회
+     * 공개된 노래
      * ==========================================
      */
 
@@ -240,7 +222,19 @@ export default async function LibraryPage() {
 
         console.error(
             'Library songs error:',
-            songsError
+            {
+                message:
+                    songsError?.message,
+
+                code:
+                    songsError?.code,
+
+                details:
+                    songsError?.details,
+
+                hint:
+                    songsError?.hint
+            }
         );
 
     }
@@ -258,77 +252,7 @@ export default async function LibraryPage() {
 
     /*
      * ==========================================
-     * At Home 멤버십 조회
-     * ==========================================
-     */
-
-    let membership =
-        null;
-
-
-    if (
-        user
-    ) {
-
-        const {
-            data,
-            error
-        } =
-            await db
-                .from(
-                    'ds_memberships'
-                )
-                .select(
-                    '*'
-                )
-                .eq(
-                    'user_id',
-                    user.id
-                )
-                .eq(
-                    'status',
-                    'active'
-                )
-                .maybeSingle();
-
-
-        if (
-            error
-        ) {
-
-            console.error(
-                'Library membership error:',
-                error
-            );
-
-        } else {
-
-            membership =
-                data ||
-                null;
-
-        }
-
-    }
-
-
-
-    /*
-     * ==========================================
-     * 현재 수강 중인 프로그램 조회
-     *
-     * 예:
-     *
-     * [
-     *   'Sunshine Toddler'
-     * ]
-     *
-     * 또는
-     *
-     * [
-     *   'Sunshine Toddler',
-     *   'Melody Book Club'
-     * ]
+     * 현재 수강 프로그램
      * ==========================================
      */
 
@@ -344,7 +268,7 @@ export default async function LibraryPage() {
 
     /*
      * ==========================================
-     * 화면
+     * Library 화면
      * ==========================================
      */
 

@@ -150,7 +150,9 @@ export default async function SongPage({ params }) {
                 marginBottom: 20,
               }}
             >
-              <DownloadButton slug={song.slug} />
+             { /* 버튼 주석 처리 */}
+             {/* <DownloadButton slug={song.slug} /> */}
+              
             </div>
           )}
 
