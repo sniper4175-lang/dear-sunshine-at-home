@@ -1,1 +1,31 @@
-{"name":"Dear Sunshine at Home","short_name":"Dear Sunshine","start_url":"/","display":"standalone","background_color":"#fffaf2","theme_color":"#f9b846","icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml"}]}
+{
+  "name": "Dear Sunshine at Home",
+  "short_name": "Dear Sunshine",
+  "description": "디어 선샤인의 영어노래와 놀이를 집에서도 자연스럽게 이어가요.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fffaf2",
+  "theme_color": "#fffaf2",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
