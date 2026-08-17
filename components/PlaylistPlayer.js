@@ -7,34 +7,37 @@ import {
 } from 'react';
 
 
+const URL_CACHE_MS =
+    7 * 60 * 1000;
+
+
+/*
+ * =====================================================
+ * PlaylistPlayer
+ * =====================================================
+ */
 export default function PlaylistPlayer({
     songs,
     accessibleSlugs
 }) {
 
+    /*
+     * =================================================
+     * 실제 AUDIO
+     * =================================================
+     */
+
     const audioRef =
         useRef(null);
 
-    /*
-    * ==========================================
-    * 백그라운드 재생용
-    * 다음 곡 URL 미리 준비
-    * ==========================================
-    */
-
-    const nextAudioUrlRef =
-        useRef('');
-
-    const nextAudioSlugRef =
-        useRef('');
-
-    const audioUrlCacheRef =
-        useRef(new Map());
 
 
     /*
-     * 실제 플레이리스트
+     * =================================================
+     * React State
+     * =================================================
      */
+
     const [
         playlist,
         setPlaylist
@@ -42,19 +45,9 @@ export default function PlaylistPlayer({
         useState([]);
 
 
-    /*
-     * 현재 재생곡
-     */
     const [
         currentSlug,
         setCurrentSlug
-    ] =
-        useState('');
-
-
-    const [
-        audioUrl,
-        setAudioUrl
     ] =
         useState('');
 
@@ -81,11 +74,9 @@ export default function PlaylistPlayer({
 
 
     /*
-     * 반복
-     *
-     * off = 반복 없음
-     * all = 플레이리스트 전체 반복
-     * one = 현재곡 반복
+     * off
+     * all
+     * one
      */
     const [
         repeatMode,
@@ -96,9 +87,6 @@ export default function PlaylistPlayer({
         );
 
 
-    /*
-     * 셔플
-     */
     const [
         shuffle,
         setShuffle
@@ -106,9 +94,6 @@ export default function PlaylistPlayer({
         useState(false);
 
 
-    /*
-     * 곡 추가창
-     */
     const [
         addOpen,
         setAddOpen
@@ -116,9 +101,6 @@ export default function PlaylistPlayer({
         useState(false);
 
 
-    /*
-     * 추가하려고 선택한 곡
-     */
     const [
         selectedSlugs,
         setSelectedSlugs
@@ -126,9 +108,6 @@ export default function PlaylistPlayer({
         useState([]);
 
 
-    /*
-     * 재생 시간
-     */
     const [
         currentTime,
         setCurrentTime
@@ -145,10 +124,138 @@ export default function PlaylistPlayer({
 
 
     /*
-     * ==========================================
-     * 현재 회원이 재생할 수 있는 곡만
-     * ==========================================
+     * =================================================
+     * BACKGROUND용 REF
+     *
+     * 화면이 꺼진 상태에서는
+     * React state/render에 최대한 의존하지 않고
+     * ref 값으로 다음곡을 결정한다.
+     * =================================================
      */
+
+    const playlistRef =
+        useRef([]);
+
+
+    const currentSlugRef =
+        useRef('');
+
+
+    const repeatModeRef =
+        useRef('all');
+
+
+    const shuffleRef =
+        useRef(false);
+
+
+    /*
+     * 현재 재생 URL
+     */
+    const currentAudioUrlRef =
+        useRef('');
+
+
+    /*
+     * signed URL cache
+     *
+     * slug => {
+     *     url,
+     *     createdAt
+     * }
+     */
+    const audioUrlCacheRef =
+        useRef(
+            new Map()
+        );
+
+
+    /*
+     * 바로 다음 곡
+     */
+    const preparedNextRef =
+        useRef({
+            slug:
+                '',
+
+            url:
+                ''
+        });
+
+
+    /*
+     * ended 이벤트 중복 방지
+     */
+    const changingTrackRef =
+        useRef(false);
+
+
+
+    /*
+     * =================================================
+     * STATE → REF 동기화
+     * =================================================
+     */
+
+    useEffect(
+        () => {
+
+            playlistRef.current =
+                playlist;
+
+        },
+        [
+            playlist
+        ]
+    );
+
+
+    useEffect(
+        () => {
+
+            currentSlugRef.current =
+                currentSlug;
+
+        },
+        [
+            currentSlug
+        ]
+    );
+
+
+    useEffect(
+        () => {
+
+            repeatModeRef.current =
+                repeatMode;
+
+        },
+        [
+            repeatMode
+        ]
+    );
+
+
+    useEffect(
+        () => {
+
+            shuffleRef.current =
+                shuffle;
+
+        },
+        [
+            shuffle
+        ]
+    );
+
+
+
+    /*
+     * =================================================
+     * 현재 이용 가능한 곡
+     * =================================================
+     */
+
     const playableSongs =
         songs.filter(
             song =>
@@ -163,18 +270,16 @@ export default function PlaylistPlayer({
             song =>
                 song.slug ===
                 currentSlug
-        ) || null;
+        ) ||
+        null;
 
 
 
     /*
-    * ==========================================
-    * signed URL 가져오기
-    *
-    * 이미 받아둔 URL이 있으면
-    * 다시 요청하지 않고 캐시 사용
-    * ==========================================
-    */
+     * =================================================
+     * signed URL
+     * =================================================
+     */
 
     async function getAudioUrl(
         slug,
@@ -187,30 +292,38 @@ export default function PlaylistPlayer({
 
 
         /*
-        * 이미 받아둔 URL 사용
-        */
+         * -----------------------------
+         * 유효한 캐시 확인
+         * -----------------------------
+         */
 
-        const cachedUrl =
+        const cached =
             audioUrlCacheRef.current.get(
                 slug
             );
 
 
-        if (cachedUrl) {
-            return cachedUrl;
+        if (
+            cached?.url &&
+            Date.now() -
+                cached.createdAt <
+                URL_CACHE_MS
+        ) {
+
+            return cached.url;
+
         }
 
 
-        if (showLoading) {
+        if (
+            showLoading
+        ) {
+
             setLoading(
                 true
             );
+
         }
-
-
-        setError(
-            ''
-        );
 
 
         try {
@@ -244,30 +357,40 @@ export default function PlaylistPlayer({
             }
 
 
-            /*
-            * URL 캐시에 저장
-            */
+            const item = {
+                url:
+                    data.url,
 
-            audioUrlCacheRef.current.set(
-                slug,
-                data.url
-            );
+                createdAt:
+                    Date.now()
+            };
 
 
-            return data.url;
+            audioUrlCacheRef
+                .current
+                .set(
+                    slug,
+                    item
+                );
+
+
+            return item.url;
 
 
         } catch (e) {
 
             console.error(
+                'audio URL error:',
                 e
             );
 
 
-            if (showLoading) {
+            if (
+                showLoading
+            ) {
 
                 setError(
-                    e.message ||
+                    e?.message ||
                     '음원을 불러오지 못했습니다.'
                 );
 
@@ -279,7 +402,9 @@ export default function PlaylistPlayer({
 
         } finally {
 
-            if (showLoading) {
+            if (
+                showLoading
+            ) {
 
                 setLoading(
                     false
@@ -291,74 +416,199 @@ export default function PlaylistPlayer({
 
     }
 
-    /*
-    * ==========================================
-    * 다음 곡 찾기
-    * ==========================================
-    */
 
-    function getNextSongForPreload() {
+
+    /*
+     * =================================================
+     * 곡 찾기
+     * =================================================
+     */
+
+    function findSong(
+        slug
+    ) {
+
+        return (
+            playlistRef.current.find(
+                song =>
+                    song.slug ===
+                    slug
+            ) ||
+            null
+        );
+
+    }
+
+
+
+    /*
+     * =================================================
+     * 랜덤곡
+     * =================================================
+     */
+
+    function getRandomSongFromRefs() {
+
+        const list =
+            playlistRef.current;
+
 
         if (
-            playlist.length ===
+            list.length ===
             0
         ) {
+
             return null;
+
         }
 
 
-        /*
-        * 한 곡 반복
-        */
+        if (
+            list.length ===
+            1
+        ) {
+
+            return list[0];
+
+        }
+
+
+        const current =
+            currentSlugRef.current;
+
+
+        const candidates =
+            list.filter(
+                song =>
+                    song.slug !==
+                    current
+            );
+
+
+        const index =
+            Math.floor(
+                Math.random() *
+                candidates.length
+            );
+
+
+        return (
+            candidates[
+                index
+            ] ||
+            null
+        );
+
+    }
+
+
+
+    /*
+     * =================================================
+     * 다음곡 계산
+     *
+     * 중요:
+     * React state가 아니라 ref 기준
+     * =================================================
+     */
+
+    function getNextSongFromRefs() {
+
+        const list =
+            playlistRef.current;
+
 
         if (
-            repeatMode ===
+            list.length ===
+            0
+        ) {
+
+            return null;
+
+        }
+
+
+        const current =
+            currentSlugRef.current;
+
+
+        const repeat =
+            repeatModeRef.current;
+
+
+        const shuffleOn =
+            shuffleRef.current;
+
+
+
+        /*
+         * 한 곡 반복
+         */
+        if (
+            repeat ===
             'one'
         ) {
 
-            return currentSong;
+            return (
+                findSong(
+                    current
+                ) ||
+                list[0]
+            );
+
+        }
+
+
+
+        /*
+         * 셔플
+         */
+        if (
+            shuffleOn
+        ) {
+
+            return (
+                getRandomSongFromRefs()
+            );
+
+        }
+
+
+
+        const index =
+            list.findIndex(
+                song =>
+                    song.slug ===
+                    current
+            );
+
+
+        /*
+         * 현재곡 없음
+         */
+        if (
+            index < 0
+        ) {
+
+            return list[0];
 
         }
 
 
         /*
-        * 셔플
-        *
-        * 셔플은 다음 곡을 지금 결정해서
-        * 미리 URL을 받아둔다.
-        */
-
-        if (shuffle) {
-
-            return getRandomSong();
-
-        }
-
-
-        const currentIndex =
-            getCurrentIndex();
-
-
+         * 마지막곡
+         */
         if (
-            currentIndex < 0
-        ) {
-
-            return playlist[0];
-
-        }
-
-
-        if (
-            currentIndex ===
-            playlist.length - 1
+            index ===
+            list.length - 1
         ) {
 
             if (
-                repeatMode ===
+                repeat ===
                 'all'
             ) {
 
-                return playlist[0];
+                return list[0];
 
             }
 
@@ -368,33 +618,170 @@ export default function PlaylistPlayer({
         }
 
 
-        return playlist[
-            currentIndex + 1
-        ];
+        return (
+            list[
+                index + 1
+            ] ||
+            null
+        );
 
     }
 
 
 
     /*
-    * ==========================================
-    * 다음 곡 URL 미리 받아두기
-    * ==========================================
-    */
+     * =================================================
+     * 이전곡 계산
+     * =================================================
+     */
 
-    async function preloadNextSong() {
+    function getPreviousSongFromRefs() {
+
+        const list =
+            playlistRef.current;
+
+
+        if (
+            list.length ===
+            0
+        ) {
+
+            return null;
+
+        }
+
+
+        if (
+            shuffleRef.current
+        ) {
+
+            return (
+                getRandomSongFromRefs()
+            );
+
+        }
+
+
+        const index =
+            list.findIndex(
+                song =>
+                    song.slug ===
+                    currentSlugRef.current
+            );
+
+
+        if (
+            index <= 0
+        ) {
+
+            return (
+                list[
+                    list.length - 1
+                ] ||
+                null
+            );
+
+        }
+
+
+        return (
+            list[
+                index - 1
+            ] ||
+            null
+        );
+
+    }
+
+
+
+    /*
+     * =================================================
+     * Media Session Metadata
+     * =================================================
+     */
+
+    function updateMediaMetadata(
+        song
+    ) {
+
+        if (
+            typeof navigator ===
+                'undefined' ||
+            !(
+                'mediaSession'
+                in navigator
+            ) ||
+            !song
+        ) {
+
+            return;
+
+        }
+
+
+        try {
+
+            navigator
+                .mediaSession
+                .metadata =
+                new MediaMetadata({
+                    title:
+                        song.title ||
+                        'Dear Sunshine',
+
+                    artist:
+                        'Dear Sunshine',
+
+                    album:
+                        song.program ||
+                        'Dear Sunshine 음원 어플'
+                });
+
+
+            navigator
+                .mediaSession
+                .playbackState =
+                'playing';
+
+
+        } catch (e) {
+
+            console.log(
+                'MediaSession metadata:',
+                e
+            );
+
+        }
+
+    }
+
+
+
+    /*
+     * =================================================
+     * 다음 곡 미리 준비
+     * =================================================
+     */
+
+    async function prepareNextSong() {
 
         const nextSong =
-            getNextSongForPreload();
+            getNextSongFromRefs();
 
 
-        if (!nextSong) {
+        if (
+            !nextSong
+        ) {
 
-            nextAudioSlugRef.current =
-                '';
+            preparedNextRef.current = {
+                slug:
+                    '',
 
-            nextAudioUrlRef.current =
-                '';
+                url:
+                    ''
+            };
+
 
             return;
 
@@ -402,20 +789,23 @@ export default function PlaylistPlayer({
 
 
         /*
-        * 현재 곡 자체가 다음 곡이면
-        * 한곡 반복이므로 현재 URL 사용
-        */
-
+         * 1곡 반복이면
+         * 현재 URL 그대로
+         */
         if (
             nextSong.slug ===
-            currentSlug
+                currentSlugRef.current &&
+            currentAudioUrlRef.current
         ) {
 
-            nextAudioSlugRef.current =
-                nextSong.slug;
+            preparedNextRef.current = {
+                slug:
+                    nextSong.slug,
 
-            nextAudioUrlRef.current =
-                audioUrl;
+                url:
+                    currentAudioUrlRef.current
+            };
+
 
             return;
 
@@ -429,60 +819,115 @@ export default function PlaylistPlayer({
             );
 
 
-        if (!url) {
+        if (
+            !url
+        ) {
+
             return;
+
         }
 
 
-        nextAudioSlugRef.current =
-            nextSong.slug;
+        /*
+         * 그 사이 현재곡이 바뀌었을 수도 있으므로
+         * 다시 다음곡 확인
+         */
 
-        nextAudioUrlRef.current =
-            url;
+        const stillNext =
+            getNextSongFromRefs();
+
+
+        if (
+            stillNext?.slug !==
+            nextSong.slug
+        ) {
+
+            return;
+
+        }
+
+
+        preparedNextRef.current = {
+            slug:
+                nextSong.slug,
+
+            url
+        };
 
     }
 
 
-    /*
-    * ==========================================
-    * 특정 곡 재생
-    * ==========================================
-    */
 
-    async function playSong(
-        song
+    /*
+     * =================================================
+     * 실제 AUDIO 객체에 곡 연결
+     *
+     * 핵심 함수
+     *
+     * React의 src/state 변경을 기다리지 않고
+     * audio.src 직접 변경
+     * =================================================
+     */
+
+    async function startAudioDirect(
+        song,
+        suppliedUrl = null
     ) {
 
-        if (!song) {
-            return;
+        if (
+            !song
+        ) {
+
+            return false;
+
         }
 
 
-        let url = null;
+        const audio =
+            audioRef.current;
+
+
+        if (
+            !audio
+        ) {
+
+            return false;
+
+        }
+
+
+        let url =
+            suppliedUrl;
 
 
         /*
-        * 다음 곡으로 미리 준비된 URL이 있으면
-        * 네트워크 요청 없이 즉시 사용
-        */
-
+         * 준비된 다음곡 URL 확인
+         */
         if (
-            nextAudioSlugRef.current ===
-            song.slug &&
-            nextAudioUrlRef.current
+            !url &&
+            preparedNextRef
+                .current
+                .slug ===
+                song.slug &&
+            preparedNextRef
+                .current
+                .url
         ) {
 
             url =
-                nextAudioUrlRef.current;
+                preparedNextRef
+                    .current
+                    .url;
+
+        }
 
 
-            nextAudioSlugRef.current =
-                '';
-
-            nextAudioUrlRef.current =
-                '';
-
-        } else {
+        /*
+         * 없으면 API 요청
+         */
+        if (
+            !url
+        ) {
 
             url =
                 await getAudioUrl(
@@ -492,11 +937,55 @@ export default function PlaylistPlayer({
         }
 
 
-        if (!url) {
-            return;
+        if (
+            !url
+        ) {
+
+            return false;
+
         }
 
 
+        /*
+         * 다음 준비정보 소비
+         */
+        if (
+            preparedNextRef
+                .current
+                .slug ===
+            song.slug
+        ) {
+
+            preparedNextRef.current = {
+                slug:
+                    '',
+
+                url:
+                    ''
+            };
+
+        }
+
+
+        /*
+         * ---------------------------------------------
+         * 중요:
+         *
+         * React setState 전에 ref부터 변경
+         * ---------------------------------------------
+         */
+
+        currentSlugRef.current =
+            song.slug;
+
+
+        currentAudioUrlRef.current =
+            url;
+
+
+        /*
+         * UI 업데이트
+         */
         setCurrentSlug(
             song.slug
         );
@@ -512,87 +1001,629 @@ export default function PlaylistPlayer({
         );
 
 
-        setAudioUrl(
-            url
+        setError(
+            ''
         );
+
+
+        /*
+         * ---------------------------------------------
+         * 핵심:
+         *
+         * audio.src 직접 변경
+         * ---------------------------------------------
+         */
+
+        if (
+            audio.src !==
+            url
+        ) {
+
+            audio.src =
+                url;
+
+            audio.load();
+
+        } else {
+
+            audio.currentTime =
+                0;
+
+        }
+
+
+        updateMediaMetadata(
+            song
+        );
+
+
+        try {
+
+            await audio.play();
+
+
+            setPlaying(
+                true
+            );
+
+
+            /*
+             * 다음 곡 미리 준비
+             *
+             * await하지 않는다.
+             * 현재 재생을 방해하지 않도록
+             * 백그라운드 실행.
+             */
+            void prepareNextSong();
+
+
+            return true;
+
+
+        } catch (e) {
+
+            /*
+             * src 변경 때문에 이전 play가
+             * 중단된 경우는 무시
+             */
+            if (
+                e?.name !==
+                'AbortError'
+            ) {
+
+                console.error(
+                    'play error:',
+                    e
+                );
+
+
+                setError(
+                    '음원을 재생하지 못했습니다.'
+                );
+
+            }
+
+
+            return false;
+
+        }
 
     }
 
 
 
     /*
-    * ==========================================
-    * URL 변경 후 자동 재생
-    * ==========================================
-    */
+     * =================================================
+     * 화면에서 곡 직접 클릭
+     * =================================================
+     */
 
-    useEffect(
-        () => {
+    async function playSong(
+        song
+    ) {
 
-            if (
-                !audioUrl ||
-                !audioRef.current
-            ) {
-                return;
-            }
+        if (
+            !song
+        ) {
+            return;
+        }
 
+
+        setLoading(
+            true
+        );
+
+
+        try {
+
+            await startAudioDirect(
+                song
+            );
+
+        } finally {
+
+            setLoading(
+                false
+            );
+
+        }
+
+    }
+
+
+
+    /*
+     * =================================================
+     * 곡 종료
+     *
+     * 이 함수가 이번 수정의 핵심.
+     * =================================================
+     */
+
+    async function handleEndedDirect() {
+
+        /*
+         * 중복 실행 방지
+         */
+        if (
+            changingTrackRef.current
+        ) {
+
+            return;
+
+        }
+
+
+        changingTrackRef.current =
+            true;
+
+
+        try {
 
             const audio =
                 audioRef.current;
 
 
+            if (
+                !audio
+            ) {
+
+                return;
+
+            }
+
+
+
             /*
-            * 새 URL 즉시 로드
-            */
+             * -----------------------------------------
+             * 1곡 반복
+             *
+             * src 변경 자체가 필요 없음
+             * -----------------------------------------
+             */
+
+            if (
+                repeatModeRef.current ===
+                'one'
+            ) {
+
+                audio.currentTime =
+                    0;
+
+
+                try {
+
+                    await audio.play();
+
+
+                    setPlaying(
+                        true
+                    );
+
+
+                    if (
+                        'mediaSession'
+                        in navigator
+                    ) {
+
+                        navigator
+                            .mediaSession
+                            .playbackState =
+                            'playing';
+
+                    }
+
+
+                } catch (e) {
+
+                    console.error(
+                        'repeat play error:',
+                        e
+                    );
+
+                }
+
+
+                return;
+
+            }
+
+
+
+            /*
+             * -----------------------------------------
+             * 다음곡
+             * -----------------------------------------
+             */
+
+            const nextSong =
+                getNextSongFromRefs();
+
+
+            if (
+                !nextSong
+            ) {
+
+                setPlaying(
+                    false
+                );
+
+
+                try {
+
+                    if (
+                        'mediaSession'
+                        in navigator
+                    ) {
+
+                        navigator
+                            .mediaSession
+                            .playbackState =
+                            'paused';
+
+                    }
+
+                } catch {}
+
+
+                return;
+
+            }
+
+
+
+            /*
+             * -----------------------------------------
+             * 가장 중요
+             *
+             * 미리 받아놓은 URL을 바로 사용.
+             *
+             * 화면이 꺼진 순간에는 여기서
+             * fetch를 새로 하지 않는 것이 목표.
+             * -----------------------------------------
+             */
+
+            let nextUrl =
+                null;
+
+
+            if (
+                preparedNextRef
+                    .current
+                    .slug ===
+                    nextSong.slug &&
+                preparedNextRef
+                    .current
+                    .url
+            ) {
+
+                nextUrl =
+                    preparedNextRef
+                        .current
+                        .url;
+
+            }
+
+
+
+            /*
+             * 혹시 준비 실패했다면
+             * 마지막 fallback으로 요청
+             */
+
+            if (
+                !nextUrl
+            ) {
+
+                nextUrl =
+                    await getAudioUrl(
+                        nextSong.slug,
+                        false
+                    );
+
+            }
+
+
+            if (
+                !nextUrl
+            ) {
+
+                setPlaying(
+                    false
+                );
+
+                return;
+
+            }
+
+
+
+            /*
+             * -----------------------------------------
+             * React 렌더를 기다리지 않고
+             * 즉시 같은 audio 객체에 다음 src 설정
+             * -----------------------------------------
+             */
+
+            currentSlugRef.current =
+                nextSong.slug;
+
+
+            currentAudioUrlRef.current =
+                nextUrl;
+
+
+            preparedNextRef.current = {
+                slug:
+                    '',
+
+                url:
+                    ''
+            };
+
+
+            /*
+             * UI는 나중에 업데이트되어도 상관없음
+             */
+            setCurrentSlug(
+                nextSong.slug
+            );
+
+
+            setCurrentTime(
+                0
+            );
+
+
+            setDuration(
+                0
+            );
+
+
+            /*
+             * 핵심
+             */
+            audio.src =
+                nextUrl;
+
 
             audio.load();
 
 
-            audio
-                .play()
-                .then(
-                    () => {
+            updateMediaMetadata(
+                nextSong
+            );
 
-                        setPlaying(
-                            true
-                        );
 
-                    }
-                )
-                .catch(
-                    e => {
+            try {
+
+                await audio.play();
+
+
+                setPlaying(
+                    true
+                );
+
+
+                /*
+                 * 다음 다음 곡 준비
+                 */
+                void prepareNextSong();
+
+
+            } catch (e) {
+
+                console.error(
+                    'background next track error:',
+                    e
+                );
+
+
+                setPlaying(
+                    false
+                );
+
+            }
+
+
+        } finally {
+
+            changingTrackRef.current =
+                false;
+
+        }
+
+    }
+
+
+
+    /*
+     * =================================================
+     * AUDIO 이벤트 직접 연결
+     *
+     * JSX onEnded보다 명확하게
+     * 실제 DOM audio 객체에 붙인다.
+     * =================================================
+     */
+
+    useEffect(
+        () => {
+
+            const audio =
+                audioRef.current;
+
+
+            if (
+                !audio
+            ) {
+
+                return;
+
+            }
+
+
+            const handleEnded =
+                () => {
+
+                    void handleEndedDirect();
+
+                };
+
+
+            const handlePlay =
+                () => {
+
+                    setPlaying(
+                        true
+                    );
+
+
+                    try {
 
                         if (
-                            e?.name !==
-                            'AbortError'
+                            'mediaSession'
+                            in navigator
                         ) {
 
-                            console.error(
-                                e
-                            );
-
-
-                            setError(
-                                '음원을 재생하지 못했습니다.'
-                            );
+                            navigator
+                                .mediaSession
+                                .playbackState =
+                                'playing';
 
                         }
 
-                    }
+                    } catch {}
+
+                };
+
+
+            const handlePause =
+                () => {
+
+                    setPlaying(
+                        false
+                    );
+
+
+                    try {
+
+                        if (
+                            'mediaSession'
+                            in navigator
+                        ) {
+
+                            navigator
+                                .mediaSession
+                                .playbackState =
+                                'paused';
+
+                        }
+
+                    } catch {}
+
+                };
+
+
+            const handleMetadata =
+                () => {
+
+                    setDuration(
+                        Number.isFinite(
+                            audio.duration
+                        )
+                            ? audio.duration
+                            : 0
+                    );
+
+                };
+
+
+            const handleTime =
+                () => {
+
+                    setCurrentTime(
+                        audio.currentTime ||
+                        0
+                    );
+
+                };
+
+
+            audio.addEventListener(
+                'ended',
+                handleEnded
+            );
+
+
+            audio.addEventListener(
+                'play',
+                handlePlay
+            );
+
+
+            audio.addEventListener(
+                'pause',
+                handlePause
+            );
+
+
+            audio.addEventListener(
+                'loadedmetadata',
+                handleMetadata
+            );
+
+
+            audio.addEventListener(
+                'timeupdate',
+                handleTime
+            );
+
+
+            return () => {
+
+                audio.removeEventListener(
+                    'ended',
+                    handleEnded
                 );
 
+
+                audio.removeEventListener(
+                    'play',
+                    handlePlay
+                );
+
+
+                audio.removeEventListener(
+                    'pause',
+                    handlePause
+                );
+
+
+                audio.removeEventListener(
+                    'loadedmetadata',
+                    handleMetadata
+                );
+
+
+                audio.removeEventListener(
+                    'timeupdate',
+                    handleTime
+                );
+
+            };
+
         },
-        [
-            audioUrl
-        ]
+        []
     );
 
+
+
     /*
-    * ==========================================
-    * 현재 곡 / 플레이리스트 상태가 바뀌면
-    * 다음 곡 URL 미리 준비
-    * ==========================================
-    */
+     * =================================================
+     * 현재곡 / 플레이리스트가 바뀌면
+     * 다음곡 미리 준비
+     * =================================================
+     */
 
     useEffect(
         () => {
@@ -600,13 +1631,16 @@ export default function PlaylistPlayer({
             if (
                 !currentSlug ||
                 playlist.length ===
-                0
+                    0
             ) {
+
                 return;
+
             }
 
 
-            preloadNextSong();
+            void prepareNextSong();
+
 
         },
         [
@@ -617,112 +1651,145 @@ export default function PlaylistPlayer({
         ]
     );
 
+
+
     /*
-    * ==========================================
-    * Media Session
-    *
-    * 휴대폰 잠금화면 / 알림창에서
-    * 재생 컨트롤 가능하도록 연결
-    * ==========================================
-    */
+     * =================================================
+     * 화면이 꺼지기 직전에도
+     * 다음곡 준비를 한번 더 확인
+     * =================================================
+     */
+
+    useEffect(
+        () => {
+
+            function handleVisibility() {
+
+                if (
+                    document
+                        .visibilityState ===
+                    'hidden'
+                ) {
+
+                    void prepareNextSong();
+
+                }
+
+            }
+
+
+            document.addEventListener(
+                'visibilitychange',
+                handleVisibility
+            );
+
+
+            return () => {
+
+                document.removeEventListener(
+                    'visibilitychange',
+                    handleVisibility
+                );
+
+            };
+
+        },
+        []
+    );
+
+
+
+    /*
+     * =================================================
+     * Media Session
+     *
+     * 한 번만 등록.
+     *
+     * 핸들러 안에서는 ref 사용.
+     * =================================================
+     */
 
     useEffect(
         () => {
 
             if (
                 typeof navigator ===
-                'undefined' ||
+                    'undefined' ||
                 !(
                     'mediaSession'
                     in navigator
                 )
             ) {
+
                 return;
+
             }
 
 
-            /*
-            * 재생
-            */
-
-            navigator.mediaSession.setActionHandler(
-                'play',
-                async () => {
-
-                    const audio =
-                        audioRef.current;
-
-
-                    if (!audio) {
-                        return;
-                    }
-
-
-                    try {
-
-                        await audio.play();
-
-                    } catch (e) {
-
-                        console.error(
-                            e
-                        );
-
-                    }
-
-                }
-            );
-
-
-            /*
-            * 일시정지
-            */
-
-            navigator.mediaSession.setActionHandler(
-                'pause',
-                () => {
-
-                    audioRef.current?.pause();
-
-                }
-            );
-
-
-            /*
-            * 다음곡
-            */
-
-            navigator.mediaSession.setActionHandler(
-                'nexttrack',
-                () => {
-
-                    nextSong(
-                        false
-                    );
-
-                }
-            );
-
-
-            /*
-            * 이전곡
-            */
-
-            navigator.mediaSession.setActionHandler(
-                'previoustrack',
-                () => {
-
-                    previousSong();
-
-                }
-            );
-
-
-            /*
-            * 앞으로 이동
-            */
-
             try {
+
+                navigator.mediaSession.setActionHandler(
+                    'play',
+                    async () => {
+
+                        const audio =
+                            audioRef.current;
+
+
+                        if (
+                            !audio
+                        ) {
+                            return;
+                        }
+
+
+                        try {
+
+                            await audio.play();
+
+                        } catch (e) {
+
+                            console.error(
+                                e
+                            );
+
+                        }
+
+                    }
+                );
+
+
+                navigator.mediaSession.setActionHandler(
+                    'pause',
+                    () => {
+
+                        audioRef
+                            .current
+                            ?.pause();
+
+                    }
+                );
+
+
+                navigator.mediaSession.setActionHandler(
+                    'nexttrack',
+                    () => {
+
+                        void nextSong();
+
+                    }
+                );
+
+
+                navigator.mediaSession.setActionHandler(
+                    'previoustrack',
+                    () => {
+
+                        void previousSong();
+
+                    }
+                );
+
 
                 navigator.mediaSession.setActionHandler(
                     'seekto',
@@ -734,10 +1801,13 @@ export default function PlaylistPlayer({
 
                         if (
                             !audio ||
-                            details.seekTime ==
-                            null
+                            details
+                                .seekTime ==
+                                null
                         ) {
+
                             return;
+
                         }
 
 
@@ -747,10 +1817,11 @@ export default function PlaylistPlayer({
                     }
                 );
 
+
             } catch (e) {
 
                 console.log(
-                    'seekto unsupported',
+                    'MediaSession unsupported:',
                     e
                 );
 
@@ -786,87 +1857,30 @@ export default function PlaylistPlayer({
                         null
                     );
 
-                } catch (e) {
-
-                    console.log(
-                        e
-                    );
-
-                }
+                } catch {}
 
             };
 
         },
-        [
-            playlist,
-            currentSlug,
-            repeatMode,
-            shuffle
-        ]
+        []
     );
 
-    /*
-    * ==========================================
-    * 잠금화면 곡 정보
-    * ==========================================
-    */
 
-    useEffect(
-        () => {
-
-            if (
-                typeof navigator ===
-                'undefined' ||
-                !(
-                    'mediaSession'
-                    in navigator
-                ) ||
-                !currentSong
-            ) {
-                return;
-            }
-
-
-            try {
-
-                navigator.mediaSession.metadata =
-                    new MediaMetadata({
-                        title:
-                            currentSong.title ||
-                            'Dear Sunshine',
-
-                        artist:
-                            'Dear Sunshine',
-
-                        album:
-                            currentSong.program ||
-                            'Dear Sunshine 음원 어플'
-                    });
-
-            } catch (e) {
-
-                console.log(
-                    'MediaMetadata unsupported',
-                    e
-                );
-
-            }
-
-        },
-        [
-            currentSong
-        ]
-    );
 
     /*
-     * ==========================================
-     * 플레이 / 일시정지
-     * ==========================================
+     * =================================================
+     * PLAY / PAUSE
+     * =================================================
      */
+
     async function togglePlay() {
 
+        const list =
+            playlistRef.current;
+
+
         if (
-            playlist.length ===
+            list.length ===
             0
         ) {
 
@@ -885,26 +1899,33 @@ export default function PlaylistPlayer({
         }
 
 
+        const audio =
+            audioRef.current;
+
+
         if (
-            !currentSong
+            !audio
         ) {
-
-            await playSong(
-                playlist[0]
-            );
-
 
             return;
 
         }
 
 
-        const audio =
-            audioRef.current;
+        /*
+         * 아직 시작곡 없음
+         */
+        if (
+            !currentSlugRef.current
+        ) {
+
+            await playSong(
+                list[0]
+            );
 
 
-        if (!audio) {
             return;
+
         }
 
 
@@ -922,6 +1943,7 @@ export default function PlaylistPlayer({
 
             }
 
+
         } catch (e) {
 
             console.error(
@@ -935,34 +1957,44 @@ export default function PlaylistPlayer({
 
 
     /*
-     * ==========================================
-     * 반복 버튼
-     *
-     * 전체 → 한곡 → 끄기 → 전체
-     * ==========================================
+     * =================================================
+     * 반복
+     * =================================================
      */
+
     function changeRepeatMode() {
 
         setRepeatMode(
             previous => {
 
+                let next =
+                    'all';
+
+
                 if (
                     previous ===
                     'all'
                 ) {
-                    return 'one';
-                }
 
+                    next =
+                        'one';
 
-                if (
+                } else if (
                     previous ===
                     'one'
                 ) {
-                    return 'off';
+
+                    next =
+                        'off';
+
                 }
 
 
-                return 'all';
+                repeatModeRef.current =
+                    next;
+
+
+                return next;
 
             }
         );
@@ -972,15 +2004,27 @@ export default function PlaylistPlayer({
 
 
     /*
-     * ==========================================
+     * =================================================
      * 셔플
-     * ==========================================
+     * =================================================
      */
+
     function toggleShuffle() {
 
         setShuffle(
-            previous =>
-                !previous
+            previous => {
+
+                const next =
+                    !previous;
+
+
+                shuffleRef.current =
+                    next;
+
+
+                return next;
+
+            }
         );
 
     }
@@ -988,215 +2032,20 @@ export default function PlaylistPlayer({
 
 
     /*
-     * 현재곡 index
+     * =================================================
+     * 다음곡 버튼
+     * =================================================
      */
-    function getCurrentIndex() {
 
-        return playlist.findIndex(
-            song =>
-                song.slug ===
-                currentSlug
-        );
+    async function nextSong() {
 
-    }
-
-
-
-    /*
-     * ==========================================
-     * 랜덤곡
-     * ==========================================
-     */
-    function getRandomSong() {
-
-        if (
-            playlist.length ===
-            0
-        ) {
-            return null;
-        }
+        const next =
+            getNextSongFromRefs();
 
 
         if (
-            playlist.length ===
-            1
+            !next
         ) {
-            return playlist[0];
-        }
-
-
-        const candidates =
-            playlist.filter(
-                song =>
-                    song.slug !==
-                    currentSlug
-            );
-
-
-        const index =
-            Math.floor(
-                Math.random() *
-                candidates.length
-            );
-
-
-        return candidates[
-            index
-        ];
-
-    }
-
-
-
-    /*
-     * ==========================================
-     * 다음곡
-     * ==========================================
-     */
-    async function nextSong(
-        fromEnded = false
-    ) {
-
-        if (
-            playlist.length ===
-            0
-        ) {
-            return;
-        }
-
-
-        /*
-         * 한곡 반복
-         */
-        if (
-            repeatMode ===
-            'one'
-        ) {
-
-            const audio =
-                audioRef.current;
-
-
-            if (audio) {
-
-                audio.currentTime =
-                    0;
-
-
-                try {
-
-                    await audio.play();
-
-                } catch (e) {
-
-                    console.error(
-                        e
-                    );
-
-                }
-
-            }
-
-
-            return;
-
-        }
-
-
-        /*
-         * 셔플
-         */
-        if (
-            shuffle
-        ) {
-
-            const randomSong =
-                getRandomSong();
-
-
-            if (randomSong) {
-
-                await playSong(
-                    randomSong
-                );
-
-            }
-
-
-            return;
-
-        }
-
-
-        const currentIndex =
-            getCurrentIndex();
-
-
-        /*
-         * 아직 선택된 곡 없음
-         */
-        if (
-            currentIndex < 0
-        ) {
-
-            await playSong(
-                playlist[0]
-            );
-
-
-            return;
-
-        }
-
-
-        /*
-         * 마지막곡
-         */
-        if (
-            currentIndex ===
-            playlist.length - 1
-        ) {
-
-            if (
-                repeatMode ===
-                'all'
-            ) {
-
-                await playSong(
-                    playlist[0]
-                );
-
-
-                return;
-
-            }
-
-
-            /*
-             * 반복 꺼짐
-             */
-            if (
-                fromEnded
-            ) {
-
-                setPlaying(
-                    false
-                );
-
-
-                return;
-
-            }
-
-
-            /*
-             * 다음 버튼 직접 클릭 시
-             * 첫 곡으로 이동
-             */
-            await playSong(
-                playlist[0]
-            );
-
 
             return;
 
@@ -1204,9 +2053,7 @@ export default function PlaylistPlayer({
 
 
         await playSong(
-            playlist[
-                currentIndex + 1
-            ]
+            next
         );
 
     }
@@ -1214,59 +2061,20 @@ export default function PlaylistPlayer({
 
 
     /*
-     * ==========================================
-     * 이전곡
-     * ==========================================
+     * =================================================
+     * 이전곡 버튼
+     * =================================================
      */
+
     async function previousSong() {
 
-        if (
-            playlist.length ===
-            0
-        ) {
-            return;
-        }
-
-
-        /*
-         * 셔플일 때 랜덤
-         */
-        if (
-            shuffle
-        ) {
-
-            const randomSong =
-                getRandomSong();
-
-
-            if (randomSong) {
-
-                await playSong(
-                    randomSong
-                );
-
-            }
-
-
-            return;
-
-        }
-
-
-        const currentIndex =
-            getCurrentIndex();
+        const previous =
+            getPreviousSongFromRefs();
 
 
         if (
-            currentIndex <= 0
+            !previous
         ) {
-
-            await playSong(
-                playlist[
-                    playlist.length - 1
-                ]
-            );
-
 
             return;
 
@@ -1274,9 +2082,7 @@ export default function PlaylistPlayer({
 
 
         await playSong(
-            playlist[
-                currentIndex - 1
-            ]
+            previous
         );
 
     }
@@ -1284,25 +2090,11 @@ export default function PlaylistPlayer({
 
 
     /*
-     * ==========================================
-     * 곡이 끝났을 때
-     * ==========================================
+     * =================================================
+     * 곡 추가 선택
+     * =================================================
      */
-    async function handleEnded() {
 
-        await nextSong(
-            true
-        );
-
-    }
-
-
-
-    /*
-     * ==========================================
-     * 추가할 곡 선택
-     * ==========================================
-     */
     function toggleSelected(
         slug
     ) {
@@ -1318,7 +2110,8 @@ export default function PlaylistPlayer({
 
                     return previous.filter(
                         item =>
-                            item !== slug
+                            item !==
+                            slug
                     );
 
                 }
@@ -1337,13 +2130,11 @@ export default function PlaylistPlayer({
 
 
     /*
-     * ==========================================
-     * 플레이리스트에 추가
-     *
-     * 기존 목록은 유지하고
-     * 중복되지 않는 곡만 뒤에 추가
-     * ==========================================
+     * =================================================
+     * 플레이리스트 추가용
+     * =================================================
      */
+
     function buildAddedPlaylist() {
 
         if (
@@ -1371,7 +2162,7 @@ export default function PlaylistPlayer({
 
 
         const existingSlugs =
-            playlist.map(
+            playlistRef.current.map(
                 song =>
                     song.slug
             );
@@ -1386,11 +2177,17 @@ export default function PlaylistPlayer({
             );
 
 
-        const nextPlaylist =
-            [
-                ...playlist,
-                ...newSongs
-            ];
+        const nextPlaylist = [
+            ...playlistRef.current,
+            ...newSongs
+        ];
+
+
+        /*
+         * ref를 먼저 변경
+         */
+        playlistRef.current =
+            nextPlaylist;
 
 
         setError(
@@ -1408,16 +2205,23 @@ export default function PlaylistPlayer({
 
 
     /*
-     * 담기만
+     * =================================================
+     * 담기
+     * =================================================
      */
+
     function addOnly() {
 
         const result =
             buildAddedPlaylist();
 
 
-        if (!result) {
+        if (
+            !result
+        ) {
+
             return;
+
         }
 
 
@@ -1435,21 +2239,41 @@ export default function PlaylistPlayer({
             false
         );
 
+
+        /*
+         * 기존 재생중이면
+         * 다음곡 준비 갱신
+         */
+        if (
+            currentSlugRef.current
+        ) {
+
+            void prepareNextSong();
+
+        }
+
     }
 
 
 
     /*
-     * 담고 바로 재생
+     * =================================================
+     * 담고 재생
+     * =================================================
      */
+
     async function addAndPlay() {
 
         const result =
             buildAddedPlaylist();
 
 
-        if (!result) {
+        if (
+            !result
+        ) {
+
             return;
+
         }
 
 
@@ -1469,12 +2293,17 @@ export default function PlaylistPlayer({
 
 
         if (
-            result.selectedSongs.length >
+            result
+                .selectedSongs
+                .length >
             0
         ) {
 
             await playSong(
-                result.selectedSongs[0]
+                result
+                    .selectedSongs[
+                    0
+                ]
             );
 
         }
@@ -1484,16 +2313,21 @@ export default function PlaylistPlayer({
 
 
     /*
-     * ==========================================
-     * 플레이리스트에서 삭제
-     * ==========================================
+     * =================================================
+     * 플레이리스트 삭제
+     * =================================================
      */
+
     async function removeFromPlaylist(
         slug
     ) {
 
+        const oldList =
+            playlistRef.current;
+
+
         const removeIndex =
-            playlist.findIndex(
+            oldList.findIndex(
                 song =>
                     song.slug ===
                     slug
@@ -1502,15 +2336,22 @@ export default function PlaylistPlayer({
 
         const wasCurrent =
             slug ===
-            currentSlug;
+            currentSlugRef.current;
 
 
         const nextPlaylist =
-            playlist.filter(
+            oldList.filter(
                 song =>
                     song.slug !==
                     slug
             );
+
+
+        /*
+         * ref 먼저
+         */
+        playlistRef.current =
+            nextPlaylist;
 
 
         setPlaylist(
@@ -1518,34 +2359,65 @@ export default function PlaylistPlayer({
         );
 
 
-        if (!wasCurrent) {
+        /*
+         * 재생곡 아닌 경우
+         */
+        if (
+            !wasCurrent
+        ) {
+
+            void prepareNextSong();
+
             return;
+
         }
 
 
         /*
-         * 전부 삭제됨
+         * 전부 삭제
          */
         if (
             nextPlaylist.length ===
             0
         ) {
 
+            const audio =
+                audioRef.current;
+
+
             if (
-                audioRef.current
+                audio
             ) {
 
-                audioRef.current.pause();
+                audio.pause();
+
+                audio.removeAttribute(
+                    'src'
+                );
+
+                audio.load();
 
             }
 
 
+            currentSlugRef.current =
+                '';
+
+
+            currentAudioUrlRef.current =
+                '';
+
+
+            preparedNextRef.current = {
+                slug:
+                    '',
+
+                url:
+                    ''
+            };
+
+
             setCurrentSlug(
-                ''
-            );
-
-
-            setAudioUrl(
                 ''
             );
 
@@ -1571,11 +2443,11 @@ export default function PlaylistPlayer({
 
 
         /*
-         * 삭제한 곡 다음 위치 재생
+         * 삭제된 곡 다음 위치 재생
          */
         const nextIndex =
             removeIndex >=
-            nextPlaylist.length
+                nextPlaylist.length
                 ? 0
                 : removeIndex;
 
@@ -1591,10 +2463,11 @@ export default function PlaylistPlayer({
 
 
     /*
-     * ==========================================
-     * 재생 위치 변경
-     * ==========================================
+     * =================================================
+     * SEEK
+     * =================================================
      */
+
     function seekAudio(
         e
     ) {
@@ -1605,11 +2478,15 @@ export default function PlaylistPlayer({
             );
 
 
+        const audio =
+            audioRef.current;
+
+
         if (
-            audioRef.current
+            audio
         ) {
 
-            audioRef.current.currentTime =
+            audio.currentTime =
                 value;
 
         }
@@ -1624,10 +2501,11 @@ export default function PlaylistPlayer({
 
 
     /*
-     * ==========================================
-     * 시간 표시
-     * ==========================================
+     * =================================================
+     * TIME
+     * =================================================
      */
+
     function formatTime(
         seconds
     ) {
@@ -1637,7 +2515,9 @@ export default function PlaylistPlayer({
                 seconds
             )
         ) {
+
             return '0:00';
+
         }
 
 
@@ -1667,8 +2547,11 @@ export default function PlaylistPlayer({
 
 
     /*
-     * 반복 아이콘
+     * =================================================
+     * 반복 표시
+     * =================================================
      */
+
     const repeatIcon =
         repeatMode ===
         'one'
@@ -1687,6 +2570,12 @@ export default function PlaylistPlayer({
 
 
 
+    /*
+     * =================================================
+     * RENDER
+     * =================================================
+     */
+
     return (
 
         <div
@@ -1696,56 +2585,28 @@ export default function PlaylistPlayer({
             }}
         >
 
-            {/* ==================================
-                실제 AUDIO
-            =================================== */}
+            {/*
+             * ==========================================
+             * 실제 AUDIO
+             *
+             * src를 React prop으로 제어하지 않는다.
+             * ==========================================
+             */}
 
             <audio
                 ref={
                     audioRef
                 }
-                src={
-                    audioUrl ||
-                    undefined
-                }
                 preload="auto"
-
-                onPlay={() =>
-                    setPlaying(
-                        true
-                    )
-                }
-
-                onPause={() =>
-                    setPlaying(
-                        false
-                    )
-                }
-
-                onLoadedMetadata={e =>
-                    setDuration(
-                        e.currentTarget.duration ||
-                        0
-                    )
-                }
-
-                onTimeUpdate={e =>
-                    setCurrentTime(
-                        e.currentTarget.currentTime ||
-                        0
-                    )
-                }
-
-                onEnded={
-                    handleEnded
-                }
             />
 
 
 
-            {/* ==================================
-                PLAYER
-            =================================== */}
+            {/*
+             * ==========================================
+             * PLAYER
+             * ==========================================
+             */}
 
             <div
                 style={{
@@ -1766,7 +2627,9 @@ export default function PlaylistPlayer({
                 }}
             >
 
-                {/* 앨범 이미지 느낌 */}
+                {/*
+                 * 앨범 이미지
+                 */}
 
                 <div
                     style={{
@@ -1804,6 +2667,11 @@ export default function PlaylistPlayer({
                     }
                 </div>
 
+
+
+                {/*
+                 * 곡 제목
+                 */}
 
                 <div
                     style={{
@@ -1867,7 +2735,9 @@ export default function PlaylistPlayer({
 
 
 
-                {/* 진행바 */}
+                {/*
+                 * 진행바
+                 */}
 
                 <input
                     type="range"
@@ -1921,6 +2791,7 @@ export default function PlaylistPlayer({
                             11
                     }}
                 >
+
                     <span>
                         {
                             formatTime(
@@ -1929,6 +2800,7 @@ export default function PlaylistPlayer({
                         }
                     </span>
 
+
                     <span>
                         {
                             formatTime(
@@ -1936,11 +2808,14 @@ export default function PlaylistPlayer({
                             )
                         }
                     </span>
+
                 </div>
 
 
 
-                {/* 컨트롤 */}
+                {/*
+                 * 컨트롤
+                 */}
 
                 <div
                     style={{
@@ -1961,7 +2836,9 @@ export default function PlaylistPlayer({
                     }}
                 >
 
-                    {/* 반복 */}
+                    {/*
+                     * 반복
+                     */}
 
                     <button
                         type="button"
@@ -2018,7 +2895,9 @@ export default function PlaylistPlayer({
 
 
 
-                    {/* 이전 */}
+                    {/*
+                     * 이전
+                     */}
 
                     <ControlButton
                         onClick={
@@ -2030,7 +2909,9 @@ export default function PlaylistPlayer({
 
 
 
-                    {/* 재생 */}
+                    {/*
+                     * 재생
+                     */}
 
                     <button
                         type="button"
@@ -2092,13 +2973,13 @@ export default function PlaylistPlayer({
 
 
 
-                    {/* 다음 */}
+                    {/*
+                     * 다음
+                     */}
 
                     <ControlButton
-                        onClick={() =>
-                            nextSong(
-                                false
-                            )
+                        onClick={
+                            nextSong
                         }
                     >
                         ⏭
@@ -2106,7 +2987,9 @@ export default function PlaylistPlayer({
 
 
 
-                    {/* 셔플 */}
+                    {/*
+                     * 셔플
+                     */}
 
                     <button
                         type="button"
@@ -2163,9 +3046,11 @@ export default function PlaylistPlayer({
 
 
 
-            {/* ==================================
-                PLAYLIST HEADER
-            =================================== */}
+            {/*
+             * ==========================================
+             * PLAYLIST HEADER
+             * ==========================================
+             */}
 
             <div
                 style={{
@@ -2225,6 +3110,7 @@ export default function PlaylistPlayer({
                 </div>
 
 
+
                 <button
                     type="button"
                     onClick={() => {
@@ -2269,9 +3155,11 @@ export default function PlaylistPlayer({
 
 
 
-            {/* ==================================
-                PLAYLIST LIST
-            =================================== */}
+            {/*
+             * ==========================================
+             * PLAYLIST
+             * ==========================================
+             */}
 
             <div
                 style={{
@@ -2305,6 +3193,7 @@ export default function PlaylistPlayer({
                                     '#9d9186'
                             }}
                         >
+
                             <div
                                 style={{
                                     fontSize:
@@ -2317,8 +3206,11 @@ export default function PlaylistPlayer({
                                 🎶
                             </div>
 
+
                             아직 담긴 노래가 없어요.
+
                             <br />
+
 
                             <button
                                 type="button"
@@ -2349,6 +3241,7 @@ export default function PlaylistPlayer({
                             >
                                 노래 추가하기
                             </button>
+
                         </div>
 
                     ) : (
@@ -2538,6 +3431,7 @@ export default function PlaylistPlayer({
                                         </button>
 
 
+
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -2589,9 +3483,11 @@ export default function PlaylistPlayer({
 
 
 
-            {/* ==================================
-                곡 추가 창
-            =================================== */}
+            {/*
+             * ==========================================
+             * 곡 추가
+             * ==========================================
+             */}
 
             {
                 addOpen && (
@@ -2672,6 +3568,7 @@ export default function PlaylistPlayer({
                             </button>
 
                         </div>
+
 
 
                         <p
@@ -2980,6 +3877,7 @@ export default function PlaylistPlayer({
                             </button>
 
 
+
                             <button
                                 type="button"
                                 onClick={
@@ -3010,6 +3908,7 @@ export default function PlaylistPlayer({
                             >
                                 담기
                             </button>
+
 
 
                             <button
@@ -3052,31 +3951,40 @@ export default function PlaylistPlayer({
 
 
 
-            {error && (
+            {
+                error && (
 
-                <p
-                    style={{
-                        margin:
-                            '10px 2px 0',
+                    <p
+                        style={{
+                            margin:
+                                '10px 2px 0',
 
-                        color:
-                            '#bd3d3d',
+                            color:
+                                '#bd3d3d',
 
-                        fontSize:
-                            13
-                    }}
-                >
-                    {error}
-                </p>
+                            fontSize:
+                                13
+                        }}
+                    >
+                        {error}
+                    </p>
 
-            )}
+                )
+            }
 
         </div>
 
     );
+
 }
 
 
+
+/*
+ * =====================================================
+ * Control Button
+ * =====================================================
+ */
 
 function ControlButton({
     onClick,
@@ -3114,4 +4022,5 @@ function ControlButton({
         </button>
 
     );
+
 }
