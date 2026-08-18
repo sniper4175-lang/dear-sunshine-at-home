@@ -1,6 +1,6 @@
 {
-  "name": "Dear Sunshine at Home",
-  "short_name": "Dear Sunshine",
+  "name": "Dear Sunshine Play",
+  "short_name": "Sunshine Play",
   "description": "디어 선샤인의 영어노래와 놀이를 집에서도 자연스럽게 이어가요.",
   "start_url": "/",
   "scope": "/",
