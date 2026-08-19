@@ -2,26 +2,23 @@ import "./globals.css";
 import BottomNav from "../components/BottomNav";
 
 export const metadata = {
-  title: "Dear Sunshine Play",
+  title: "Dear Sunshine Song Play",
 
   description:
     "디어 선샤인의 영어노래와 놀이를 집에서도 자연스럽게 이어가요.",
 
   manifest: "/manifest.webmanifest",
 
-  applicationName: "Dear Sunshine Play",
+  applicationName: "Dear Sunshine Song Play",
 
   icons: {
     icon: "/Dear_Sunshine_logo.png",
-
     apple: "/Dear_Sunshine_logo.png",
   },
 
   appleWebApp: {
     capable: true,
-
-    title: "Sunshine Play",
-
+    title: "Sunshine Song Play",
     statusBarStyle: "default",
   },
 };
