@@ -57,7 +57,7 @@ export default async function SongPage({ params }) {
     lockedTitle = "로그인 후 들을 수 있어요";
 
     lockedDescription =
-      "Dear Sunshine at Home에 로그인하면 이용 가능한 음원을 확인할 수 있어요.";
+      "DEAR SUNSHINE SONG PLAY에 로그인하면 이용 가능한 음원을 확인할 수 있어요.";
 
     lockedButton = "로그인하기";
 
@@ -202,7 +202,7 @@ export default async function SongPage({ params }) {
           {song.activities &&
             song.activities.length > 0 && (
               <section className="content-card">
-                <p className="eyebrow">PLAY AT HOME</p>
+                <p className="eyebrow">Song Play</p>
 
                 <h2>이 노래로 놀아요</h2>
 

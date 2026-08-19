@@ -341,7 +341,7 @@ export default function ResetPasswordPage() {
 
 
                 <p className="eyebrow">
-                    DEAR SUNSHINE AT HOME
+                    DEAR SUNSHINE SONG PLAY
                 </p>
 
 

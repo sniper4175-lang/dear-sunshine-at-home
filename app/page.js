@@ -178,7 +178,7 @@ export default async function HomePage() {
 
 
                 <p className="eyebrow">
-                    DEAR SUNSHINE AT HOME
+                    DEAR SUNSHINE SONG PLAY
                 </p>
 
 
