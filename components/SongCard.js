@@ -57,7 +57,7 @@ export default function SongCard({
 
 
         /*
-         * Song Play 멤버십 없음
+         * Song Club 멤버십 없음
          */
         if (
             !membership

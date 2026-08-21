@@ -230,7 +230,7 @@ export default function SignupPage() {
 
 
                 <p className="eyebrow">
-                    DEAR SUNSHINE SONG PLAY
+                    DEAR SUNSHINE SONG CLUB
                 </p>
 
 

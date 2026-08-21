@@ -240,7 +240,7 @@ export default function MyPageClient({
                         color: '#8d8175'
                     }}
                 >
-                    DEAR SUNSHINE SONG PLAY 회원
+                    DEAR SUNSHINE SONG CLUB 회원
                 </p>
 
             </section>
