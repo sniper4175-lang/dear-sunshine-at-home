@@ -57,7 +57,7 @@ export default async function SongPage({ params }) {
     lockedTitle = "로그인 후 들을 수 있어요";
 
     lockedDescription =
-      "DEAR SUNSHINE SONG CLUB에 로그인하면 이용 가능한 음원을 확인할 수 있어요.";
+      "DEAR SUNSHINE Song Club에 로그인하면 이용 가능한 음원을 확인할 수 있어요.";
 
     lockedButton = "로그인하기";
 
