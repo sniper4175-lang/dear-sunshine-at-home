@@ -1,4 +1,4 @@
-# DEAR SUNSHINE SONG PLAY — MVP
+# DEAR SUNSHINE Song Club — MVP
 
 디어 선샤인 영어노래 멤버십의 첫 번째 웹앱 MVP입니다.
 
