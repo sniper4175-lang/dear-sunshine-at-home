@@ -123,6 +123,62 @@ export default function PlaylistPlayer({
 
 
     const [
+        draggedSlug,
+        setDraggedSlug
+    ] =
+        useState('');
+
+
+    const [
+        favorites,
+        setFavorites
+    ] =
+        useState([]);
+
+
+    const [
+        recentSlugs,
+        setRecentSlugs
+    ] =
+        useState([]);
+
+
+    const [
+        savedPlaylists,
+        setSavedPlaylists
+    ] =
+        useState([]);
+
+
+    const [
+        songView,
+        setSongView
+    ] =
+        useState('all');
+
+
+    const [
+        playlistSelectMode,
+        setPlaylistSelectMode
+    ] =
+        useState(false);
+
+
+    const [
+        selectedPlaylistSlugs,
+        setSelectedPlaylistSlugs
+    ] =
+        useState([]);
+
+
+    const [
+        durationMap,
+        setDurationMap
+    ] =
+        useState({});
+
+
+    const [
         currentTime,
         setCurrentTime
     ] =
@@ -266,6 +322,163 @@ export default function PlaylistPlayer({
 
     /*
      * =================================================
+     * 사용자 플레이리스트 설정 저장
+     * - 즐겨찾기
+     * - 최근 재생
+     * - 저장한 플레이리스트
+     * =================================================
+     */
+
+    useEffect(
+        () => {
+
+            try {
+
+                const storedFavorites =
+                    JSON.parse(
+                        localStorage.getItem(
+                            'dear-sunshine-favorites'
+                        ) ||
+                        '[]'
+                    );
+
+
+                const storedRecent =
+                    JSON.parse(
+                        localStorage.getItem(
+                            'dear-sunshine-recent'
+                        ) ||
+                        '[]'
+                    );
+
+
+                const storedPlaylists =
+                    JSON.parse(
+                        localStorage.getItem(
+                            'dear-sunshine-saved-playlists'
+                        ) ||
+                        '[]'
+                    );
+
+
+                if (
+                    Array.isArray(
+                        storedFavorites
+                    )
+                ) {
+
+                    setFavorites(
+                        storedFavorites
+                    );
+
+                }
+
+
+                if (
+                    Array.isArray(
+                        storedRecent
+                    )
+                ) {
+
+                    setRecentSlugs(
+                        storedRecent
+                    );
+
+                }
+
+
+                if (
+                    Array.isArray(
+                        storedPlaylists
+                    )
+                ) {
+
+                    setSavedPlaylists(
+                        storedPlaylists
+                    );
+
+                }
+
+            } catch (e) {
+
+                console.log(
+                    'playlist local storage load:',
+                    e
+                );
+
+            }
+
+        },
+        []
+    );
+
+
+    useEffect(
+        () => {
+
+            try {
+
+                localStorage.setItem(
+                    'dear-sunshine-favorites',
+                    JSON.stringify(
+                        favorites
+                    )
+                );
+
+            } catch {}
+
+        },
+        [
+            favorites
+        ]
+    );
+
+
+    useEffect(
+        () => {
+
+            try {
+
+                localStorage.setItem(
+                    'dear-sunshine-recent',
+                    JSON.stringify(
+                        recentSlugs
+                    )
+                );
+
+            } catch {}
+
+        },
+        [
+            recentSlugs
+        ]
+    );
+
+
+    useEffect(
+        () => {
+
+            try {
+
+                localStorage.setItem(
+                    'dear-sunshine-saved-playlists',
+                    JSON.stringify(
+                        savedPlaylists
+                    )
+                );
+
+            } catch {}
+
+        },
+        [
+            savedPlaylists
+        ]
+    );
+
+
+
+    /*
+     * =================================================
      * 현재 이용 가능한 곡
      * =================================================
      */
@@ -309,6 +522,20 @@ export default function PlaylistPlayer({
                         programFilter;
 
 
+                const matchesSongView =
+                    songView ===
+                        'favorites'
+                        ? favorites.includes(
+                            song.slug
+                        )
+                        : songView ===
+                            'recent'
+                            ? recentSlugs.includes(
+                                song.slug
+                            )
+                            : true;
+
+
                 const haystack =
                     `${song.title || ''} ${song.program || ''}`
                         .toLowerCase();
@@ -323,6 +550,7 @@ export default function PlaylistPlayer({
 
                 return (
                     matchesProgram &&
+                    matchesSongView &&
                     matchesSearch
                 );
 
@@ -375,6 +603,125 @@ export default function PlaylistPlayer({
                 currentSlug
         ) ||
         null;
+
+
+    const nextSongPreview = (() => {
+
+        if (
+            playlist.length ===
+            0
+        ) {
+
+            return null;
+
+        }
+
+
+        if (
+            repeatMode ===
+            'one'
+        ) {
+
+            return (
+                currentSong ||
+                playlist[0]
+            );
+
+        }
+
+
+        if (
+            shuffle
+        ) {
+
+            return null;
+
+        }
+
+
+        const index =
+            playlist.findIndex(
+                song =>
+                    song.slug ===
+                    currentSlug
+            );
+
+
+        if (
+            index < 0
+        ) {
+
+            return playlist[0];
+
+        }
+
+
+        if (
+            index ===
+            playlist.length - 1
+        ) {
+
+            return repeatMode ===
+                'all'
+                ? playlist[0]
+                : null;
+
+        }
+
+
+        return (
+            playlist[
+                index + 1
+            ] ||
+            null
+        );
+
+    })();
+
+
+    const totalPlaylistDuration =
+        playlist.reduce(
+            (
+                sum,
+                song
+            ) =>
+                sum +
+                (
+                    Number(
+                        durationMap[
+                            song.slug
+                        ]
+                    ) ||
+                    Number(
+                        song.durationSeconds
+                    ) ||
+                    Number(
+                        song.duration
+                    ) ||
+                    0
+                ),
+            0
+        );
+
+
+    const knownPlaylistDurationCount =
+        playlist.filter(
+            song =>
+                Number(
+                    durationMap[
+                        song.slug
+                    ]
+                ) >
+                    0 ||
+                Number(
+                    song.durationSeconds
+                ) >
+                    0 ||
+                Number(
+                    song.duration
+                ) >
+                    0
+        ).length;
 
 
 
@@ -1150,6 +1497,21 @@ export default function PlaylistPlayer({
             );
 
 
+            setRecentSlugs(
+                previous => [
+                    song.slug,
+                    ...previous.filter(
+                        slug =>
+                            slug !==
+                            song.slug
+                    )
+                ].slice(
+                    0,
+                    10
+                )
+            );
+
+
             /*
              * 다음 곡 미리 준비
              *
@@ -1508,6 +1870,21 @@ export default function PlaylistPlayer({
                 );
 
 
+                setRecentSlugs(
+                    previous => [
+                        nextSong.slug,
+                        ...previous.filter(
+                            slug =>
+                                slug !==
+                                nextSong.slug
+                        )
+                    ].slice(
+                        0,
+                        10
+                    )
+                );
+
+
                 /*
                  * 다음 다음 곡 준비
                  */
@@ -1630,13 +2007,36 @@ export default function PlaylistPlayer({
             const handleMetadata =
                 () => {
 
-                    setDuration(
+                    const seconds =
                         Number.isFinite(
                             audio.duration
                         )
                             ? audio.duration
-                            : 0
+                            : 0;
+
+
+                    setDuration(
+                        seconds
                     );
+
+
+                    if (
+                        currentSlugRef.current &&
+                        seconds >
+                            0
+                    ) {
+
+                        setDurationMap(
+                            previous => ({
+                                ...previous,
+                                [
+                                    currentSlugRef.current
+                                ]:
+                                    seconds
+                            })
+                        );
+
+                    }
 
                 };
 
@@ -1717,6 +2117,198 @@ export default function PlaylistPlayer({
 
         },
         []
+    );
+
+
+
+    /*
+     * =================================================
+     * 플레이리스트 총 재생시간 계산
+     *
+     * 아직 길이를 모르는 곡만 metadata를 확인한다.
+     * =================================================
+     */
+
+    useEffect(
+        () => {
+
+            let cancelled =
+                false;
+
+
+            async function loadMissingDurations() {
+
+                for (
+                    const song
+                    of playlist
+                ) {
+
+                    if (
+                        cancelled
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    if (
+                        Number(
+                            durationMap[
+                                song.slug
+                            ]
+                        ) >
+                            0 ||
+                        Number(
+                            song.durationSeconds
+                        ) >
+                            0 ||
+                        Number(
+                            song.duration
+                        ) >
+                            0
+                    ) {
+
+                        continue;
+
+                    }
+
+
+                    const url =
+                        await getAudioUrl(
+                            song.slug,
+                            false
+                        );
+
+
+                    if (
+                        !url ||
+                        cancelled
+                    ) {
+
+                        continue;
+
+                    }
+
+
+                    await new Promise(
+                        resolve => {
+
+                            const probe =
+                                new Audio();
+
+
+                            let finished =
+                                false;
+
+
+                            const finish =
+                                () => {
+
+                                    if (
+                                        finished
+                                    ) {
+
+                                        return;
+
+                                    }
+
+
+                                    finished =
+                                        true;
+
+
+                                    probe.removeAttribute(
+                                        'src'
+                                    );
+
+
+                                    resolve();
+
+                                };
+
+
+                            probe.preload =
+                                'metadata';
+
+
+                            probe.onloadedmetadata =
+                                () => {
+
+                                    const seconds =
+                                        Number.isFinite(
+                                            probe.duration
+                                        )
+                                            ? probe.duration
+                                            : 0;
+
+
+                                    if (
+                                        !cancelled &&
+                                        seconds >
+                                            0
+                                    ) {
+
+                                        setDurationMap(
+                                            previous => ({
+                                                ...previous,
+                                                [
+                                                    song.slug
+                                                ]:
+                                                    seconds
+                                            })
+                                        );
+
+                                    }
+
+
+                                    finish();
+
+                                };
+
+
+                            probe.onerror =
+                                finish;
+
+
+                            probe.src =
+                                url;
+
+
+                            window.setTimeout(
+                                finish,
+                                7000
+                            );
+
+                        }
+                    );
+
+                }
+
+            }
+
+
+            if (
+                playlist.length >
+                0
+            ) {
+
+                void loadMissingDurations();
+
+            }
+
+
+            return () => {
+
+                cancelled =
+                    true;
+
+            };
+
+        },
+        [
+            playlist
+        ]
     );
 
 
@@ -2426,6 +3018,11 @@ export default function PlaylistPlayer({
         );
 
 
+        setSongView(
+            'all'
+        );
+
+
         setAddOpen(
             false
         );
@@ -2488,6 +3085,11 @@ export default function PlaylistPlayer({
         );
 
 
+        setSongView(
+            'all'
+        );
+
+
         setAddOpen(
             false
         );
@@ -2508,6 +3110,615 @@ export default function PlaylistPlayer({
             );
 
         }
+
+    }
+
+
+
+    /*
+     * =================================================
+     * 즐겨찾기 / 저장 플레이리스트 / 선택 삭제
+     * =================================================
+     */
+
+    function toggleFavorite(
+        slug
+    ) {
+
+        setFavorites(
+            previous =>
+                previous.includes(
+                    slug
+                )
+                    ? previous.filter(
+                        item =>
+                            item !==
+                            slug
+                    )
+                    : [
+                        ...previous,
+                        slug
+                    ]
+        );
+
+    }
+
+
+
+    function saveCurrentPlaylist() {
+
+        if (
+            playlistRef.current.length ===
+            0
+        ) {
+
+            setError(
+                '저장할 플레이리스트가 없어요.'
+            );
+
+            return;
+
+        }
+
+
+        const name =
+            typeof window ===
+                'undefined'
+                ? ''
+                : window.prompt(
+                    '플레이리스트 이름을 입력해주세요.',
+                    `My Playlist ${savedPlaylists.length + 1}`
+                );
+
+
+        if (
+            !name?.trim()
+        ) {
+
+            return;
+
+        }
+
+
+        const item = {
+            id:
+                `${Date.now()}-${Math.random()
+                    .toString(36)
+                    .slice(2, 8)}`,
+
+            name:
+                name.trim(),
+
+            slugs:
+                playlistRef.current.map(
+                    song =>
+                        song.slug
+                )
+        };
+
+
+        setSavedPlaylists(
+            previous => [
+                item,
+                ...previous
+            ]
+        );
+
+
+        setError(
+            ''
+        );
+
+    }
+
+
+
+    async function loadSavedPlaylist(
+        saved
+    ) {
+
+        if (
+            !saved?.slugs
+        ) {
+
+            return;
+
+        }
+
+
+        const songMap =
+            new Map(
+                playableSongs.map(
+                    song => [
+                        song.slug,
+                        song
+                    ]
+                )
+            );
+
+
+        const nextPlaylist =
+            saved.slugs
+                .map(
+                    slug =>
+                        songMap.get(
+                            slug
+                        )
+                )
+                .filter(Boolean);
+
+
+        if (
+            nextPlaylist.length ===
+            0
+        ) {
+
+            setError(
+                '현재 이용 가능한 곡이 이 플레이리스트에 없어요.'
+            );
+
+            return;
+
+        }
+
+
+        const audio =
+            audioRef.current;
+
+
+        if (
+            audio
+        ) {
+
+            audio.pause();
+
+            audio.removeAttribute(
+                'src'
+            );
+
+            audio.load();
+
+        }
+
+
+        playlistRef.current =
+            nextPlaylist;
+
+
+        currentSlugRef.current =
+            '';
+
+
+        currentAudioUrlRef.current =
+            '';
+
+
+        preparedNextRef.current = {
+            slug:
+                '',
+
+            url:
+                ''
+        };
+
+
+        setPlaylist(
+            nextPlaylist
+        );
+
+
+        setCurrentSlug(
+            ''
+        );
+
+
+        setCurrentTime(
+            0
+        );
+
+
+        setDuration(
+            0
+        );
+
+
+        setPlaying(
+            false
+        );
+
+
+        setPlaylistSelectMode(
+            false
+        );
+
+
+        setSelectedPlaylistSlugs(
+            []
+        );
+
+
+        setError(
+            ''
+        );
+
+    }
+
+
+
+    function deleteSavedPlaylist(
+        id
+    ) {
+
+        const confirmed =
+            typeof window ===
+                'undefined'
+                ? true
+                : window.confirm(
+                    '저장한 플레이리스트를 삭제할까요?'
+                );
+
+
+        if (
+            !confirmed
+        ) {
+
+            return;
+
+        }
+
+
+        setSavedPlaylists(
+            previous =>
+                previous.filter(
+                    item =>
+                        item.id !==
+                        id
+                )
+        );
+
+    }
+
+
+
+    function togglePlaylistSelected(
+        slug
+    ) {
+
+        setSelectedPlaylistSlugs(
+            previous =>
+                previous.includes(
+                    slug
+                )
+                    ? previous.filter(
+                        item =>
+                            item !==
+                            slug
+                    )
+                    : [
+                        ...previous,
+                        slug
+                    ]
+        );
+
+    }
+
+
+
+    async function removeSelectedFromPlaylist() {
+
+        if (
+            selectedPlaylistSlugs.length ===
+            0
+        ) {
+
+            return;
+
+        }
+
+
+        const removeSet =
+            new Set(
+                selectedPlaylistSlugs
+            );
+
+
+        const currentWasRemoved =
+            removeSet.has(
+                currentSlugRef.current
+            );
+
+
+        const nextPlaylist =
+            playlistRef.current.filter(
+                song =>
+                    !removeSet.has(
+                        song.slug
+                    )
+            );
+
+
+        playlistRef.current =
+            nextPlaylist;
+
+
+        setPlaylist(
+            nextPlaylist
+        );
+
+
+        setSelectedPlaylistSlugs(
+            []
+        );
+
+
+        setPlaylistSelectMode(
+            false
+        );
+
+
+        if (
+            !currentWasRemoved
+        ) {
+
+            if (
+                currentSlugRef.current
+            ) {
+
+                void prepareNextSong();
+
+            }
+
+            return;
+
+        }
+
+
+        if (
+            nextPlaylist.length ===
+            0
+        ) {
+
+            const audio =
+                audioRef.current;
+
+
+            if (
+                audio
+            ) {
+
+                audio.pause();
+
+                audio.removeAttribute(
+                    'src'
+                );
+
+                audio.load();
+
+            }
+
+
+            currentSlugRef.current =
+                '';
+
+
+            currentAudioUrlRef.current =
+                '';
+
+
+            setCurrentSlug(
+                ''
+            );
+
+
+            setPlaying(
+                false
+            );
+
+
+            setCurrentTime(
+                0
+            );
+
+
+            setDuration(
+                0
+            );
+
+
+            return;
+
+        }
+
+
+        await playSong(
+            nextPlaylist[0]
+        );
+
+    }
+
+
+
+    /*
+     * =================================================
+     * 플레이리스트 순서 변경
+     * =================================================
+     */
+
+    function reorderPlaylist(
+        fromSlug,
+        toSlug
+    ) {
+
+        if (
+            !fromSlug ||
+            !toSlug ||
+            fromSlug ===
+            toSlug
+        ) {
+
+            return;
+
+        }
+
+
+        const currentList =
+            playlistRef.current;
+
+
+        const fromIndex =
+            currentList.findIndex(
+                song =>
+                    song.slug ===
+                    fromSlug
+            );
+
+
+        const toIndex =
+            currentList.findIndex(
+                song =>
+                    song.slug ===
+                    toSlug
+            );
+
+
+        if (
+            fromIndex < 0 ||
+            toIndex < 0
+        ) {
+
+            return;
+
+        }
+
+
+        const nextPlaylist = [
+            ...currentList
+        ];
+
+
+        const [
+            movedSong
+        ] =
+            nextPlaylist.splice(
+                fromIndex,
+                1
+            );
+
+
+        nextPlaylist.splice(
+            toIndex,
+            0,
+            movedSong
+        );
+
+
+        playlistRef.current =
+            nextPlaylist;
+
+
+        setPlaylist(
+            nextPlaylist
+        );
+
+
+        if (
+            currentSlugRef.current
+        ) {
+
+            void prepareNextSong();
+
+        }
+
+    }
+
+
+
+    function handleDragStart(
+        e,
+        slug
+    ) {
+
+        setDraggedSlug(
+            slug
+        );
+
+
+        try {
+
+            e.dataTransfer.effectAllowed =
+                'move';
+
+            e.dataTransfer.setData(
+                'text/plain',
+                slug
+            );
+
+        } catch {}
+
+    }
+
+
+
+    function handleDragOver(
+        e
+    ) {
+
+        e.preventDefault();
+
+
+        try {
+
+            e.dataTransfer.dropEffect =
+                'move';
+
+        } catch {}
+
+    }
+
+
+
+    function handleDrop(
+        e,
+        targetSlug
+    ) {
+
+        e.preventDefault();
+
+
+        let sourceSlug =
+            draggedSlug;
+
+
+        try {
+
+            sourceSlug =
+                e.dataTransfer.getData(
+                    'text/plain'
+                ) ||
+                sourceSlug;
+
+        } catch {}
+
+
+        reorderPlaylist(
+            sourceSlug,
+            targetSlug
+        );
+
+
+        setDraggedSlug(
+            ''
+        );
+
+    }
+
+
+
+    function handleDragEnd() {
+
+        setDraggedSlug(
+            ''
+        );
 
     }
 
@@ -2596,6 +3807,16 @@ export default function PlaylistPlayer({
 
         setSelectedSlugs(
             []
+        );
+
+
+        setSelectedPlaylistSlugs(
+            []
+        );
+
+
+        setPlaylistSelectMode(
+            false
         );
 
 
@@ -3046,6 +4267,37 @@ export default function PlaylistPlayer({
                         }
                     </span>
 
+
+                    {
+                        currentSong && (
+
+                            <span
+                                style={{
+                                    display:
+                                        'block',
+
+                                    marginTop:
+                                        7,
+
+                                    opacity:
+                                        0.68,
+
+                                    fontSize:
+                                        11
+                                }}
+                            >
+                                {
+                                    shuffle
+                                        ? '다음 곡 · 셔플 재생'
+                                        : nextSongPreview
+                                            ? `다음 곡 · ${nextSongPreview.title}`
+                                            : '다음 곡 · 재생 종료'
+                                }
+                            </span>
+
+                        )
+                    }
+
                 </div>
 
 
@@ -3420,7 +4672,49 @@ export default function PlaylistPlayer({
                         }}
                     >
                         {playlist.length}곡
+                        {
+                            playlist.length >
+                                0 &&
+                            totalPlaylistDuration >
+                                0
+                                ? ` · ${formatTime(totalPlaylistDuration)}`
+                                : ''
+                        }
+                        {
+                            playlist.length >
+                                0 &&
+                            knownPlaylistDurationCount <
+                                playlist.length
+                                ? ' · 계산 중'
+                                : ''
+                        }
                     </span>
+
+
+                    {
+                        playlist.length >
+                            1 && (
+
+                            <span
+                                style={{
+                                    display:
+                                        'block',
+
+                                    marginTop:
+                                        3,
+
+                                    color:
+                                        '#b0a397',
+
+                                    fontSize:
+                                        11
+                                }}
+                            >
+                                ☰ 아이콘을 드래그해 순서를 바꿀 수 있어요.
+                            </span>
+
+                        )
+                    }
 
                 </div>
 
@@ -3434,10 +4728,110 @@ export default function PlaylistPlayer({
                         alignItems:
                             'center',
 
+                        justifyContent:
+                            'flex-end',
+
+                        flexWrap:
+                            'wrap',
+
                         gap:
                             8
                     }}
                 >
+
+                    {
+                        playlist.length >
+                            0 && (
+
+                            <button
+                                type="button"
+                                onClick={
+                                    saveCurrentPlaylist
+                                }
+                                style={{
+                                    padding:
+                                        '10px 12px',
+
+                                    border:
+                                        '1px solid #eadfd3',
+
+                                    borderRadius:
+                                        14,
+
+                                    background:
+                                        '#fff',
+
+                                    color:
+                                        '#66584c',
+
+                                    cursor:
+                                        'pointer',
+
+                                    fontWeight:
+                                        800
+                                }}
+                            >
+                                저장
+                            </button>
+
+                        )
+                    }
+
+
+                    {
+                        playlist.length >
+                            0 && (
+
+                            <button
+                                type="button"
+                                onClick={() => {
+
+                                    setPlaylistSelectMode(
+                                        previous =>
+                                            !previous
+                                    );
+
+
+                                    setSelectedPlaylistSlugs(
+                                        []
+                                    );
+
+                                }}
+                                style={{
+                                    padding:
+                                        '10px 12px',
+
+                                    border:
+                                        '1px solid #eadfd3',
+
+                                    borderRadius:
+                                        14,
+
+                                    background:
+                                        playlistSelectMode
+                                            ? '#fff1cf'
+                                            : '#fff',
+
+                                    color:
+                                        '#66584c',
+
+                                    cursor:
+                                        'pointer',
+
+                                    fontWeight:
+                                        800
+                                }}
+                            >
+                                {
+                                    playlistSelectMode
+                                        ? '선택 취소'
+                                        : '선택 삭제'
+                                }
+                            </button>
+
+                        )
+                    }
+
 
                     {
                         playlist.length >
@@ -3497,6 +4891,11 @@ export default function PlaylistPlayer({
                             );
 
 
+                            setSongView(
+                                'all'
+                            );
+
+
                             setAddOpen(
                                 true
                             );
@@ -3532,6 +4931,230 @@ export default function PlaylistPlayer({
 
             </div>
 
+
+
+            {
+                savedPlaylists.length >
+                    0 && (
+
+                    <div
+                        style={{
+                            display:
+                                'flex',
+
+                            gap:
+                                7,
+
+                            marginBottom:
+                                11,
+
+                            overflowX:
+                                'auto',
+
+                            paddingBottom:
+                                2
+                        }}
+                    >
+
+                        {
+                            savedPlaylists.map(
+                                saved => (
+
+                                    <div
+                                        key={
+                                            saved.id
+                                        }
+                                        style={{
+                                            display:
+                                                'flex',
+
+                                            flexShrink:
+                                                0,
+
+                                            alignItems:
+                                                'center',
+
+                                            border:
+                                                '1px solid #eadfd3',
+
+                                            borderRadius:
+                                                999,
+
+                                            background:
+                                                '#fffaf2',
+
+                                            overflow:
+                                                'hidden'
+                                        }}
+                                    >
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                loadSavedPlaylist(
+                                                    saved
+                                                )
+                                            }
+                                            style={{
+                                                padding:
+                                                    '8px 4px 8px 11px',
+
+                                                border:
+                                                    'none',
+
+                                                background:
+                                                    'transparent',
+
+                                                color:
+                                                    '#5c4b3d',
+
+                                                cursor:
+                                                    'pointer',
+
+                                                fontSize:
+                                                    12,
+
+                                                fontWeight:
+                                                    850
+                                            }}
+                                        >
+                                            {saved.name}
+                                        </button>
+
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                deleteSavedPlaylist(
+                                                    saved.id
+                                                )
+                                            }
+                                            aria-label={`${saved.name} 삭제`}
+                                            style={{
+                                                padding:
+                                                    '7px 9px 7px 5px',
+
+                                                border:
+                                                    'none',
+
+                                                background:
+                                                    'transparent',
+
+                                                color:
+                                                    '#aa9b8e',
+
+                                                cursor:
+                                                    'pointer',
+
+                                                fontSize:
+                                                    16
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+
+                                    </div>
+
+                                )
+                            )
+                        }
+
+                    </div>
+
+                )
+            }
+
+
+            {
+                playlistSelectMode && (
+
+                    <div
+                        style={{
+                            display:
+                                'flex',
+
+                            justifyContent:
+                                'space-between',
+
+                            alignItems:
+                                'center',
+
+                            gap:
+                                10,
+
+                            marginBottom:
+                                9,
+
+                            padding:
+                                '9px 11px',
+
+                            borderRadius:
+                                12,
+
+                            background:
+                                '#fff7df',
+
+                            color:
+                                '#66584c',
+
+                            fontSize:
+                                12,
+
+                            fontWeight:
+                                800
+                        }}
+                    >
+
+                        <span>
+                            {selectedPlaylistSlugs.length}곡 선택됨
+                        </span>
+
+
+                        <button
+                            type="button"
+                            onClick={
+                                removeSelectedFromPlaylist
+                            }
+                            disabled={
+                                selectedPlaylistSlugs.length ===
+                                0
+                            }
+                            style={{
+                                padding:
+                                    '7px 10px',
+
+                                border:
+                                    'none',
+
+                                borderRadius:
+                                    10,
+
+                                background:
+                                    selectedPlaylistSlugs.length >
+                                    0
+                                        ? '#f9b846'
+                                        : '#eadfd3',
+
+                                color:
+                                    '#3d3026',
+
+                                cursor:
+                                    selectedPlaylistSlugs.length >
+                                    0
+                                        ? 'pointer'
+                                        : 'default',
+
+                                fontWeight:
+                                    900
+                            }}
+                        >
+                            선택한 곡 삭제
+                        </button>
+
+                    </div>
+
+                )
+            }
 
 
             {/*
@@ -3642,12 +5265,26 @@ export default function PlaylistPlayer({
                                         key={
                                             song.slug
                                         }
+                                        onDragOver={
+                                            playlistSelectMode
+                                                ? undefined
+                                                : handleDragOver
+                                        }
+                                        onDrop={
+                                            playlistSelectMode
+                                                ? undefined
+                                                : e =>
+                                                    handleDrop(
+                                                        e,
+                                                        song.slug
+                                                    )
+                                        }
                                         style={{
                                             display:
                                                 'grid',
 
                                             gridTemplateColumns:
-                                                'minmax(0,1fr) 42px',
+                                                '34px minmax(0,1fr) 38px 42px',
 
                                             alignItems:
                                                 'center',
@@ -3664,9 +5301,152 @@ export default function PlaylistPlayer({
                                             background:
                                                 active
                                                     ? '#fff7df'
-                                                    : '#fff'
+                                                    : '#fff',
+
+                                            opacity:
+                                                draggedSlug ===
+                                                song.slug
+                                                    ? 0.5
+                                                    : 1,
+
+                                            transition:
+                                                'opacity 0.15s ease, background 0.15s ease'
                                         }}
                                     >
+
+                                        {
+                                            playlistSelectMode ? (
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        togglePlaylistSelected(
+                                                            song.slug
+                                                        )
+                                                    }
+                                                    aria-label={`${song.title} 선택`}
+                                                    style={{
+                                                        display:
+                                                            'grid',
+
+                                                        placeItems:
+                                                            'center',
+
+                                                        width:
+                                                            25,
+
+                                                        height:
+                                                            25,
+
+                                                        margin:
+                                                            '0 auto',
+
+                                                        padding:
+                                                            0,
+
+                                                        border:
+                                                            selectedPlaylistSlugs.includes(
+                                                                song.slug
+                                                            )
+                                                                ? 'none'
+                                                                : '1px solid #d8c9b9',
+
+                                                        borderRadius:
+                                                            '50%',
+
+                                                        background:
+                                                            selectedPlaylistSlugs.includes(
+                                                                song.slug
+                                                            )
+                                                                ? '#f9b846'
+                                                                : '#fff',
+
+                                                        color:
+                                                            '#3d3026',
+
+                                                        cursor:
+                                                            'pointer',
+
+                                                        fontSize:
+                                                            13,
+
+                                                        fontWeight:
+                                                            900
+                                                    }}
+                                                >
+                                                    {
+                                                        selectedPlaylistSlugs.includes(
+                                                            song.slug
+                                                        )
+                                                            ? '✓'
+                                                            : ''
+                                                    }
+                                                </button>
+
+                                            ) : (
+
+                                                <button
+                                                    type="button"
+                                                    draggable="true"
+                                                    onDragStart={
+                                                        e =>
+                                                            handleDragStart(
+                                                                e,
+                                                                song.slug
+                                                            )
+                                                    }
+                                                    onDragEnd={
+                                                        handleDragEnd
+                                                    }
+                                                    aria-label={`${song.title} 순서 변경`}
+                                                    title="드래그해서 순서 변경"
+                                                    style={{
+                                                        display:
+                                                            'grid',
+
+                                                        placeItems:
+                                                            'center',
+
+                                                        width:
+                                                            34,
+
+                                                        height:
+                                                            '100%',
+
+                                                        minHeight:
+                                                            62,
+
+                                                        padding:
+                                                            0,
+
+                                                        border:
+                                                            'none',
+
+                                                        background:
+                                                            'transparent',
+
+                                                        color:
+                                                            '#b4a79a',
+
+                                                        cursor:
+                                                            'grab',
+
+                                                        fontSize:
+                                                            18,
+
+                                                        lineHeight:
+                                                            1,
+
+                                                        userSelect:
+                                                            'none'
+                                                    }}
+                                                >
+                                                    ☰
+                                                </button>
+
+                                            )
+                                        }
+
 
                                         <button
                                             type="button"
@@ -3814,6 +5594,56 @@ export default function PlaylistPlayer({
                                         <button
                                             type="button"
                                             onClick={() =>
+                                                toggleFavorite(
+                                                    song.slug
+                                                )
+                                            }
+                                            aria-label={`${song.title} 즐겨찾기`}
+                                            title="즐겨찾기"
+                                            style={{
+                                                width:
+                                                    34,
+
+                                                height:
+                                                    34,
+
+                                                border:
+                                                    'none',
+
+                                                borderRadius:
+                                                    '50%',
+
+                                                background:
+                                                    'transparent',
+
+                                                color:
+                                                    favorites.includes(
+                                                        song.slug
+                                                    )
+                                                        ? '#d89017'
+                                                        : '#c3b7aa',
+
+                                                cursor:
+                                                    'pointer',
+
+                                                fontSize:
+                                                    18
+                                            }}
+                                        >
+                                            {
+                                                favorites.includes(
+                                                    song.slug
+                                                )
+                                                    ? '★'
+                                                    : '☆'
+                                            }
+                                        </button>
+
+
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
                                                 removeFromPlaylist(
                                                     song.slug
                                                 )
@@ -3938,6 +5768,11 @@ export default function PlaylistPlayer({
                                     );
 
 
+                                    setSongView(
+                                        'all'
+                                    );
+
+
                                     setAddOpen(
                                         false
                                     );
@@ -4035,6 +5870,101 @@ export default function PlaylistPlayer({
 
                                 marginTop:
                                     9,
+
+                                overflowX:
+                                    'auto',
+
+                                paddingBottom:
+                                    2
+                            }}
+                        >
+
+                            {
+                                [
+                                    [
+                                        'all',
+                                        '전체 곡'
+                                    ],
+                                    [
+                                        'favorites',
+                                        '★ 즐겨찾기'
+                                    ],
+                                    [
+                                        'recent',
+                                        '최근 재생'
+                                    ]
+                                ].map(
+                                    ([
+                                        value,
+                                        label
+                                    ]) => (
+
+                                        <button
+                                            key={
+                                                value
+                                            }
+                                            type="button"
+                                            onClick={() =>
+                                                setSongView(
+                                                    value
+                                                )
+                                            }
+                                            style={{
+                                                flexShrink:
+                                                    0,
+
+                                                padding:
+                                                    '7px 10px',
+
+                                                border:
+                                                    songView ===
+                                                    value
+                                                        ? '1px solid #e6a53d'
+                                                        : '1px solid #eadfd3',
+
+                                                borderRadius:
+                                                    999,
+
+                                                background:
+                                                    songView ===
+                                                    value
+                                                        ? '#fff1cf'
+                                                        : '#fff',
+
+                                                color:
+                                                    '#5c4b3d',
+
+                                                cursor:
+                                                    'pointer',
+
+                                                fontSize:
+                                                    12,
+
+                                                fontWeight:
+                                                    800
+                                            }}
+                                        >
+                                            {label}
+                                        </button>
+
+                                    )
+                                )
+                            }
+
+                        </div>
+
+
+
+                        <div
+                            style={{
+                                display:
+                                    'flex',
+
+                                gap:
+                                    7,
+
+                                marginTop:
+                                    7,
 
                                 overflowX:
                                     'auto',
@@ -4460,6 +6390,13 @@ export default function PlaylistPlayer({
                                                         }}
                                                     >
                                                         {song.title}
+                                                        {
+                                                            favorites.includes(
+                                                                song.slug
+                                                            )
+                                                                ? ' ★'
+                                                                : ''
+                                                        }
                                                     </strong>
 
 
@@ -4549,6 +6486,11 @@ export default function PlaylistPlayer({
 
 
                                     setProgramFilter(
+                                        'all'
+                                    );
+
+
+                                    setSongView(
                                         'all'
                                     );
 
