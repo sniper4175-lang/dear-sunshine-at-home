@@ -109,6 +109,20 @@ export default function PlaylistPlayer({
 
 
     const [
+        searchQuery,
+        setSearchQuery
+    ] =
+        useState('');
+
+
+    const [
+        programFilter,
+        setProgramFilter
+    ] =
+        useState('all');
+
+
+    const [
         currentTime,
         setCurrentTime
     ] =
@@ -263,6 +277,95 @@ export default function PlaylistPlayer({
                     song.slug
                 )
         );
+
+
+    const programs =
+        Array.from(
+            new Set(
+                playableSongs
+                    .map(
+                        song =>
+                            song.program
+                    )
+                    .filter(Boolean)
+            )
+        );
+
+
+    const normalizedSearch =
+        searchQuery
+            .trim()
+            .toLowerCase();
+
+
+    const filteredPlayableSongs =
+        playableSongs.filter(
+            song => {
+
+                const matchesProgram =
+                    programFilter ===
+                        'all' ||
+                    song.program ===
+                        programFilter;
+
+
+                const haystack =
+                    `${song.title || ''} ${song.program || ''}`
+                        .toLowerCase();
+
+
+                const matchesSearch =
+                    !normalizedSearch ||
+                    haystack.includes(
+                        normalizedSearch
+                    );
+
+
+                return (
+                    matchesProgram &&
+                    matchesSearch
+                );
+
+            }
+        );
+
+
+    const alreadyAddedSlugSet =
+        new Set(
+            playlist.map(
+                song =>
+                    song.slug
+            )
+        );
+
+
+    const selectableFilteredSongs =
+        filteredPlayableSongs.filter(
+            song =>
+                !alreadyAddedSlugSet.has(
+                    song.slug
+                )
+        );
+
+
+    const allVisibleSelected =
+        selectableFilteredSongs.length >
+            0 &&
+        selectableFilteredSongs.every(
+            song =>
+                selectedSlugs.includes(
+                    song.slug
+                )
+        );
+
+
+    const selectedAddableCount =
+        selectedSlugs.filter(
+            slug =>
+                !alreadyAddedSlugSet.has(
+                    slug
+                )
+        ).length;
 
 
     const currentSong =
@@ -2099,6 +2202,19 @@ export default function PlaylistPlayer({
         slug
     ) {
 
+        if (
+            playlistRef.current.some(
+                song =>
+                    song.slug ===
+                    slug
+            )
+        ) {
+
+            return;
+
+        }
+
+
         setSelectedSlugs(
             previous => {
 
@@ -2121,6 +2237,71 @@ export default function PlaylistPlayer({
                     ...previous,
                     slug
                 ];
+
+            }
+        );
+
+    }
+
+
+
+    /*
+     * =================================================
+     * 현재 보이는 곡 전체 선택 / 전체 해제
+     * =================================================
+     */
+
+    function toggleSelectAllVisible() {
+
+        const visibleSlugs =
+            selectableFilteredSongs.map(
+                song =>
+                    song.slug
+            );
+
+
+        if (
+            visibleSlugs.length ===
+            0
+        ) {
+
+            return;
+
+        }
+
+
+        setSelectedSlugs(
+            previous => {
+
+                const allSelected =
+                    visibleSlugs.every(
+                        slug =>
+                            previous.includes(
+                                slug
+                            )
+                    );
+
+
+                if (
+                    allSelected
+                ) {
+
+                    return previous.filter(
+                        slug =>
+                            !visibleSlugs.includes(
+                                slug
+                            )
+                    );
+
+                }
+
+
+                return Array.from(
+                    new Set([
+                        ...previous,
+                        ...visibleSlugs
+                    ])
+                );
 
             }
         );
@@ -2235,6 +2416,16 @@ export default function PlaylistPlayer({
         );
 
 
+        setSearchQuery(
+            ''
+        );
+
+
+        setProgramFilter(
+            'all'
+        );
+
+
         setAddOpen(
             false
         );
@@ -2287,6 +2478,16 @@ export default function PlaylistPlayer({
         );
 
 
+        setSearchQuery(
+            ''
+        );
+
+
+        setProgramFilter(
+            'all'
+        );
+
+
         setAddOpen(
             false
         );
@@ -2307,6 +2508,120 @@ export default function PlaylistPlayer({
             );
 
         }
+
+    }
+
+
+
+    /*
+     * =================================================
+     * 플레이리스트 전체 비우기
+     * =================================================
+     */
+
+    function clearPlaylist() {
+
+        if (
+            playlistRef.current.length ===
+            0
+        ) {
+
+            return;
+
+        }
+
+
+        const confirmed =
+            typeof window ===
+                'undefined'
+                ? true
+                : window.confirm(
+                    '플레이리스트의 모든 곡을 삭제할까요?'
+                );
+
+
+        if (
+            !confirmed
+        ) {
+
+            return;
+
+        }
+
+
+        const audio =
+            audioRef.current;
+
+
+        if (
+            audio
+        ) {
+
+            audio.pause();
+
+            audio.removeAttribute(
+                'src'
+            );
+
+            audio.load();
+
+        }
+
+
+        playlistRef.current =
+            [];
+
+
+        currentSlugRef.current =
+            '';
+
+
+        currentAudioUrlRef.current =
+            '';
+
+
+        preparedNextRef.current = {
+            slug:
+                '',
+
+            url:
+                ''
+        };
+
+
+        setPlaylist(
+            []
+        );
+
+
+        setSelectedSlugs(
+            []
+        );
+
+
+        setCurrentSlug(
+            ''
+        );
+
+
+        setPlaying(
+            false
+        );
+
+
+        setCurrentTime(
+            0
+        );
+
+
+        setDuration(
+            0
+        );
+
+
+        setError(
+            ''
+        );
 
     }
 
@@ -3111,45 +3426,109 @@ export default function PlaylistPlayer({
 
 
 
-                <button
-                    type="button"
-                    onClick={() => {
-
-                        setSelectedSlugs(
-                            []
-                        );
-
-
-                        setAddOpen(
-                            true
-                        );
-
-                    }}
+                <div
                     style={{
-                        padding:
-                            '10px 14px',
+                        display:
+                            'flex',
 
-                        border:
-                            '1px solid #ecd9bd',
+                        alignItems:
+                            'center',
 
-                        borderRadius:
-                            14,
-
-                        background:
-                            '#fffaf2',
-
-                        color:
-                            '#3d3026',
-
-                        cursor:
-                            'pointer',
-
-                        fontWeight:
-                            850
+                        gap:
+                            8
                     }}
                 >
-                    ＋ 곡 추가
-                </button>
+
+                    {
+                        playlist.length >
+                            0 && (
+
+                            <button
+                                type="button"
+                                onClick={
+                                    clearPlaylist
+                                }
+                                style={{
+                                    padding:
+                                        '10px 12px',
+
+                                    border:
+                                        '1px solid #eadfd3',
+
+                                    borderRadius:
+                                        14,
+
+                                    background:
+                                        '#fff',
+
+                                    color:
+                                        '#8d8175',
+
+                                    cursor:
+                                        'pointer',
+
+                                    fontWeight:
+                                        800
+                                }}
+                            >
+                                전체 비우기
+                            </button>
+
+                        )
+                    }
+
+
+                    <button
+                        type="button"
+                        onClick={() => {
+
+                            setSelectedSlugs(
+                                []
+                            );
+
+
+                            setSearchQuery(
+                                ''
+                            );
+
+
+                            setProgramFilter(
+                                'all'
+                            );
+
+
+                            setAddOpen(
+                                true
+                            );
+
+                        }}
+                        style={{
+                            padding:
+                                '10px 14px',
+
+                            border:
+                                '1px solid #ecd9bd',
+
+                            borderRadius:
+                                14,
+
+                            background:
+                                '#fffaf2',
+
+                            color:
+                                '#3d3026',
+
+                            cursor:
+                                'pointer',
+
+                            fontWeight:
+                                850
+                        }}
+                    >
+                        ＋ 곡 추가
+                    </button>
+
+                </div>
 
             </div>
 
@@ -3542,11 +3921,28 @@ export default function PlaylistPlayer({
 
                             <button
                                 type="button"
-                                onClick={() =>
+                                onClick={() => {
+
+                                    setSelectedSlugs(
+                                        []
+                                    );
+
+
+                                    setSearchQuery(
+                                        ''
+                                    );
+
+
+                                    setProgramFilter(
+                                        'all'
+                                    );
+
+
                                     setAddOpen(
                                         false
-                                    )
-                                }
+                                    );
+
+                                }}
                                 style={{
                                     border:
                                         'none',
@@ -3588,6 +3984,258 @@ export default function PlaylistPlayer({
 
 
 
+                        <input
+                            type="search"
+                            value={
+                                searchQuery
+                            }
+                            onChange={
+                                e =>
+                                    setSearchQuery(
+                                        e.target.value
+                                    )
+                            }
+                            placeholder="노래 검색"
+                            style={{
+                                width:
+                                    '100%',
+
+                                padding:
+                                    '11px 13px',
+
+                                border:
+                                    '1px solid #eadfd3',
+
+                                borderRadius:
+                                    13,
+
+                                outline:
+                                    'none',
+
+                                background:
+                                    '#fffdf9',
+
+                                color:
+                                    '#3d3026',
+
+                                fontSize:
+                                    14
+                            }}
+                        />
+
+
+
+                        <div
+                            style={{
+                                display:
+                                    'flex',
+
+                                gap:
+                                    7,
+
+                                marginTop:
+                                    9,
+
+                                overflowX:
+                                    'auto',
+
+                                paddingBottom:
+                                    2
+                            }}
+                        >
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setProgramFilter(
+                                        'all'
+                                    )
+                                }
+                                style={{
+                                    flexShrink:
+                                        0,
+
+                                    padding:
+                                        '7px 10px',
+
+                                    border:
+                                        programFilter ===
+                                        'all'
+                                            ? '1px solid #e6a53d'
+                                            : '1px solid #eadfd3',
+
+                                    borderRadius:
+                                        999,
+
+                                    background:
+                                        programFilter ===
+                                        'all'
+                                            ? '#fff1cf'
+                                            : '#fff',
+
+                                    color:
+                                        '#5c4b3d',
+
+                                    cursor:
+                                        'pointer',
+
+                                    fontSize:
+                                        12,
+
+                                    fontWeight:
+                                        800
+                                }}
+                            >
+                                전체
+                            </button>
+
+
+                            {
+                                programs.map(
+                                    program => (
+
+                                        <button
+                                            key={
+                                                program
+                                            }
+                                            type="button"
+                                            onClick={() =>
+                                                setProgramFilter(
+                                                    program
+                                                )
+                                            }
+                                            style={{
+                                                flexShrink:
+                                                    0,
+
+                                                padding:
+                                                    '7px 10px',
+
+                                                border:
+                                                    programFilter ===
+                                                    program
+                                                        ? '1px solid #e6a53d'
+                                                        : '1px solid #eadfd3',
+
+                                                borderRadius:
+                                                    999,
+
+                                                background:
+                                                    programFilter ===
+                                                    program
+                                                        ? '#fff1cf'
+                                                        : '#fff',
+
+                                                color:
+                                                    '#5c4b3d',
+
+                                                cursor:
+                                                    'pointer',
+
+                                                fontSize:
+                                                    12,
+
+                                                fontWeight:
+                                                    800
+                                            }}
+                                        >
+                                            {program}
+                                        </button>
+
+                                    )
+                                )
+                            }
+
+                        </div>
+
+
+
+                        <div
+                            style={{
+                                display:
+                                    'flex',
+
+                                justifyContent:
+                                    'space-between',
+
+                                alignItems:
+                                    'center',
+
+                                gap:
+                                    10,
+
+                                margin:
+                                    '11px 1px 8px'
+                            }}
+                        >
+
+                            <button
+                                type="button"
+                                onClick={
+                                    toggleSelectAllVisible
+                                }
+                                disabled={
+                                    selectableFilteredSongs.length ===
+                                    0
+                                }
+                                style={{
+                                    border:
+                                        'none',
+
+                                    background:
+                                        'transparent',
+
+                                    color:
+                                        selectableFilteredSongs.length ===
+                                        0
+                                            ? '#c9beb3'
+                                            : '#b7771f',
+
+                                    cursor:
+                                        selectableFilteredSongs.length ===
+                                        0
+                                            ? 'default'
+                                            : 'pointer',
+
+                                    padding:
+                                        0,
+
+                                    fontSize:
+                                        12,
+
+                                    fontWeight:
+                                        900
+                                }}
+                            >
+                                {
+                                    allVisibleSelected
+                                        ? '전체 해제'
+                                        : '전체 선택'
+                                }
+                            </button>
+
+
+                            <span
+                                style={{
+                                    color:
+                                        '#9b8e82',
+
+                                    fontSize:
+                                        11,
+
+                                    fontWeight:
+                                        700
+                                }}
+                            >
+                                {
+                                    filteredPlayableSongs.length
+                                }곡 표시
+                            </span>
+
+                        </div>
+
+
+
                         <div
                             style={{
                                 maxHeight:
@@ -3605,7 +4253,28 @@ export default function PlaylistPlayer({
                         >
 
                             {
-                                playableSongs.map(
+                                filteredPlayableSongs.length ===
+                                0 ? (
+
+                                    <div
+                                        style={{
+                                            padding:
+                                                '28px 16px',
+
+                                            textAlign:
+                                                'center',
+
+                                            color:
+                                                '#9b8e82',
+
+                                            fontSize:
+                                                13
+                                        }}
+                                    >
+                                        검색 결과가 없어요.
+                                    </div>
+
+                                ) : filteredPlayableSongs.map(
                                     (
                                         song,
                                         index
@@ -3632,10 +4301,24 @@ export default function PlaylistPlayer({
                                                     song.slug
                                                 }
                                                 type="button"
-                                                onClick={() =>
+                                                onClick={() => {
+
+                                                    if (
+                                                        alreadyAdded
+                                                    ) {
+
+                                                        return;
+
+                                                    }
+
+
                                                     toggleSelected(
                                                         song.slug
-                                                    )
+                                                    );
+
+                                                }}
+                                                disabled={
+                                                    alreadyAdded
                                                 }
                                                 style={{
                                                     display:
@@ -3661,20 +4344,29 @@ export default function PlaylistPlayer({
 
                                                     borderBottom:
                                                         index ===
-                                                        playableSongs.length - 1
+                                                        filteredPlayableSongs.length - 1
                                                             ? 'none'
                                                             : '1px solid #f2e9df',
 
                                                     background:
-                                                        checked
-                                                            ? '#fff7df'
-                                                            : '#fff',
+                                                        alreadyAdded
+                                                            ? '#faf8f5'
+                                                            : checked
+                                                                ? '#fff7df'
+                                                                : '#fff',
 
                                                     color:
                                                         '#3d3026',
 
                                                     cursor:
-                                                        'pointer',
+                                                        alreadyAdded
+                                                            ? 'default'
+                                                            : 'pointer',
+
+                                                    opacity:
+                                                        alreadyAdded
+                                                            ? 0.6
+                                                            : 1,
 
                                                     textAlign:
                                                         'left'
@@ -3819,6 +4511,12 @@ export default function PlaylistPlayer({
                             }}
                         >
                             {selectedSlugs.length}곡 선택됨
+                            {
+                                selectedSlugs.length !==
+                                selectedAddableCount
+                                    ? ` · ${selectedAddableCount}곡 추가 예정`
+                                    : ''
+                            }
                         </p>
 
 
@@ -3842,6 +4540,16 @@ export default function PlaylistPlayer({
 
                                     setSelectedSlugs(
                                         []
+                                    );
+
+
+                                    setSearchQuery(
+                                        ''
+                                    );
+
+
+                                    setProgramFilter(
+                                        'all'
                                     );
 
 
