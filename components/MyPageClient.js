@@ -100,9 +100,6 @@ export default function MyPageClient({
     }
 
 
-    /*
-     * 로그인하지 않은 경우
-     */
     if (!loggedIn) {
 
         return (
@@ -163,16 +160,6 @@ export default function MyPageClient({
     }
 
 
-    const isPremium =
-        membership?.plan ===
-        'premium';
-
-
-    const isBasic =
-        membership?.plan ===
-        'basic';
-
-
     return (
 
         <main
@@ -182,8 +169,6 @@ export default function MyPageClient({
                 padding: '40px 20px 110px'
             }}
         >
-
-            {/* 상단 */}
 
             <div
                 style={{
@@ -215,8 +200,6 @@ export default function MyPageClient({
 
 
 
-            {/* 계정 정보 */}
-
             <section
                 className="content-card"
                 style={{
@@ -246,8 +229,6 @@ export default function MyPageClient({
             </section>
 
 
-
-            {/* 멤버십 없음 */}
 
             {!membership && (
 
@@ -280,8 +261,8 @@ export default function MyPageClient({
 
 
                     <p className="page-copy">
-                        Basic 또는 Premium 멤버십이
-                        등록되면 음원과 활동자료를
+                        Dear Sunshine Monthly Song Club에
+                        가입하면 음원과 활동자료를
                         이용할 수 있어요.
                     </p>
 
@@ -290,7 +271,7 @@ export default function MyPageClient({
                         href="/membership"
                         className="primary-button"
                     >
-                        멤버십 보기
+                        Song Club 보기
                     </Link>
 
                 </section>
@@ -298,118 +279,21 @@ export default function MyPageClient({
             )}
 
 
-
-            {/* 멤버십 있음 */}
 
             {membership && (
 
-                <section
-                    className="content-card"
-                    style={{
-                        marginBottom: 18
-                    }}
-                >
+                <>
 
-                    <p className="eyebrow">
-                        MY MEMBERSHIP
-                    </p>
-
-
-                    <div
+                    <section
+                        className="content-card"
                         style={{
-                            display: 'flex',
-                            justifyContent:
-                                'space-between',
-                            alignItems:
-                                'center',
-                            gap: 12,
-                            flexWrap: 'wrap'
+                            marginBottom: 18
                         }}
                     >
 
-                        <div>
-
-                            <h2
-                                style={{
-                                    marginBottom: 6
-                                }}
-                            >
-                                {
-                                    isPremium
-                                        ? '✨ Premium'
-                                        : '☀️ Basic'
-                                }
-                            </h2>
-
-
-                            <p
-                                style={{
-                                    margin: 0,
-                                    color: '#8d8175'
-                                }}
-                            >
-                                {
-                                    isPremium
-                                        ? '전체 Dear Sunshine 콘텐츠를 이용하고 있어요.'
-                                        : '최근 공개된 Dear Sunshine 콘텐츠를 이용하고 있어요.'
-                                }
-                            </p>
-
-                        </div>
-
-
-                        <div
-                            style={{
-                                padding: '7px 12px',
-                                borderRadius: 999,
-                                background:
-                                    '#eef8ef',
-                                fontSize: 13,
-                                fontWeight: 800
-                            }}
-                        >
-                            🟢 이용중
-                        </div>
-
-                    </div>
-
-
-                    <div
-                        style={{
-                            marginTop: 22,
-                            paddingTop: 18,
-                            borderTop:
-                                '1px solid #eee',
-                            display: 'grid',
-                            gap: 14
-                        }}
-                    >
-
-                        <div
-                            style={{
-                                display: 'flex',
-                                justifyContent:
-                                    'space-between',
-                                gap: 20
-                            }}
-                        >
-                            <span
-                                style={{
-                                    color:
-                                        '#8d8175'
-                                }}
-                            >
-                                이용 시작일
-                            </span>
-
-                            <strong>
-                                {
-                                    formatDate(
-                                        membership.starts_at
-                                    )
-                                }
-                            </strong>
-                        </div>
+                        <p className="eyebrow">
+                            MY MEMBERSHIP
+                        </p>
 
 
                         <div
@@ -417,129 +301,160 @@ export default function MyPageClient({
                                 display: 'flex',
                                 justifyContent:
                                     'space-between',
-                                gap: 20
+                                alignItems:
+                                    'center',
+                                gap: 12,
+                                flexWrap: 'wrap'
                             }}
                         >
-                            <span
+
+                            <div>
+
+                                <h2
+                                    style={{
+                                        marginBottom: 6
+                                    }}
+                                >
+                                    ☀️ Monthly Song Club
+                                </h2>
+
+
+                                <p
+                                    style={{
+                                        margin: 0,
+                                        color: '#8d8175'
+                                    }}
+                                >
+                                    Dear Sunshine의 노래와
+                                    활동자료를 이용하고 있어요.
+                                </p>
+
+                            </div>
+
+
+                            <div
                                 style={{
-                                    color:
-                                        '#8d8175'
+                                    padding: '7px 12px',
+                                    borderRadius: 999,
+                                    background:
+                                        '#eef8ef',
+                                    fontSize: 13,
+                                    fontWeight: 800
                                 }}
                             >
-                                이용 종료일
-                            </span>
+                                🟢 이용중
+                            </div>
 
-                            <strong>
-                                {
-                                    formatDate(
-                                        membership.ends_at
-                                    )
-                                }
-                            </strong>
                         </div>
 
-                    </div>
 
-                </section>
+                        <div
+                            style={{
+                                marginTop: 22,
+                                paddingTop: 18,
+                                borderTop:
+                                    '1px solid #eee',
+                                display: 'grid',
+                                gap: 14
+                            }}
+                        >
+
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    justifyContent:
+                                        'space-between',
+                                    gap: 20
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        color:
+                                            '#8d8175'
+                                    }}
+                                >
+                                    이용 시작일
+                                </span>
+
+                                <strong>
+                                    {
+                                        formatDate(
+                                            membership.starts_at
+                                        )
+                                    }
+                                </strong>
+                            </div>
+
+
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    justifyContent:
+                                        'space-between',
+                                    gap: 20
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        color:
+                                            '#8d8175'
+                                    }}
+                                >
+                                    이용 종료일
+                                </span>
+
+                                <strong>
+                                    {
+                                        formatDate(
+                                            membership.ends_at
+                                        )
+                                    }
+                                </strong>
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                    <section
+                        className="content-card"
+                        style={{
+                            marginBottom: 18
+                        }}
+                    >
+
+                        <p className="eyebrow">
+                            SONG CLUB BENEFITS
+                        </p>
+
+
+                        <h2>
+                            Song Club 이용 안내
+                        </h2>
+
+
+                        <div
+                            style={{
+                                lineHeight: 2
+                            }}
+                        >
+                            🎵 매월 수업곡 4~5곡
+                            <br />
+                            📝 Lyrics
+                            <br />
+                            💡 Play Ideas
+                            <br />
+                            🎨 Printable Materials
+                        </div>
+
+                    </section>
+
+                </>
 
             )}
 
 
-
-            {/* Premium 혜택 */}
-
-            {isPremium && (
-
-                <section
-                    className="content-card"
-                    style={{
-                        marginBottom: 18
-                    }}
-                >
-
-                    <p className="eyebrow">
-                        PREMIUM BENEFITS
-                    </p>
-
-
-                    <h2>
-                        Premium 혜택
-                    </h2>
-
-
-                    <div
-                        style={{
-                            lineHeight: 2
-                        }}
-                    >
-                        ✓ 공개된 전체 음원 스트리밍
-                        <br />
-                        ✓ 가사지 보기
-                        <br />
-                        ✓ 활동자료 이용
-                        <br />
-                        ✓ Premium 전용 콘텐츠
-                        <br />
-                        ✓ 음원 다운로드
-                    </div>
-
-                </section>
-
-            )}
-
-
-
-            {/* Basic 혜택 */}
-
-            {isBasic && (
-
-                <section
-                    className="content-card"
-                    style={{
-                        marginBottom: 18
-                    }}
-                >
-
-                    <p className="eyebrow">
-                        BASIC
-                    </p>
-
-
-                    <h2>
-                        Basic 이용 안내
-                    </h2>
-
-
-                    <div
-                        style={{
-                            lineHeight: 2
-                        }}
-                    >
-                        ✓ 최근 3개월 음원 스트리밍
-                        <br />
-                        ✓ 가사지 보기
-                        <br />
-                        ✓ 활동자료 이용
-                    </div>
-
-
-                    <Link
-                        href="/membership"
-                        className="primary-button"
-                        style={{
-                            marginTop: 14
-                        }}
-                    >
-                        Premium 알아보기
-                    </Link>
-
-                </section>
-
-            )}
-
-
-
-            {/* 계정 메뉴 */}
 
             <section
                 className="content-card"

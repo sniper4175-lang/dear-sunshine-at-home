@@ -21,36 +21,21 @@ export const dynamic = "force-dynamic";
 export default async function SongPage({ params }) {
   const { slug } = await params;
 
-  /*
-   * 곡 정보 조회
-   */
   const song = await getSongBySlug(slug);
 
   if (!song) {
     notFound();
   }
 
-  /*
-   * 현재 로그인 / 멤버십 확인
-   */
   const { user, membership } = await getCurrentMembership();
 
   const loggedIn = Boolean(user);
 
-  /*
-   * 실제 접근 가능 여부
-   */
   const accessible = canAccessSong(song, membership);
 
-  /*
-   * 잠긴 이유
-   */
   let lockedTitle = "";
-
   let lockedDescription = "";
-
   let lockedButton = "";
-
   let lockedHref = "";
 
   if (!loggedIn) {
@@ -63,53 +48,38 @@ export default async function SongPage({ params }) {
 
     lockedHref = "/login";
   } else if (!membership) {
-    lockedTitle = "멤버십이 필요해요";
+    lockedTitle = "Song Club 멤버십이 필요해요";
 
     lockedDescription =
-      "이 노래를 들으려면 Basic 또는 Premium 멤버십이 필요해요.";
+      "Dear Sunshine Monthly Song Club 회원은 수업에서 만난 노래와 자료를 집에서도 이용할 수 있어요.";
 
-    lockedButton = "멤버십 보기";
+    lockedButton = "Song Club 보기";
 
     lockedHref = "/membership";
-  } else if (membership.plan === "basic") {
-    if (song.premiumOnly) {
-      lockedTitle = "Premium 전용 노래예요";
+  } else {
+    lockedTitle = "현재 이용할 수 없는 콘텐츠예요";
 
-      lockedDescription =
-        "이 콘텐츠는 Premium 멤버십에서 이용할 수 있어요.";
-    } else {
-      lockedTitle = "Premium에서 전체 음원을 만나보세요";
+    lockedDescription =
+      "멤버십 상태 또는 콘텐츠 공개 상태를 확인해주세요.";
 
-      lockedDescription =
-        "Basic 멤버십은 최근 3개월 콘텐츠를 이용할 수 있어요. Premium에서는 이전에 공개된 노래까지 모두 들을 수 있어요.";
-    }
-
-    lockedButton = "Premium 알아보기";
+    lockedButton = "멤버십 보기";
 
     lockedHref = "/membership";
   }
 
   return (
     <section className="song-page">
-      {/* 뒤로가기 */}
-
       <Link className="back-link" href="/library">
         ← 노래 목록
       </Link>
-
-      {/* 대표 이미지 */}
 
       <div className="song-cover large">
         <span>{song.emoji || "🎵"}</span>
       </div>
 
-      {/* 프로그램 */}
-
       {song.program && (
         <p className="eyebrow">{song.program}</p>
       )}
-
-      {/* 카테고리 */}
 
       {song.category && (
         <p
@@ -122,19 +92,11 @@ export default async function SongPage({ params }) {
         </p>
       )}
 
-      {/* 제목 */}
-
       <h1>{song.title}</h1>
-
-      {/* 설명 */}
 
       {song.subtitle && (
         <p className="page-copy">{song.subtitle}</p>
       )}
-
-      {/* =====================================
-                접근 가능
-            ====================================== */}
 
       {accessible ? (
         <>
@@ -142,21 +104,6 @@ export default async function SongPage({ params }) {
             title={song.title}
             slug={song.slug}
           />
-
-          {membership?.plan === "premium" && (
-            <div
-              style={{
-                marginTop: 12,
-                marginBottom: 20,
-              }}
-            >
-             { /* 버튼 주석 처리 */}
-             {/* <DownloadButton slug={song.slug} /> */}
-              
-            </div>
-          )}
-
-          {/* 활동지 */}
 
           {song.printablePath && (
             <section
@@ -202,7 +149,9 @@ export default async function SongPage({ params }) {
           {song.activities &&
             song.activities.length > 0 && (
               <section className="content-card">
-                <p className="eyebrow">Monthly Song Club</p>
+                <p className="eyebrow">
+                  MONTHLY SONG CLUB
+                </p>
 
                 <h2>이 노래로 놀아요</h2>
 
@@ -228,40 +177,24 @@ export default async function SongPage({ params }) {
             )}
         </>
       ) : (
-        /*
-         * =====================================
-         * 잠긴 콘텐츠 안내
-         * =====================================
-         */
-
         <section
           className="content-card"
           style={{
             marginTop: 20,
-
             textAlign: "center",
-
             padding: "34px 22px",
           }}
         >
           <div
             style={{
               width: 64,
-
               height: 64,
-
               margin: "0 auto 16px",
-
               borderRadius: "50%",
-
               display: "flex",
-
               alignItems: "center",
-
               justifyContent: "center",
-
               background: "#fff1c9",
-
               fontSize: 28,
             }}
           >
@@ -276,7 +209,6 @@ export default async function SongPage({ params }) {
             className="page-copy"
             style={{
               maxWidth: 440,
-
               margin: "0 auto 22px",
             }}
           >
@@ -290,24 +222,6 @@ export default async function SongPage({ params }) {
             {lockedButton}
           </Link>
         </section>
-      )}
-
-      {/* Premium 표시 */}
-
-      {song.premiumOnly && (
-        <div
-          style={{
-            marginTop: 18,
-
-            fontSize: 13,
-
-            color: "#9b7c61",
-
-            textAlign: "center",
-          }}
-        >
-          🔒 Premium 전용 콘텐츠
-        </div>
       )}
     </section>
   );

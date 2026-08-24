@@ -19,10 +19,6 @@ export default function MembershipClient({
         useRouter();
 
 
-    const currentPlan =
-        membership?.plan || null;
-
-
     async function logout() {
 
         const supabase =
@@ -75,7 +71,7 @@ export default function MembershipClient({
     }
 
 
-    function selectBasic() {
+    function startMembership() {
 
         if (!requireLogin()) {
             return;
@@ -83,29 +79,10 @@ export default function MembershipClient({
 
 
         /*
-         * 다음 단계에서
-         * 실제 Basic 결제로 연결
+         * 실제 정기결제 연결 전 임시 안내
          */
         alert(
-            'Basic 결제 기능은 다음 단계에서 연결합니다.'
-        );
-
-    }
-
-
-    function selectPremium() {
-
-        if (!requireLogin()) {
-            return;
-        }
-
-
-        /*
-         * 다음 단계에서
-         * 실제 Premium 결제로 연결
-         */
-        alert(
-            'Premium 결제 기능은 다음 단계에서 연결합니다.'
+            '첫 7일 무료 후 월 12,900원 정기결제 기능은 다음 단계에서 연결합니다.'
         );
 
     }
@@ -127,8 +104,15 @@ export default function MembershipClient({
 
 
             <p className="page-copy">
-                아이가 좋아했던 영어노래를
-                집에서도 자연스럽게 이어주세요.
+                아이들이 사랑한 Dear Sunshine의 노래,
+                <br />
+                이제 집에서도 만나요!
+            </p>
+
+
+            <p className="page-copy">
+                Dear Sunshine 정규 수강생만 가입할 수 있는
+                특별한 Song Membership ♡
             </p>
 
 
@@ -138,8 +122,7 @@ export default function MembershipClient({
             <div
                 className="content-card"
                 style={{
-                    marginBottom:
-                        22
+                    marginBottom: 22
                 }}
             >
 
@@ -177,20 +160,12 @@ export default function MembershipClient({
 
                     </>
 
-                ) : (
+                ) : membership ? (
 
                     <>
 
                         <h2>
-                            {
-                                currentPlan ===
-                                'premium'
-                                    ? 'Premium 이용 중'
-                                    : currentPlan ===
-                                        'basic'
-                                        ? 'Basic 이용 중'
-                                        : '가입된 멤버십 없음'
-                            }
+                            ☀️ Song Club 이용 중
                         </h2>
 
 
@@ -199,59 +174,82 @@ export default function MembershipClient({
                         </p>
 
 
-                        {membership && (
+                        <div
+                            style={{
+                                marginTop: 14,
+                                padding: 14,
+                                borderRadius: 14,
+                                background: '#fff8ea'
+                            }}
+                        >
 
-                            <div
-                                style={{
-                                    marginTop:
-                                        14,
+                            <strong>
+                                Dear Sunshine Monthly Song Club
+                            </strong>
 
-                                    padding:
-                                        14,
 
-                                    borderRadius:
-                                        14,
+                            {membership.starts_at && (
 
-                                    background:
-                                        '#fff8ea'
-                                }}
-                            >
-
-                                <strong>
-                                    현재 요금제:{' '}
+                                <p
+                                    style={{
+                                        marginBottom:
+                                            membership.ends_at
+                                                ? 6
+                                                : 0
+                                    }}
+                                >
+                                    이용 시작일:{' '}
                                     {
-                                        currentPlan ===
-                                        'premium'
-                                            ? 'Premium'
-                                            : 'Basic'
+                                        String(
+                                            membership.starts_at
+                                        ).slice(
+                                            0,
+                                            10
+                                        )
                                     }
-                                </strong>
+                                </p>
+
+                            )}
 
 
-                                {membership.ends_at && (
+                            {membership.ends_at && (
 
-                                    <p
-                                        style={{
-                                            marginBottom:
-                                                0
-                                        }}
-                                    >
-                                        이용 종료일:{' '}
-                                        {
-                                            String(
-                                                membership.ends_at
-                                            ).slice(
-                                                0,
-                                                10
-                                            )
-                                        }
-                                    </p>
+                                <p
+                                    style={{
+                                        marginBottom: 0
+                                    }}
+                                >
+                                    이용 종료일:{' '}
+                                    {
+                                        String(
+                                            membership.ends_at
+                                        ).slice(
+                                            0,
+                                            10
+                                        )
+                                    }
+                                </p>
 
-                                )}
+                            )}
 
-                            </div>
+                        </div>
 
-                        )}
+                    </>
+
+                ) : (
+
+                    <>
+
+                        <h2>
+                            가입된 멤버십이 없어요
+                        </h2>
+
+
+                        <p className="muted">
+                            Song Club에 가입하면
+                            수업에서 만난 노래와 자료를
+                            집에서도 이어서 이용할 수 있어요.
+                        </p>
 
                     </>
 
@@ -261,147 +259,95 @@ export default function MembershipClient({
 
 
 
-            {/* Basic */}
+            {/* 단일 멤버십 */}
 
             <div
                 className="content-card"
                 style={{
-                    marginBottom:
-                        18
+                    marginBottom: 18
                 }}
             >
 
                 <p className="eyebrow">
-                    BASIC
+                    MONTHLY SONG CLUB
                 </p>
 
 
                 <h2>
-                    Basic
+                    Dear Sunshine Monthly Song Club
                 </h2>
 
 
                 <p className="page-copy">
-                    최근 3개월 동안 공개된
-                    Dear Sunshine 영어노래를
-                    스트리밍으로 이용해요.
+                    매달 수업에서 만나는 Dear Sunshine의 노래를
+                    집에서도 듣고, 보고, 함께 놀아보세요.
                 </p>
 
 
                 <div
                     style={{
-                        margin:
-                            '18px 0',
-
-                        lineHeight:
-                            1.9
+                        margin: '18px 0',
+                        lineHeight: 2
                     }}
                 >
-                    ✓ 최근 3개월 음원 스트리밍
+                    🎵 매월 수업곡 4~5곡
                     <br />
-                    ✓ 가사지 보기
+                    📝 Lyrics
                     <br />
-                    ✓ 홈 영어놀이 콘텐츠
+                    💡 Play Ideas
+                    <br />
+                    🎨 Printable Materials
+                </div>
+
+
+                <div
+                    style={{
+                        padding: '18px',
+                        borderRadius: 16,
+                        background: '#fff8ea',
+                        marginBottom: 18,
+                        textAlign: 'center'
+                    }}
+                >
+                    <strong
+                        style={{
+                            display: 'block',
+                            fontSize: 18,
+                            marginBottom: 6
+                        }}
+                    >
+                        첫 7일 FREE
+                    </strong>
+
+                    <span>
+                        이후 월 12,900원
+                    </span>
                 </div>
 
 
                 <button
                     type="button"
                     className={
-                        currentPlan ===
-                        'basic'
-                            ? 'secondary-button'
+                        membership
+                            ? 'secondary-button wide'
                             : 'primary-button wide'
                     }
                     disabled={
-                        currentPlan ===
-                        'basic'
+                        Boolean(
+                            membership
+                        )
                     }
                     onClick={
-                        selectBasic
+                        startMembership
                     }
                 >
 
                     {
-                        currentPlan ===
-                        'basic'
+                        membership
                             ? '현재 이용 중'
-                            : 'Basic 시작하기'
-                    }
-
-                </button>
-
-            </div>
-
-
-
-            {/* Premium */}
-
-            <div
-                className="content-card"
-                style={{
-                    marginBottom:
-                        18
-                }}
-            >
-
-                <p className="eyebrow">
-                    PREMIUM
-                </p>
-
-
-                <h2>
-                    Premium
-                </h2>
-
-
-                <p className="page-copy">
-                    공개된 전체 Dear Sunshine
-                    음원을 자유롭게 이용해요.
-                </p>
-
-
-                <div
-                    style={{
-                        margin:
-                            '18px 0',
-
-                        lineHeight:
-                            1.9
-                    }}
-                >
-                    ✓ 전체 음원 스트리밍
-                    <br />
-                    ✓ 전체 가사지
-                    <br />
-                    ✓ Premium 전용 콘텐츠
-                    <br />
-                    ✓ 추후 다운로드 기능 제공
-                </div>
-
-
-                <button
-                    type="button"
-                    className={
-                        currentPlan ===
-                        'premium'
-                            ? 'secondary-button'
-                            : 'primary-button wide'
-                    }
-                    disabled={
-                        currentPlan ===
-                        'premium'
-                    }
-                    onClick={
-                        selectPremium
-                    }
-                >
-
-                    {
-                        currentPlan ===
-                        'premium'
-                            ? '현재 이용 중'
-                            : 'Premium 시작하기'
+                            : loggedIn
+                                ? 'Song Club 시작하기'
+                                : '로그인 후 시작하기'
                     }
 
                 </button>
@@ -421,11 +367,8 @@ export default function MembershipClient({
                         logout
                     }
                     style={{
-                        width:
-                            '100%',
-
-                        marginTop:
-                            10
+                        width: '100%',
+                        marginTop: 10
                     }}
                 >
                     로그아웃

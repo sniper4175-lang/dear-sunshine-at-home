@@ -20,9 +20,6 @@ export const dynamic =
     'force-dynamic';
 
 
-/*
- * 한국 기준 YYYY-MM
- */
 function currentMonthKST() {
 
     const parts =
@@ -67,16 +64,10 @@ function currentMonthKST() {
 
 export default async function HomePage() {
 
-    /*
-     * 공개된 콘텐츠 전체
-     */
     const songs =
         await getSongs();
 
 
-    /*
-     * 현재 로그인 사용자 + 멤버십
-     */
     const {
         user,
         membership
@@ -89,12 +80,6 @@ export default async function HomePage() {
             user
         );
 
-
-    /*
-     * =====================================
-     * 이번 달 신규곡
-     * =====================================
-     */
 
     const monthKey =
         currentMonthKST();
@@ -115,10 +100,6 @@ export default async function HomePage() {
             );
 
 
-    /*
-     * 이번 달 공개곡이 아직 없으면
-     * 최신곡 4곡 표시
-     */
     const newSongs =
         thisMonthSongs.length > 0
             ? thisMonthSongs
@@ -127,12 +108,6 @@ export default async function HomePage() {
                 4
             );
 
-
-    /*
-     * =====================================
-     * 인기곡
-     * =====================================
-     */
 
     const popularSongs =
         songs
@@ -146,28 +121,18 @@ export default async function HomePage() {
             );
 
 
-    /*
-     * 멤버십 표시
-     */
-    const planLabel =
+    const membershipLabel =
         !loggedIn
             ? '로그인 필요'
-            : !membership
-                ? '멤버십 없음'
-                : membership.plan ===
-                    'premium'
-                    ? 'Premium'
-                    : 'Basic';
+            : membership
+                ? 'Song Club 이용 중'
+                : '멤버십 없음';
 
 
     return (
 
         <>
 
-
-            {/* =====================================
-                HERO
-            ====================================== */}
 
             <section className="hero">
 
@@ -183,22 +148,17 @@ export default async function HomePage() {
 
 
                 <h1>
-                    수업에서 좋아했던 영어노래를
+                    아이들이 사랑한 Dear Sunshine의 노래,
                     <br />
-                    집에서도 이어가요
+                    이제 집에서도 만나요!
                 </h1>
 
 
                 <p className="hero-copy">
-                    노래를 듣고,
-                    가사지를 보고,
-                    바로 따라 할 수 있는
-                    영어놀이까지.
+                    Dear Sunshine 정규 수강생만 가입할 수 있는
+                    특별한 Song Membership ♡
                 </p>
 
-
-
-                {/* 현재 회원 상태 */}
 
                 <Link
                     href={
@@ -208,29 +168,19 @@ export default async function HomePage() {
                     }
                     className="plan-pill"
                 >
-
                     {
-                        membership?.plan ===
-                        'premium'
-                            ? '✨ Premium 이용 중'
-                            : membership?.plan ===
-                                'basic'
-                                ? '☀️ Basic 이용 중'
-                                : loggedIn
-                                    ? '멤버십 선택하기'
-                                    : '로그인하기'
+                        membership
+                            ? '☀️ Song Club 이용 중'
+                            : loggedIn
+                                ? 'Song Club 시작하기'
+                                : '로그인하기'
                     }
-
                 </Link>
 
 
             </section>
 
 
-
-            {/* =====================================
-                이번 달 새로운 노래
-            ====================================== */}
 
             <section className="section">
 
@@ -328,10 +278,6 @@ export default async function HomePage() {
 
 
 
-            {/* =====================================
-                인기곡
-            ====================================== */}
-
             <section className="section">
 
 
@@ -428,10 +374,6 @@ export default async function HomePage() {
 
 
 
-            {/* =====================================
-                멤버십 안내
-            ====================================== */}
-
             <section className="membership-banner">
 
 
@@ -441,16 +383,24 @@ export default async function HomePage() {
 
 
                 <h2>
-                    Dear Sunshine Song Library
+                    Dear Sunshine Monthly Song Club
                 </h2>
 
 
                 <p>
-                    Basic은 최근 3개월 콘텐츠를,
-                    Premium은 공개된 전체 음원과
-                    가사지를 이용할 수 있어요.
+                    🎵 매월 수업곡 4~5곡
+                    <br />
+                    📝 Lyrics · 💡 Play Ideas · 🎨 Printable Materials
                 </p>
 
+
+                <p>
+                    <strong>
+                        첫 7일 FREE
+                    </strong>
+                    <br />
+                    이후 월 12,900원
+                </p>
 
 
                 <div
@@ -461,7 +411,7 @@ export default async function HomePage() {
                 >
 
                     <strong>
-                        현재 상태: {planLabel}
+                        현재 상태: {membershipLabel}
                     </strong>
 
                 </div>
@@ -475,7 +425,7 @@ export default async function HomePage() {
                     {
                         membership
                             ? '내 멤버십 보기'
-                            : '멤버십 보기'
+                            : 'Song Club 보기'
                     }
                 </Link>
 

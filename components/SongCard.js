@@ -17,10 +17,6 @@ export default function SongCard({
         useRouter();
 
 
-    /*
-     * 현재 이 곡의 수업을
-     * 실제로 수강 중인지
-     */
     const enrolledInProgram =
         Array.isArray(
             userPrograms
@@ -30,19 +26,9 @@ export default function SongCard({
         );
 
 
-    /*
-     * ==========================================
-     * 곡 클릭
-     * ==========================================
-     */
     function openSong() {
 
-        /*
-         * 로그인 전
-         */
-        if (
-            !loggedIn
-        ) {
+        if (!loggedIn) {
 
             router.push(
                 `/login?next=${encodeURIComponent(
@@ -50,67 +36,44 @@ export default function SongCard({
                 )}`
             );
 
-
             return;
 
         }
 
 
-        /*
-         * Monthly Song Club 멤버십 없음
-         */
-        if (
-            !membership
-        ) {
+        if (!membership) {
 
             router.push(
                 '/membership'
             );
 
-
             return;
 
         }
 
 
-        /*
-         * 현재 수강하지 않는 클래스
-         */
-        if (
-            !enrolledInProgram
-        ) {
+        if (!enrolledInProgram) {
 
             alert(
                 `${song.program} 수강 회원만 이용할 수 있는 음원입니다.`
             );
 
-
             return;
 
         }
 
 
-        /*
-         * 접근 가능
-         */
-        if (
-            accessible
-        ) {
+        if (accessible) {
 
             router.push(
                 `/song/${song.slug}`
             );
 
-
             return;
 
         }
 
 
-        /*
-         * 수업은 수강 중이지만
-         * 현재 멤버십 플랜으로 접근 불가
-         */
         router.push(
             '/membership'
         );
@@ -118,54 +81,25 @@ export default function SongCard({
     }
 
 
-
-    /*
-     * ==========================================
-     * 잠금 안내 문구
-     * ==========================================
-     */
     function getLockedMessage() {
 
-        if (
-            !loggedIn
-        ) {
-
+        if (!loggedIn) {
             return '로그인 후 이용';
-
         }
 
 
-        if (
-            !membership
-        ) {
-
-            return '멤버십 필요';
-
+        if (!membership) {
+            return 'Song Club 멤버십 필요';
         }
 
 
-        if (
-            !enrolledInProgram
-        ) {
-
+        if (!enrolledInProgram) {
             return `${song.program} 수강 회원 전용`;
-
         }
 
 
-        if (
-            song.premiumOnly
-        ) {
-
-            return 'Premium 전용';
-
-        }
-
-
-        return 'Premium에서 전체 이용';
-
+        return '현재 이용할 수 없는 콘텐츠';
     }
-
 
 
     return (
@@ -192,10 +126,6 @@ export default function SongCard({
                         : 0.72
             }}
         >
-
-            {/* ==================================
-                COVER
-            =================================== */}
 
             <div
                 className="song-cover"
@@ -234,11 +164,6 @@ export default function SongCard({
 
             </div>
 
-
-
-            {/* ==================================
-                SONG INFO
-            =================================== */}
 
             <div
                 className="song-meta"
