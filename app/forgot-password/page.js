@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
           ☀️
         </div>
 
-        <p className="eyebrow">DEAR SUNSHINE SONG CLUB</p>
+        <p className="eyebrow">DEAR SUNSHINE MONTHLY SONG CLUB</p>
 
         <h1>비밀번호 찾기</h1>
 

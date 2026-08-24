@@ -2,14 +2,14 @@ import "./globals.css";
 import BottomNav from "../components/BottomNav";
 
 export const metadata = {
-  title: "Dear Sunshine Song Club",
+  title: "Dear Sunshine Monthly Song Club",
 
   description:
     "디어 선샤인의 영어노래와 놀이를 집에서도 자연스럽게 이어가요.",
 
   manifest: "/manifest.webmanifest",
 
-  applicationName: "Dear Sunshine Song Club",
+  applicationName: "Dear Sunshine Monthly Song Club",
 
   icons: {
     icon: "/Dear_Sunshine_logo.png",
@@ -18,7 +18,7 @@ export const metadata = {
 
   appleWebApp: {
     capable: true,
-    title: "Sunshine Song Club",
+    title: "Sunshine Monthly Song Club",
     statusBarStyle: "default",
   },
 };

@@ -122,7 +122,7 @@ export default function MembershipClient({
 
 
             <h1>
-                DEAR SUNSHINE SONG CLUB
+                DEAR SUNSHINE MONTHLY SONG CLUB
             </h1>
 
 

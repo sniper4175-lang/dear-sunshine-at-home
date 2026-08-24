@@ -96,7 +96,7 @@ export default function LoginPage() {
           ☀️
         </div>
 
-        <p className="eyebrow">DEAR SUNSHINE SONG CLUB</p>
+        <p className="eyebrow">DEAR SUNSHINE MONTHLY SONG CLUB</p>
 
         <h1>로그인</h1>
 

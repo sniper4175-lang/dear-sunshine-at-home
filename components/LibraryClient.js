@@ -103,7 +103,7 @@ function canAccessSong(
 
 
     /*
-     * Song Club 멤버십 없음
+     * MonthlyvSong Club 멤버십 없음
      */
     if (
         !membership
