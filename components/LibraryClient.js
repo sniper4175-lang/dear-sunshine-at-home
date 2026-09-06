@@ -92,132 +92,27 @@ function canAccessSong(
     userPrograms
 ) {
 
-    /*
-     * 로그인 안 됨
-     */
     if (
-        !loggedIn
-    ) {
-        return false;
-    }
-
-
-    /*
-     * MonthlyvSong Club 멤버십 없음
-     */
-    if (
+        !loggedIn ||
         !membership
     ) {
         return false;
     }
 
 
-    /*
-     * ======================================
-     * 현재 수강 중인 프로그램 확인
-     *
-     * Sunshine Toddler 수강생
-     * → Sunshine Toddler 음원만
-     *
-     * Melody Book Club 수강생
-     * → Melody Book Club 음원만
-     *
-     * 둘 다 수강
-     * → 둘 다 이용
-     * ======================================
-     */
     if (
         !Array.isArray(
             userPrograms
         ) ||
-        !userPrograms.includes(
-            song.program
-        )
+        !song?.program
     ) {
-
         return false;
-
     }
 
 
-    /*
-     * ======================================
-     * Premium
-     *
-     * 현재 수강 중인 프로그램 안에서는
-     * Premium 전용곡까지 모두 이용 가능
-     * ======================================
-     */
-    if (
-        membership.plan ===
-        'premium'
-    ) {
-
-        return true;
-
-    }
-
-
-    /*
-     * Basic 이외의 플랜이면 접근 불가
-     */
-    if (
-        membership.plan !==
-        'basic'
-    ) {
-
-        return false;
-
-    }
-
-
-    /*
-     * Premium 전용곡
-     */
-    if (
-        song.premiumOnly
-    ) {
-
-        return false;
-
-    }
-
-
-    /*
-     * releaseDate 없는 곡
-     */
-    if (
-        !song.releaseDate
-    ) {
-
-        return false;
-
-    }
-
-
-    /*
-     * Basic
-     *
-     * 최근 3개월 곡만 이용
-     */
-    const today =
-        todayKST();
-
-
-    const threshold =
-        monthsAgo(
-            today,
-            3
-        );
-
-
-    return (
-        song.releaseDate >=
-            threshold &&
-        song.releaseDate <=
-            today
+    return userPrograms.includes(
+        song.program
     );
-
 }
 
 

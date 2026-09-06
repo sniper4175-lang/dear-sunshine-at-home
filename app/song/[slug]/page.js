@@ -12,6 +12,10 @@ import { getCurrentMembership } from "../../../lib/membership";
 
 import { canAccessSong } from "../../../lib/content-access";
 
+import { createAdminSupabase } from "../../../lib/supabase-server";
+
+import { getUserPrograms } from "../../../lib/program-access";
+
 import AudioPlayer from "../../../components/AudioPlayer";
 
 import LyricsSheet from "../../../components/LyricsSheet";
@@ -31,7 +35,23 @@ export default async function SongPage({ params }) {
 
   const loggedIn = Boolean(user);
 
-  const accessible = canAccessSong(song, membership);
+  const db = createAdminSupabase();
+
+  let userPrograms = [];
+
+  if (user) {
+    try {
+      userPrograms = await getUserPrograms(db, user.id);
+    } catch (error) {
+      console.error("Song program access error:", error);
+    }
+  }
+
+  const accessible = canAccessSong(
+    song,
+    membership,
+    userPrograms
+  );
 
   let lockedTitle = "";
   let lockedDescription = "";
@@ -60,7 +80,7 @@ export default async function SongPage({ params }) {
     lockedTitle = "현재 이용할 수 없는 콘텐츠예요";
 
     lockedDescription =
-      "멤버십 상태 또는 콘텐츠 공개 상태를 확인해주세요.";
+      `${song.program} 수강 회원만 이용할 수 있는 콘텐츠예요.`;
 
     lockedButton = "멤버십 보기";
 

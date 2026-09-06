@@ -9,6 +9,10 @@ import {
     getCurrentMembership
 } from '../../lib/membership';
 
+import {
+    getUserPrograms
+} from '../../lib/program-access';
+
 
 export const dynamic =
     'force-dynamic';
@@ -79,77 +83,6 @@ function mapSong(
 
 }
 
-
-
-async function getUserPrograms(
-    db,
-    userId
-) {
-
-    if (!userId) {
-        return [];
-    }
-
-
-    const {
-        data,
-        error
-    } =
-        await db
-            .from(
-                'ds_user_program_access'
-            )
-            .select(
-                'program'
-            )
-            .eq(
-                'user_id',
-                userId
-            );
-
-
-    if (error) {
-
-        console.error(
-            'getUserPrograms error:',
-            {
-                message:
-                    error?.message,
-
-                code:
-                    error?.code,
-
-                details:
-                    error?.details,
-
-                hint:
-                    error?.hint
-            }
-        );
-
-
-        return [];
-
-    }
-
-
-    return [
-        ...new Set(
-            (
-                data ||
-                []
-            )
-                .map(
-                    item =>
-                        item.program
-                )
-                .filter(
-                    Boolean
-                )
-        )
-    ];
-
-}
 
 
 

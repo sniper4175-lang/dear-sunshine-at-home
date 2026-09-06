@@ -12,6 +12,14 @@ import {
     canAccessSong
 } from '../lib/content-access';
 
+import {
+    createAdminSupabase
+} from '../lib/supabase-server';
+
+import {
+    getUserPrograms
+} from '../lib/program-access';
+
 import SongCard
     from '../components/SongCard';
 
@@ -79,6 +87,36 @@ export default async function HomePage() {
         Boolean(
             user
         );
+
+
+    const db =
+        createAdminSupabase();
+
+
+    let userPrograms =
+        [];
+
+
+    if (user) {
+
+        try {
+
+            userPrograms =
+                await getUserPrograms(
+                    db,
+                    user.id
+                );
+
+        } catch (error) {
+
+            console.error(
+                'Home program access error:',
+                error
+            );
+
+        }
+
+    }
 
 
     const monthKey =
@@ -222,7 +260,8 @@ export default async function HomePage() {
                                 const accessible =
                                     canAccessSong(
                                         song,
-                                        membership
+                                        membership,
+                                        userPrograms
                                     );
 
 
@@ -318,7 +357,8 @@ export default async function HomePage() {
                                 const accessible =
                                     canAccessSong(
                                         song,
-                                        membership
+                                        membership,
+                                        userPrograms
                                     );
 
 

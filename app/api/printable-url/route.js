@@ -3,10 +3,6 @@ import {
 } from 'next/server';
 
 import {
-    getSongBySlug
-} from '../../../lib/content';
-
-import {
     createAdminSupabase
 } from '../../../lib/supabase-server';
 
@@ -15,8 +11,16 @@ import {
 } from '../../../lib/membership';
 
 import {
+    getUserPrograms
+} from '../../../lib/program-access';
+
+import {
     canAccessSong
 } from '../../../lib/content-access';
+
+
+export const dynamic =
+    'force-dynamic';
 
 
 export async function GET(
@@ -25,38 +29,6 @@ export async function GET(
 
     try {
 
-        const {
-            searchParams
-        } =
-            new URL(
-                request.url
-            );
-
-
-        const slug =
-            searchParams.get(
-                'slug'
-            );
-
-
-        if (!slug) {
-
-            return NextResponse.json(
-                {
-                    error:
-                        '곡 정보가 없습니다.'
-                },
-                {
-                    status: 400
-                }
-            );
-
-        }
-
-
-        /*
-         * 로그인 + 멤버십 확인
-         */
         const {
             user,
             membership
@@ -84,7 +56,7 @@ export async function GET(
             return NextResponse.json(
                 {
                     error:
-                        '이용 가능한 멤버십이 없습니다.'
+                        '이용 가능한 Song Club 멤버십이 없습니다.'
                 },
                 {
                     status: 403
@@ -94,18 +66,94 @@ export async function GET(
         }
 
 
-        /*
-         * 공개 콘텐츠 조회
-         */
-        const song =
-            await getSongBySlug(
-                slug
+        const {
+            searchParams
+        } =
+            new URL(
+                request.url
             );
+
+
+        const slug =
+            String(
+                searchParams.get(
+                    'slug'
+                ) ||
+                ''
+            ).trim();
+
+
+        if (!slug) {
+
+            return NextResponse.json(
+                {
+                    error:
+                        '곡 정보가 없습니다.'
+                },
+                {
+                    status: 400
+                }
+            );
+
+        }
+
+
+        const db =
+            createAdminSupabase();
+
+
+        const {
+            data: song,
+            error: songError
+        } =
+            await db
+                .from(
+                    'ds_content_songs'
+                )
+                .select(
+                    `
+                    slug,
+                    title,
+                    program,
+                    printable_path,
+                    is_published
+                    `
+                )
+                .eq(
+                    'slug',
+                    slug
+                )
+                .eq(
+                    'is_published',
+                    true
+                )
+                .maybeSingle();
+
+
+        if (songError) {
+
+            console.error(
+                'printable-url song error:',
+                songError
+            );
+
+
+            return NextResponse.json(
+                {
+                    error:
+                        '활동지 정보를 확인하지 못했습니다.'
+                },
+                {
+                    status: 500
+                }
+            );
+
+        }
 
 
         if (
             !song ||
-            !song.printablePath
+            !song.printable_path
         ) {
 
             return NextResponse.json(
@@ -122,22 +170,57 @@ export async function GET(
 
 
         /*
-         * Basic / Premium 권한 확인
+         * 중요:
+         * 화면의 accessible 값을 신뢰하지 않고,
+         * signed URL을 발급하기 직전에 서버에서
+         * ds_user_program_access를 다시 조회합니다.
          */
+        let userPrograms;
+
+        try {
+
+            userPrograms =
+                await getUserPrograms(
+                    db,
+                    user.id
+                );
+
+        } catch (error) {
+
+            console.error(
+                'printable-url program access error:',
+                error
+            );
+
+
+            return NextResponse.json(
+                {
+                    error:
+                        '수강 프로그램 권한을 확인하지 못했습니다.'
+                },
+                {
+                    status: 500
+                }
+            );
+
+        }
+
+
         if (
             !canAccessSong(
-                song,
-                membership
+                {
+                    program:
+                        song.program
+                },
+                membership,
+                userPrograms
             )
         ) {
 
             return NextResponse.json(
                 {
                     error:
-                        membership.plan ===
-                        'basic'
-                            ? 'Basic 멤버십에서는 이 활동지를 이용할 수 없습니다.'
-                            : '이 활동지를 이용할 수 없습니다.'
+                        `${song.program} 수강 회원만 이용할 수 있는 활동지입니다.`
                 },
                 {
                     status: 403
@@ -147,33 +230,26 @@ export async function GET(
         }
 
 
-        const supabase =
-            createAdminSupabase();
-
-
-        /*
-         * 30분 signed URL
-         */
         const {
-            data,
-            error
+            data: signedData,
+            error: signedError
         } =
-            await supabase
+            await db
                 .storage
                 .from(
                     'dear-sunshine-printables'
                 )
                 .createSignedUrl(
-                    song.printablePath,
-                    1800
+                    song.printable_path,
+                    60 * 30
                 );
 
 
-        if (error) {
+        if (signedError) {
 
             console.error(
-                'printable signed URL error:',
-                error
+                'printable-url signed URL error:',
+                signedError
             );
 
 
@@ -192,7 +268,7 @@ export async function GET(
 
         return NextResponse.json({
             url:
-                data.signedUrl
+                signedData.signedUrl
         });
 
 
