@@ -1,7 +1,5 @@
 import ResourceGallery from "../../../components/ResourceGallery";
-/*
-import DownloadButton from "../../../components/DownloadButton";
-*/
+
 import { notFound } from "next/navigation";
 
 import Link from "next/link";
