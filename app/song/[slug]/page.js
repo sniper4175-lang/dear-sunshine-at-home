@@ -146,13 +146,10 @@ export default async function SongPage({ params }) {
               emptyMessage="등록된 활동자료가 없습니다."
             />
           )}
-
-          {song.lyricsPath && (
-            <LyricsSheet
-              slug={song.slug}
-              title={song.title}
-            />
-          )}
+          <LyricsSheet
+            slug={song.slug}
+            title={song.title}
+          />
 
           {song.lyrics && song.lyrics.length > 0 && (
             <section className="content-card">

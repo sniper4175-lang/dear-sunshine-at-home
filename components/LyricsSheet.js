@@ -12,10 +12,10 @@ export default function LyricsSheet({
 }) {
 
     const [
-        url,
-        setUrl
+        items,
+        setItems
     ] =
-        useState('');
+        useState([]);
 
 
     const [
@@ -30,6 +30,13 @@ export default function LyricsSheet({
         setError
     ] =
         useState('');
+
+
+    const [
+        missing,
+        setMissing
+    ] =
+        useState(false);
 
 
     useEffect(
@@ -51,17 +58,52 @@ export default function LyricsSheet({
                         ''
                     );
 
+                    setMissing(
+                        false
+                    );
+
 
                     const response =
                         await fetch(
                             `/api/lyrics-url?slug=${encodeURIComponent(
                                 slug
-                            )}`
+                            )}`,
+                            {
+                                cache:
+                                    'no-store'
+                            }
                         );
 
 
                     const data =
                         await response.json();
+
+
+                    /*
+                     * 파일이 없는 곡은 에러 카드도 띄우지 않고
+                     * 가사지 영역 자체를 숨김.
+                     */
+                    if (
+                        response.status ===
+                        404
+                    ) {
+
+                        if (!cancelled) {
+
+                            setMissing(
+                                true
+                            );
+
+                            setItems(
+                                []
+                            );
+
+                        }
+
+
+                        return;
+
+                    }
 
 
                     if (!response.ok) {
@@ -76,8 +118,25 @@ export default function LyricsSheet({
 
                     if (!cancelled) {
 
-                        setUrl(
-                            data.url
+                        const nextItems =
+                            Array.isArray(
+                                data.items
+                            )
+                                ? data.items
+                                : data.url
+                                    ? [
+                                        {
+                                            name:
+                                                `${title} 가사지`,
+                                            url:
+                                                data.url
+                                        }
+                                    ]
+                                    : [];
+
+
+                        setItems(
+                            nextItems
                         );
 
                     }
@@ -88,7 +147,8 @@ export default function LyricsSheet({
                     if (!cancelled) {
 
                         setError(
-                            e.message
+                            e?.message ||
+                            '가사지를 불러오지 못했습니다.'
                         );
 
                     }
@@ -121,9 +181,18 @@ export default function LyricsSheet({
 
         },
         [
-            slug
+            slug,
+            title
         ]
     );
+
+
+    if (
+        !loading &&
+        missing
+    ) {
+        return null;
+    }
 
 
     if (loading) {
@@ -181,6 +250,13 @@ export default function LyricsSheet({
     }
 
 
+    if (
+        items.length === 0
+    ) {
+        return null;
+    }
+
+
     return (
 
         <section className="content-card">
@@ -205,59 +281,138 @@ export default function LyricsSheet({
             </p>
 
 
-            <a
-                href={
-                    url
-                }
-                target="_blank"
-                rel="noopener noreferrer"
+            <div
+                style={{
+                    display:
+                        'grid',
+
+                    gap:
+                        18
+                }}
             >
 
-                <img
-                    src={
-                        url
-                    }
-                    alt={
-                        `${title} 가사지`
-                    }
-                    style={{
-                        display:
-                            'block',
+                {items.map(
+                    (
+                        item,
+                        index
+                    ) => (
 
-                        width:
-                            '100%',
+                        <div
+                            key={
+                                item.path ||
+                                item.url ||
+                                `${slug}-${index}`
+                            }
+                        >
 
-                        height:
-                            'auto',
+                            <a
+                                href={
+                                    item.url
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
 
-                        borderRadius:
-                            16,
+                                <img
+                                    src={
+                                        item.url
+                                    }
+                                    alt={
+                                        `${title} 가사지 ${index + 1}`
+                                    }
+                                    style={{
+                                        display:
+                                            'block',
 
-                        border:
-                            '1px solid #eee3d5'
-                    }}
-                />
+                                        width:
+                                            '100%',
 
-            </a>
+                                        height:
+                                            'auto',
+
+                                        borderRadius:
+                                            16,
+
+                                        border:
+                                            '1px solid #eee3d5'
+                                    }}
+                                />
+
+                            </a>
+
+
+                            {items.length > 1 && (
+
+                                <div
+                                    style={{
+                                        marginTop:
+                                            8,
+
+                                        color:
+                                            '#8d8175',
+
+                                        fontSize:
+                                            12,
+
+                                        textAlign:
+                                            'center'
+                                    }}
+                                >
+                                    {index + 1} / {items.length}
+                                </div>
+
+                            )}
+
+                        </div>
+
+                    )
+                )}
+
+            </div>
 
 
             <div
                 style={{
                     marginTop:
-                        16
+                        16,
+
+                    display:
+                        'flex',
+
+                    gap:
+                        10,
+
+                    flexWrap:
+                        'wrap'
                 }}
             >
 
-                <a
-                    className="secondary-button"
-                    href={
-                        url
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    🔍 가사지 크게 보기
-                </a>
+                {items.map(
+                    (
+                        item,
+                        index
+                    ) => (
+
+                        <a
+                            key={
+                                `open-${item.path || item.url || index}`
+                            }
+                            className="secondary-button"
+                            href={
+                                item.url
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            🔍 {
+                                items.length === 1
+                                    ? '가사지 크게 보기'
+                                    : `${index + 1}페이지 크게 보기`
+                            }
+                        </a>
+
+                    )
+                )}
 
             </div>
 

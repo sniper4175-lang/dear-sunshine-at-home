@@ -18,9 +18,33 @@ import {
     canAccessSong
 } from '../../../lib/content-access';
 
+import {
+    createResourceSignedUrls
+} from '../../../lib/storage-resource';
+
 
 export const dynamic =
     'force-dynamic';
+
+
+function isExamplePath(
+    value
+) {
+
+    return String(
+        value || ''
+    )
+        .toLowerCase()
+        .endsWith(
+            '/example.png'
+        ) ||
+        String(
+            value || ''
+        )
+            .toLowerCase() ===
+            'example.png';
+
+}
 
 
 export async function GET(
@@ -151,15 +175,12 @@ export async function GET(
         }
 
 
-        if (
-            !song ||
-            !song.lyrics_path
-        ) {
+        if (!song) {
 
             return NextResponse.json(
                 {
                     error:
-                        '가사지를 찾을 수 없습니다.'
+                        '곡 정보를 찾을 수 없습니다.'
                 },
                 {
                     status: 404
@@ -169,12 +190,6 @@ export async function GET(
         }
 
 
-        /*
-         * 중요:
-         * 화면의 accessible 값을 신뢰하지 않고,
-         * signed URL을 발급하기 직전에 서버에서
-         * ds_user_program_access를 다시 조회합니다.
-         */
         let userPrograms;
 
         try {
@@ -230,33 +245,54 @@ export async function GET(
         }
 
 
-        const {
-            data: signedData,
-            error: signedError
-        } =
-            await db
-                .storage
-                .from(
-                    'dear-sunshine-lyrics'
-                )
-                .createSignedUrl(
-                    song.lyrics_path,
-                    60 * 30
-                );
+        /*
+         * 1) 정상적인 lyrics_path가 있으면 그대로 사용
+         * 2) null 또는 예전 example.png이면 자동 폴더 경로 사용
+         *
+         * 예:
+         * Sunshine Toddler/Excavator Song
+         * Melody Book Club/Color Monster
+         */
+        const resourcePath =
+            song.lyrics_path &&
+            !isExamplePath(
+                song.lyrics_path
+            )
+                ? song.lyrics_path
+                : `${song.program}/${song.title}`;
 
 
-        if (signedError) {
+        let items =
+            [];
+
+
+        try {
+
+            items =
+                await createResourceSignedUrls({
+                    db,
+                    bucket:
+                        'dear-sunshine-lyrics',
+
+                    pathOrFolder:
+                        resourcePath,
+
+                    expiresIn:
+                        60 * 30
+                });
+
+        } catch (error) {
 
             console.error(
-                'lyrics-url signed URL error:',
-                signedError
+                'lyrics-url storage error:',
+                error
             );
 
 
             return NextResponse.json(
                 {
                     error:
-                        '가사지 주소를 만들지 못했습니다.'
+                        '가사지 파일을 확인하지 못했습니다.'
                 },
                 {
                     status: 500
@@ -266,9 +302,36 @@ export async function GET(
         }
 
 
+        /*
+         * 폴더가 없거나 파일이 없으면 404.
+         * 클라이언트는 404일 때 가사지 영역 자체를 숨깁니다.
+         */
+        if (
+            items.length === 0
+        ) {
+
+            return NextResponse.json(
+                {
+                    error:
+                        '등록된 가사지가 없습니다.'
+                },
+                {
+                    status: 404
+                }
+            );
+
+        }
+
+
         return NextResponse.json({
+            items,
+
+            /*
+             * 기존 단일 가사지 코드 호환
+             */
             url:
-                signedData.signedUrl
+                items[0]?.url ||
+                null
         });
 
 
