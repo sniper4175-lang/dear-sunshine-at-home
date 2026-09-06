@@ -43,6 +43,18 @@ export default function SignupPage() {
 
 
     const [
+        termsAgreed,
+        setTermsAgreed
+    ] =
+        useState(false);
+
+    const [
+        privacyAgreed,
+        setPrivacyAgreed
+    ] =
+        useState(false);
+
+    const [
         loading,
         setLoading
     ] =
@@ -100,6 +112,14 @@ export default function SignupPage() {
         }
 
 
+        if (!termsAgreed || !privacyAgreed) {
+            setError(
+                '이용약관과 개인정보 수집·이용 동의는 필수입니다.'
+            );
+
+            return;
+        }
+
         setLoading(true);
 
 
@@ -124,7 +144,18 @@ export default function SignupPage() {
                         options: {
 
                             emailRedirectTo:
-                                `${window.location.origin}/login`
+                                `${window.location.origin}/login`,
+
+                            data: {
+                                terms_version:
+                                    '2026-09-06',
+
+                                privacy_version:
+                                    '2026-09-06',
+
+                                legal_consented_at:
+                                    new Date().toISOString()
+                            }
 
                         }
                     });
@@ -344,6 +375,113 @@ export default function SignupPage() {
                         }}
                     />
                 </label>
+
+
+
+                <div
+                    style={{
+                        display: 'grid',
+                        gap: 12,
+                        padding: 16,
+                        borderRadius: 16,
+                        background: '#fff8ea'
+                    }}
+                >
+                    <label
+                        style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 10,
+                            lineHeight: 1.5
+                        }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={termsAgreed}
+                            onChange={e =>
+                                setTermsAgreed(
+                                    e.target.checked
+                                )
+                            }
+                            required
+                            style={{ marginTop: 4 }}
+                        />
+
+                        <span>
+                            <strong>[필수] 이용약관 동의</strong>
+                            <br />
+                            <Link
+                                href="/terms"
+                                target="_blank"
+                                style={{
+                                    textDecoration: 'underline',
+                                    fontSize: 13
+                                }}
+                            >
+                                이용약관 보기
+                            </Link>
+                        </span>
+                    </label>
+
+                    <label
+                        style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 10,
+                            lineHeight: 1.5
+                        }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={privacyAgreed}
+                            onChange={e =>
+                                setPrivacyAgreed(
+                                    e.target.checked
+                                )
+                            }
+                            required
+                            style={{ marginTop: 4 }}
+                        />
+
+                        <span>
+                            <strong>
+                                [필수] 개인정보 수집·이용 동의
+                            </strong>
+                            <br />
+                            <span
+                                style={{
+                                    display: 'block',
+                                    marginTop: 4,
+                                    color: '#8d8175',
+                                    fontSize: 12
+                                }}
+                            >
+                                목적: 회원가입·로그인·서비스 제공
+                                <br />
+                                항목: 이메일, 회원 식별자
+                                <br />
+                                보유: 회원탈퇴 시까지
+                                (법령상 보존 의무가 있는 경우 제외)
+                                <br />
+                                동의를 거부할 수 있으나,
+                                필수정보이므로 회원가입이 제한됩니다.
+                            </span>
+
+                            <Link
+                                href="/privacy"
+                                target="_blank"
+                                style={{
+                                    display: 'inline-block',
+                                    marginTop: 5,
+                                    textDecoration: 'underline',
+                                    fontSize: 13
+                                }}
+                            >
+                                개인정보처리방침 보기
+                            </Link>
+                        </span>
+                    </label>
+                </div>
 
 
                 {error && (

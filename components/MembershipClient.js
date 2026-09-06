@@ -4,6 +4,12 @@ import {
     useRouter
 } from 'next/navigation';
 
+import Link from 'next/link';
+
+import {
+    useState
+} from 'react';
+
 import {
     createBrowserSupabase
 } from '../lib/supabase-browser';
@@ -17,6 +23,18 @@ export default function MembershipClient({
 
     const router =
         useRouter();
+
+    const [
+        autoPaymentAgreed,
+        setAutoPaymentAgreed
+    ] =
+        useState(false);
+
+    const [
+        subscriptionPolicyAgreed,
+        setSubscriptionPolicyAgreed
+    ] =
+        useState(false);
 
 
     async function logout() {
@@ -78,11 +96,24 @@ export default function MembershipClient({
         }
 
 
+        if (
+            !autoPaymentAgreed ||
+            !subscriptionPolicyAgreed
+        ) {
+            alert(
+                '정기결제 및 해지 조건에 모두 동의해주세요.'
+            );
+
+            return;
+        }
+
+
         /*
-         * 실제 정기결제 연결 전 임시 안내
+         * Step ④ PG 연동 전 임시 안내.
+         * 실제 PG 결제수단 등록 성공 후에만 trialing 멤버십을 생성합니다.
          */
         alert(
-            '첫 7일 무료 후 월 12,900원 정기결제 기능은 다음 단계에서 연결합니다.'
+            '동의가 확인되었습니다. 다음 단계에서 네이버페이·토스페이·카드 정기결제 등록을 연결합니다.'
         );
 
     }
@@ -323,6 +354,116 @@ export default function MembershipClient({
                         이후 월 12,900원
                     </span>
                 </div>
+
+
+
+                {!membership && (
+
+                    <div
+                        style={{
+                            display: 'grid',
+                            gap: 12,
+                            padding: 16,
+                            borderRadius: 16,
+                            background: '#fffdf7',
+                            border: '1px solid #f0dfc8',
+                            marginBottom: 16
+                        }}
+                    >
+
+                        <label
+                            style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 10,
+                                lineHeight: 1.5
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={autoPaymentAgreed}
+                                onChange={e =>
+                                    setAutoPaymentAgreed(
+                                        e.target.checked
+                                    )
+                                }
+                                style={{ marginTop: 4 }}
+                            />
+
+                            <span>
+                                <strong>
+                                    [필수] 7일 무료체험 후 자동결제 동의
+                                </strong>
+                                <br />
+                                <span
+                                    style={{
+                                        color: '#8d8175',
+                                        fontSize: 12
+                                    }}
+                                >
+                                    오늘 결제되지 않습니다.
+                                    무료체험 종료 후 월 12,900원이
+                                    등록한 결제수단으로 자동결제되고,
+                                    해지 전까지 매월 자동갱신됩니다.
+                                </span>
+                            </span>
+                        </label>
+
+
+                        <label
+                            style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 10,
+                                lineHeight: 1.5
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={subscriptionPolicyAgreed}
+                                onChange={e =>
+                                    setSubscriptionPolicyAgreed(
+                                        e.target.checked
+                                    )
+                                }
+                                style={{ marginTop: 4 }}
+                            />
+
+                            <span>
+                                <strong>
+                                    [필수] 정기결제·해지·환불 조건 확인
+                                </strong>
+                                <br />
+
+                                <Link
+                                    href="/subscription-policy"
+                                    target="_blank"
+                                    style={{
+                                        textDecoration: 'underline',
+                                        fontSize: 13
+                                    }}
+                                >
+                                    정기결제·해지 안내 보기
+                                </Link>
+
+                                {' · '}
+
+                                <Link
+                                    href="/terms"
+                                    target="_blank"
+                                    style={{
+                                        textDecoration: 'underline',
+                                        fontSize: 13
+                                    }}
+                                >
+                                    이용약관 보기
+                                </Link>
+                            </span>
+                        </label>
+
+                    </div>
+
+                )}
 
 
                 <button
