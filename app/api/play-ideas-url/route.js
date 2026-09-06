@@ -119,7 +119,7 @@ export async function GET(
                     slug,
                     title,
                     program,
-                    printable_path,
+                    play_ideas_path,
                     is_published
                     `
                 )
@@ -137,7 +137,7 @@ export async function GET(
         if (songError) {
 
             console.error(
-                'printable-url song error:',
+                'play-ideas-url song error:',
                 songError
             );
 
@@ -145,7 +145,7 @@ export async function GET(
             return NextResponse.json(
                 {
                     error:
-                        '활동지 정보를 확인하지 못했습니다.'
+                        'Play Ideas 정보를 확인하지 못했습니다.'
                 },
                 {
                     status: 500
@@ -157,13 +157,13 @@ export async function GET(
 
         if (
             !song ||
-            !song.printable_path
+            !song.play_ideas_path
         ) {
 
             return NextResponse.json(
                 {
                     error:
-                        '등록된 활동지가 없습니다.'
+                        '등록된 Play Ideas가 없습니다.'
                 },
                 {
                     status: 404
@@ -186,7 +186,7 @@ export async function GET(
         } catch (error) {
 
             console.error(
-                'printable-url program access error:',
+                'play-ideas-url program access error:',
                 error
             );
 
@@ -218,7 +218,7 @@ export async function GET(
             return NextResponse.json(
                 {
                     error:
-                        `${song.program} 수강 회원만 이용할 수 있는 활동지입니다.`
+                        `${song.program} 수강 회원만 이용할 수 있는 Play Ideas입니다.`
                 },
                 {
                     status: 403
@@ -232,10 +232,10 @@ export async function GET(
             await createResourceSignedUrls({
                 db,
                 bucket:
-                    'dear-sunshine-printables',
+                    'dear-sunshine-play-ideas',
 
                 pathOrFolder:
-                    song.printable_path,
+                    song.play_ideas_path,
 
                 expiresIn:
                     60 * 30
@@ -249,7 +249,7 @@ export async function GET(
             return NextResponse.json(
                 {
                     error:
-                        '등록된 활동지 파일이 없습니다.'
+                        '등록된 Play Ideas 파일이 없습니다.'
                 },
                 {
                     status: 404
@@ -277,7 +277,7 @@ export async function GET(
     } catch (error) {
 
         console.error(
-            'printable-url error:',
+            'play-ideas-url error:',
             error
         );
 
@@ -285,7 +285,7 @@ export async function GET(
         return NextResponse.json(
             {
                 error:
-                    '활동지 처리 중 오류가 발생했습니다.'
+                    'Play Ideas 처리 중 오류가 발생했습니다.'
             },
             {
                 status: 500

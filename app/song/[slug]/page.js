@@ -1,4 +1,4 @@
-import PrintableButton from "../../../components/PrintableButton";
+import ResourceGallery from "../../../components/ResourceGallery";
 /*
 import DownloadButton from "../../../components/DownloadButton";
 */
@@ -125,24 +125,26 @@ export default async function SongPage({ params }) {
             slug={song.slug}
           />
 
+          {song.playIdeasPath && (
+            <ResourceGallery
+              slug={song.slug}
+              apiPath="/api/play-ideas-url"
+              eyebrow="PLAY IDEAS"
+              title="이 노래로 놀아요"
+              description="집에서 바로 따라 할 수 있는 놀이 아이디어를 확인해보세요."
+              emptyMessage="등록된 Play Ideas가 없습니다."
+            />
+          )}
+
           {song.printablePath && (
-            <section
-              className="content-card"
-              style={{
-                marginTop: 20,
-              }}
-            >
-              <p className="eyebrow">PRINTABLE</p>
-
-              <h2>활동자료</h2>
-
-              <p className="page-copy">
-                노래를 들으며 집에서도 함께 영어놀이를
-                이어가 보세요.
-              </p>
-
-              <PrintableButton slug={song.slug} />
-            </section>
+            <ResourceGallery
+              slug={song.slug}
+              apiPath="/api/printable-url"
+              eyebrow="PRINTABLE"
+              title="활동자료"
+              description="노래를 들으며 함께 활용할 수 있는 활동자료예요."
+              emptyMessage="등록된 활동자료가 없습니다."
+            />
           )}
 
           {song.lyricsPath && (
