@@ -1,0 +1,17 @@
+# Step 4-2 추가 환경변수
+
+# 실제 월 구독 금액. 생략하면 코드 기본값 12900원을 사용합니다.
+SONG_CLUB_MONTHLY_PRICE=12900
+
+# 자동결제 cron API 보호용 강한 랜덤 문자열
+# 로컬 .env.local과 Vercel Environment Variables에 동일하게 설정하세요.
+CRON_SECRET=여기에_긴_랜덤_문자열
+
+# Step 4-1에서 이미 필요한 값들
+# NEXT_PUBLIC_TOSS_CLIENT_KEY=test_ck_...
+# TOSS_SECRET_KEY=test_sk_...
+# BILLING_ENCRYPTION_KEY=...
+
+# 주의
+# TOSS_SECRET_KEY / BILLING_ENCRYPTION_KEY / CRON_SECRET은
+# 절대 Git에 커밋하거나 채팅/스크린샷으로 공유하지 마세요.

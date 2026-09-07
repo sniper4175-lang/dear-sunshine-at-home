@@ -1,40 +1,116 @@
 'use client';
 
 import {
-    useRouter
-} from 'next/navigation';
-
-import Link from 'next/link';
-
-import {
     useState
 } from 'react';
+
+import {
+    useRouter
+} from 'next/navigation';
 
 import {
     createBrowserSupabase
 } from '../lib/supabase-browser';
 
+import BillingStartButton
+    from './BillingStartButton';
+
+
+function formatDate(
+    value
+) {
+
+    if (!value) {
+        return '-';
+    }
+
+
+    try {
+        return new Intl.DateTimeFormat(
+            'ko-KR',
+            {
+                timeZone:
+                    'Asia/Seoul',
+                year:
+                    'numeric',
+                month:
+                    'long',
+                day:
+                    'numeric'
+            }
+        ).format(
+            new Date(
+                value
+            )
+        );
+    } catch {
+        return String(
+            value
+        ).slice(
+            0,
+            10
+        );
+    }
+}
+
+
+function getAccessUntil(
+    membership
+) {
+
+    if (!membership) {
+        return null;
+    }
+
+
+    if (
+        membership.status ===
+        'trialing'
+    ) {
+        return (
+            membership.trial_ends_at ||
+            membership.current_period_end ||
+            membership.ends_at ||
+            null
+        );
+    }
+
+
+    return (
+        membership.current_period_end ||
+        membership.ends_at ||
+        null
+    );
+}
+
 
 export default function MembershipClient({
     loggedIn,
     email,
-    membership
+    membership,
+    billingProfile
 }) {
 
     const router =
         useRouter();
 
-    const [
-        autoPaymentAgreed,
-        setAutoPaymentAgreed
-    ] =
-        useState(false);
 
     const [
-        subscriptionPolicyAgreed,
-        setSubscriptionPolicyAgreed
+        cancelling,
+        setCancelling
     ] =
-        useState(false);
+        useState(
+            false
+        );
+
+
+    const [
+        cancelError,
+        setCancelError
+    ] =
+        useState(
+            ''
+        );
 
 
     async function logout() {
@@ -58,7 +134,6 @@ export default function MembershipClient({
             );
 
             return;
-
         }
 
 
@@ -67,56 +142,115 @@ export default function MembershipClient({
         );
 
         router.refresh();
-
     }
 
 
-    function requireLogin() {
+    async function cancelMembership() {
 
-        if (!loggedIn) {
-
-            router.push(
-                '/login'
-            );
-
-            return false;
-
-        }
-
-
-        return true;
-
-    }
-
-
-    function startMembership() {
-
-        if (!requireLogin()) {
+        if (
+            !membership ||
+            membership.cancel_at_period_end ||
+            cancelling
+        ) {
             return;
         }
+
+
+        const accessUntil =
+            getAccessUntil(
+                membership
+            );
+
+
+        const message =
+            membership.status ===
+            'trialing'
+                ? `무료체험을 해지할까요?\n\n${formatDate(accessUntil)}까지 이용할 수 있고, 이후 12,900원 자동결제는 진행되지 않습니다.`
+                : `Song Club 구독을 해지할까요?\n\n${formatDate(accessUntil)}까지 이용할 수 있고, 다음 자동결제는 진행되지 않습니다.`;
 
 
         if (
-            !autoPaymentAgreed ||
-            !subscriptionPolicyAgreed
+            !window.confirm(
+                message
+            )
         ) {
-            alert(
-                '정기결제 및 해지 조건에 모두 동의해주세요.'
-            );
-
             return;
         }
 
 
-        /*
-         * Step ④ PG 연동 전 임시 안내.
-         * 실제 PG 결제수단 등록 성공 후에만 trialing 멤버십을 생성합니다.
-         */
-        alert(
-            '동의가 확인되었습니다. 다음 단계에서 네이버페이·토스페이·카드 정기결제 등록을 연결합니다.'
+        setCancelling(
+            true
         );
 
+        setCancelError(
+            ''
+        );
+
+
+        try {
+
+            const response =
+                await fetch(
+                    '/api/billing/cancel',
+                    {
+                        method:
+                            'POST',
+                        headers: {
+                            'Content-Type':
+                                'application/json'
+                        }
+                    }
+                );
+
+
+            const result =
+                await response.json();
+
+
+            if (
+                !response.ok ||
+                !result?.ok
+            ) {
+                throw new Error(
+                    result?.error ||
+                    '구독 해지에 실패했습니다.'
+                );
+            }
+
+
+            router.refresh();
+
+        } catch (error) {
+
+            setCancelError(
+                error?.message ||
+                '구독 해지 중 오류가 발생했습니다.'
+            );
+
+        } finally {
+
+            setCancelling(
+                false
+            );
+        }
     }
+
+
+    const accessUntil =
+        getAccessUntil(
+            membership
+        );
+
+
+    const nextBillingAt =
+        membership?.next_billing_at ||
+        null;
+
+
+    const paymentLabel =
+        billingProfile?.payment_method_label ||
+        billingProfile?.payment_method ||
+        '등록된 카드';
 
 
     return (
@@ -146,9 +280,6 @@ export default function MembershipClient({
                 특별한 Song Membership ♡
             </p>
 
-
-
-            {/* 현재 회원 상태 */}
 
             <div
                 className="content-card"
@@ -208,62 +339,142 @@ export default function MembershipClient({
                         <div
                             style={{
                                 marginTop: 14,
-                                padding: 14,
+                                padding: 16,
                                 borderRadius: 14,
                                 background: '#fff8ea'
                             }}
                         >
 
-                            <strong>
+                            <strong
+                                style={{
+                                    display: 'block',
+                                    marginBottom: 12
+                                }}
+                            >
                                 Dear Sunshine Monthly Song Club
                             </strong>
 
 
-                            {membership.starts_at && (
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gap: 8,
+                                    fontSize: 14
+                                }}
+                            >
 
-                                <p
-                                    style={{
-                                        marginBottom:
-                                            membership.ends_at
-                                                ? 6
-                                                : 0
-                                    }}
-                                >
-                                    이용 시작일:{' '}
-                                    {
-                                        String(
+                                <div>
+                                    <strong>상태</strong>{' '}
+                                    {membership.cancel_at_period_end
+                                        ? '해지 예정'
+                                        : membership.status === 'trialing'
+                                            ? '7일 무료체험 중'
+                                            : '이용 중'}
+                                </div>
+
+
+                                {membership.starts_at && (
+                                    <div>
+                                        <strong>이용 시작일</strong>{' '}
+                                        {formatDate(
                                             membership.starts_at
-                                        ).slice(
-                                            0,
-                                            10
-                                        )
-                                    }
-                                </p>
-
-                            )}
+                                        )}
+                                    </div>
+                                )}
 
 
-                            {membership.ends_at && (
+                                {membership.status === 'trialing' && !membership.cancel_at_period_end && (
+                                    <div>
+                                        <strong>첫 결제 예정일</strong>{' '}
+                                        {formatDate(
+                                            nextBillingAt
+                                        )}
+                                    </div>
+                                )}
 
-                                <p
+
+                                {membership.status === 'active' && !membership.cancel_at_period_end && (
+                                    <div>
+                                        <strong>다음 결제 예정일</strong>{' '}
+                                        {formatDate(
+                                            nextBillingAt
+                                        )}
+                                    </div>
+                                )}
+
+
+                                {billingProfile && (
+                                    <div>
+                                        <strong>결제수단</strong>{' '}
+                                        {paymentLabel}
+                                    </div>
+                                )}
+
+
+                                {membership.cancel_at_period_end && (
+                                    <div>
+                                        <strong>이용 가능 기간</strong>{' '}
+                                        {formatDate(
+                                            accessUntil
+                                        )}까지
+                                    </div>
+                                )}
+
+                            </div>
+
+
+                            {membership.cancel_at_period_end && (
+                                <div
                                     style={{
-                                        marginBottom: 0
+                                        marginTop: 14,
+                                        paddingTop: 12,
+                                        borderTop: '1px solid rgba(0,0,0,0.08)',
+                                        lineHeight: 1.6,
+                                        fontSize: 14
                                     }}
                                 >
-                                    이용 종료일:{' '}
-                                    {
-                                        String(
-                                            membership.ends_at
-                                        ).slice(
-                                            0,
-                                            10
-                                        )
-                                    }
-                                </p>
-
+                                    해지 신청이 완료되었습니다.
+                                    <br />
+                                    {formatDate(accessUntil)}까지 이용할 수 있으며,
+                                    이후 자동결제는 진행되지 않습니다.
+                                </div>
                             )}
 
                         </div>
+
+
+                        {!membership.cancel_at_period_end && (
+                            <button
+                                type="button"
+                                className="secondary-button wide"
+                                onClick={
+                                    cancelMembership
+                                }
+                                disabled={
+                                    cancelling
+                                }
+                                style={{
+                                    marginTop: 12
+                                }}
+                            >
+                                {cancelling
+                                    ? '해지 처리 중...'
+                                    : '구독 해지'}
+                            </button>
+                        )}
+
+
+                        {cancelError && (
+                            <p
+                                style={{
+                                    marginTop: 10,
+                                    marginBottom: 0,
+                                    fontSize: 14
+                                }}
+                            >
+                                {cancelError}
+                            </p>
+                        )}
 
                     </>
 
@@ -288,9 +499,6 @@ export default function MembershipClient({
 
             </div>
 
-
-
-            {/* 단일 멤버십 */}
 
             <div
                 className="content-card"
@@ -356,148 +564,46 @@ export default function MembershipClient({
                 </div>
 
 
+                {
+                    membership ? (
 
-                {!membership && (
-
-                    <div
-                        style={{
-                            display: 'grid',
-                            gap: 12,
-                            padding: 16,
-                            borderRadius: 16,
-                            background: '#fffdf7',
-                            border: '1px solid #f0dfc8',
-                            marginBottom: 16
-                        }}
-                    >
-
-                        <label
-                            style={{
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                gap: 10,
-                                lineHeight: 1.5
-                            }}
+                        <button
+                            type="button"
+                            className="secondary-button wide"
+                            disabled
                         >
-                            <input
-                                type="checkbox"
-                                checked={autoPaymentAgreed}
-                                onChange={e =>
-                                    setAutoPaymentAgreed(
-                                        e.target.checked
-                                    )
-                                }
-                                style={{ marginTop: 4 }}
-                            />
+                            {
+                                membership.cancel_at_period_end
+                                    ? '해지 예정'
+                                    : membership.status === 'trialing'
+                                        ? '7일 무료체험 이용 중'
+                                        : '현재 이용 중'
+                            }
+                        </button>
 
-                            <span>
-                                <strong>
-                                    [필수] 7일 무료체험 후 자동결제 동의
-                                </strong>
-                                <br />
-                                <span
-                                    style={{
-                                        color: '#8d8175',
-                                        fontSize: 12
-                                    }}
-                                >
-                                    오늘 결제되지 않습니다.
-                                    무료체험 종료 후 월 12,900원이
-                                    등록한 결제수단으로 자동결제되고,
-                                    해지 전까지 매월 자동갱신됩니다.
-                                </span>
-                            </span>
-                        </label>
+                    ) : loggedIn ? (
 
+                        <BillingStartButton />
 
-                        <label
-                            style={{
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                gap: 10,
-                                lineHeight: 1.5
-                            }}
+                    ) : (
+
+                        <button
+                            type="button"
+                            className="primary-button wide"
+                            onClick={() =>
+                                router.push(
+                                    '/login'
+                                )
+                            }
                         >
-                            <input
-                                type="checkbox"
-                                checked={subscriptionPolicyAgreed}
-                                onChange={e =>
-                                    setSubscriptionPolicyAgreed(
-                                        e.target.checked
-                                    )
-                                }
-                                style={{ marginTop: 4 }}
-                            />
+                            로그인 후 시작하기
+                        </button>
 
-                            <span>
-                                <strong>
-                                    [필수] 정기결제·해지·환불 조건 확인
-                                </strong>
-                                <br />
-
-                                <Link
-                                    href="/subscription-policy"
-                                    target="_blank"
-                                    style={{
-                                        textDecoration: 'underline',
-                                        fontSize: 13
-                                    }}
-                                >
-                                    정기결제·해지 안내 보기
-                                </Link>
-
-                                {' · '}
-
-                                <Link
-                                    href="/terms"
-                                    target="_blank"
-                                    style={{
-                                        textDecoration: 'underline',
-                                        fontSize: 13
-                                    }}
-                                >
-                                    이용약관 보기
-                                </Link>
-                            </span>
-                        </label>
-
-                    </div>
-
-                )}
-
-
-                <button
-                    type="button"
-                    className={
-                        membership
-                            ? 'secondary-button wide'
-                            : 'primary-button wide'
-                    }
-                    disabled={
-                        Boolean(
-                            membership
-                        )
-                    }
-                    onClick={
-                        startMembership
-                    }
-                >
-
-                    {
-                        membership
-                            ? '현재 이용 중'
-                            : loggedIn
-                                ? 'Song Club 시작하기'
-                                : '로그인 후 시작하기'
-                    }
-
-                </button>
+                    )
+                }
 
             </div>
 
-
-
-            {/* 로그아웃 */}
 
             {loggedIn && (
 

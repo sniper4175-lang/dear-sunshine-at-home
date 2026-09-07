@@ -14,7 +14,8 @@ export default async function MembershipPage() {
 
     const {
         user,
-        membership
+        membership,
+        billingProfile
     } =
         await getCurrentMembership();
 
@@ -29,6 +30,9 @@ export default async function MembershipPage() {
             }
             membership={
                 membership
+            }
+            billingProfile={
+                billingProfile
             }
         />
     );
