@@ -416,16 +416,13 @@ export default async function HomePage() {
 
             <section className="membership-banner">
 
-
                 <p className="eyebrow">
                     MEMBERSHIP
                 </p>
 
-
                 <h2>
                     Dear Sunshine Monthly Song Club
                 </h2>
-
 
                 <p>
                     🎵 매월 수업곡 4~5곡
@@ -433,30 +430,48 @@ export default async function HomePage() {
                     📝 Lyrics · 💡 Play Ideas · 🎨 Printable Materials
                 </p>
 
-
-                <p>
+                <div
+                    style={{
+                        margin: '18px 0',
+                        lineHeight: 1.8
+                    }}
+                >
                     <strong>
-                        첫 7일 FREE
+                        OPENING SPECIAL
                     </strong>
-                    <br />
-                    이후 월 12,900원
-                </p>
 
+                    <br />
+
+                    1개월 12,900원
+
+                    <br />
+
+                    6개월 73,500원 · 약 5% SAVE
+
+                    <br />
+
+                    12개월 139,000원 · 약 10% SAVE
+
+                    <br />
+
+                    <span
+                        style={{
+                            fontSize: 13
+                        }}
+                    >
+                        자동결제 없이 원하는 기간만 이용해요.
+                    </span>
+                </div>
 
                 <div
                     style={{
-                        margin:
-                            '16px 0'
+                        margin: '16px 0'
                     }}
                 >
-
                     <strong>
                         현재 상태: {membershipLabel}
                     </strong>
-
                 </div>
-
-
 
                 <Link
                     className="primary-button"
@@ -465,10 +480,9 @@ export default async function HomePage() {
                     {
                         membership
                             ? '내 멤버십 보기'
-                            : 'Song Club 보기'
+                            : 'Song Club 멤버십 보기'
                     }
                 </Link>
-
 
             </section>
 

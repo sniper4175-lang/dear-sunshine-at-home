@@ -18,7 +18,7 @@ export default function BillingFailClient() {
         searchParams.get(
             'message'
         ) ||
-        '결제수단 등록이 완료되지 않았습니다.';
+        '결제가 완료되지 않았습니다.';
 
 
     return (
@@ -34,12 +34,12 @@ export default function BillingFailClient() {
             >
 
                 <p className="eyebrow">
-                    BILLING
+                    PAYMENT
                 </p>
 
 
                 <h1>
-                    결제수단 등록이 취소되었어요
+                    결제가 취소되었어요
                 </h1>
 
 
@@ -48,9 +48,16 @@ export default function BillingFailClient() {
                 </p>
 
 
-                <p className="muted">
-                    결제는 발생하지 않았어요.
-                    다시 시도하려면 멤버십 페이지로 돌아가주세요.
+                <p
+                    className="muted"
+                    style={{
+                        lineHeight: 1.7
+                    }}
+                >
+                    결제는 완료되지 않았어요.
+                    <br />
+                    이용권을 구매하려면
+                    멤버십 페이지에서 다시 시도해주세요.
                 </p>
 
 
@@ -58,7 +65,7 @@ export default function BillingFailClient() {
                     href="/membership"
                     className="primary-button wide"
                 >
-                    다시 시도하기
+                    멤버십으로 돌아가기
                 </Link>
 
             </div>
@@ -66,4 +73,5 @@ export default function BillingFailClient() {
         </section>
 
     );
+
 }

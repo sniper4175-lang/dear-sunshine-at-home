@@ -9,11 +9,42 @@ const TOSS_SDK_URL =
     'https://js.tosspayments.com/v2/standard';
 
 
+const PLANS = {
+
+    monthly: {
+        months: 1,
+        amount: 12900,
+        orderName:
+            'Dear Sunshine Song Club 1개월 이용권',
+        buttonText:
+            '1개월 12,900원 결제하기'
+    },
+
+    sixMonths: {
+        months: 6,
+        amount: 73500,
+        orderName:
+            'Dear Sunshine Song Club 6개월 이용권',
+        buttonText:
+            '6개월 73,500원 결제하기'
+    },
+
+    twelveMonths: {
+        months: 12,
+        amount: 139000,
+        orderName:
+            'Dear Sunshine Song Club 12개월 이용권',
+        buttonText:
+            '12개월 139,000원 결제하기'
+    }
+
+};
+
+
 function loadTossPaymentsSdk() {
 
     if (
-        typeof window !==
-        'undefined' &&
+        typeof window !== 'undefined' &&
         window.TossPayments
     ) {
 
@@ -108,7 +139,26 @@ function loadTossPaymentsSdk() {
 }
 
 
-export default function BillingStartButton({
+function createOrderId(plan) {
+
+    const randomId =
+        typeof crypto !== 'undefined' &&
+        crypto.randomUUID
+            ? crypto
+                .randomUUID()
+                .replaceAll('-', '')
+            : `${Date.now()}_${Math.random()
+                .toString(36)
+                .slice(2)}`;
+
+
+    return `sunshine_${plan}_${randomId}`;
+
+}
+
+
+export default function MembershipPaymentButton({
+    plan = 'monthly',
     disabled = false
 }) {
 
@@ -116,31 +166,34 @@ export default function BillingStartButton({
         loading,
         setLoading
     ] =
-        useState(
-            false
-        );
+        useState(false);
 
 
-    async function startBilling() {
+    const selectedPlan =
+        PLANS[plan];
+
+
+    async function startPayment() {
 
         if (
             loading ||
-            disabled
+            disabled ||
+            !selectedPlan
         ) {
+
             return;
+
         }
 
 
         try {
 
-            setLoading(
-                true
-            );
+            setLoading(true);
 
 
             /*
-             * customerKey는 브라우저에서 임의 생성하지 않고
-             * 로그인 사용자를 확인한 서버에서 준비합니다.
+             * 로그인 사용자 및
+             * Toss clientKey/customerKey 준비
              */
             const prepareResponse =
                 await fetch(
@@ -152,14 +205,18 @@ export default function BillingStartButton({
                         headers: {
                             'Content-Type':
                                 'application/json'
-                        }
+                        },
+
+                        body:
+                            JSON.stringify({
+                                plan
+                            })
                     }
                 );
 
 
             const prepared =
-                await prepareResponse
-                    .json();
+                await prepareResponse.json();
 
 
             if (
@@ -168,7 +225,7 @@ export default function BillingStartButton({
 
                 throw new Error(
                     prepared?.error ||
-                    '결제수단 등록을 준비하지 못했습니다.'
+                    '결제를 준비하지 못했습니다.'
                 );
 
             }
@@ -205,12 +262,28 @@ export default function BillingStartButton({
 
 
             /*
-             * 이 단계에서는 결제하지 않습니다.
-             * 카드 인증 -> 빌링키 발급을 위한 결제수단 등록만 진행합니다.
+             * 자동결제가 아닌 1회 결제
              */
-            await payment.requestBillingAuth({
+            await payment.requestPayment({
+
                 method:
                     'CARD',
+
+                amount: {
+                    currency:
+                        'KRW',
+
+                    value:
+                        selectedPlan.amount
+                },
+
+                orderId:
+                    createOrderId(
+                        plan
+                    ),
+
+                orderName:
+                    selectedPlan.orderName,
 
                 successUrl:
                     `${origin}/billing/success`,
@@ -221,26 +294,25 @@ export default function BillingStartButton({
                 customerEmail:
                     prepared.customerEmail ||
                     undefined
+
             });
 
 
         } catch (error) {
 
             console.error(
-                'start billing error:',
+                'payment start error:',
                 error
             );
 
 
             alert(
                 error?.message ||
-                '결제수단 등록을 시작하지 못했습니다.'
+                '결제를 시작하지 못했습니다.'
             );
 
 
-            setLoading(
-                false
-            );
+            setLoading(false);
 
         }
 
@@ -257,13 +329,13 @@ export default function BillingStartButton({
                 loading
             }
             onClick={
-                startBilling
+                startPayment
             }
         >
             {
                 loading
                     ? '결제창 여는 중...'
-                    : '월 12,900원으로 시작하기'
+                    : selectedPlan.buttonText
             }
         </button>
 

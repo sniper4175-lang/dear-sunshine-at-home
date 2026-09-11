@@ -19,10 +19,23 @@ export const dynamic =
     'force-dynamic';
 
 
-export async function POST() {
+const VALID_PLANS = [
+    'monthly',
+    'sixMonths',
+    'twelveMonths'
+];
+
+
+export async function POST(
+    request
+) {
 
     try {
 
+        /*
+         * 1.
+         * 로그인 사용자 확인
+         */
         const authSupabase =
             await createAuthSupabase();
 
@@ -49,13 +62,53 @@ export async function POST() {
                         '로그인이 필요합니다.'
                 },
                 {
-                    status: 401
+                    status:
+                        401
                 }
             );
 
         }
 
 
+        /*
+         * 2.
+         * 사용자가 선택한 기간권 확인
+         */
+        const body =
+            await request.json();
+
+
+        const plan =
+            String(
+                body?.plan ||
+                ''
+            ).trim();
+
+
+        if (
+            !VALID_PLANS.includes(
+                plan
+            )
+        ) {
+
+            return NextResponse.json(
+                {
+                    error:
+                        '올바르지 않은 멤버십 상품입니다.'
+                },
+                {
+                    status:
+                        400
+                }
+            );
+
+        }
+
+
+        /*
+         * 3.
+         * Toss 클라이언트 키 확인
+         */
         const clientKey =
             process.env
                 .NEXT_PUBLIC_TOSS_CLIENT_KEY;
@@ -69,7 +122,8 @@ export async function POST() {
                         '토스페이먼츠 클라이언트 키가 설정되지 않았습니다.'
                 },
                 {
-                    status: 500
+                    status:
+                        500
                 }
             );
 
@@ -81,49 +135,104 @@ export async function POST() {
 
 
         /*
-         * 이미 현재 멤버십이 있으면 결제수단 등록을 다시 시작하지 않음.
+         * 4.
+         * 아직 이용기간이 남아있는
+         * Song Club 멤버십이 있는지 확인
+         *
+         * 자동결제가 아니므로
+         * trialing / past_due / paused 등은
+         * 더 이상 사용하지 않습니다.
          */
         const {
-            data: currentMembership
+            data: memberships,
+            error: membershipError
         } =
             await db
                 .from(
                     'ds_content_memberships'
                 )
                 .select(
-                    'id,status'
+                    'id,status,current_period_end,ends_at,created_at'
                 )
                 .eq(
                     'user_id',
                     user.id
                 )
-                .in(
+                .eq(
                     'status',
-                    [
-                        'trialing',
-                        'active',
-                        'past_due',
-                        'paused'
-                    ]
+                    'active'
                 )
-                .maybeSingle();
+                .order(
+                    'created_at',
+                    {
+                        ascending:
+                            false
+                    }
+                )
+                .limit(
+                    1
+                );
 
 
-        if (currentMembership) {
+        if (membershipError) {
 
-            return NextResponse.json(
-                {
-                    error:
-                        '이미 이용 중인 Song Club 멤버십이 있습니다.'
-                },
-                {
-                    status: 409
-                }
-            );
+            throw membershipError;
 
         }
 
 
+        const currentMembership =
+            memberships?.[0] ||
+            null;
+
+
+        if (currentMembership) {
+
+            const accessUntil =
+                currentMembership
+                    .current_period_end ||
+                currentMembership
+                    .ends_at ||
+                null;
+
+
+            /*
+             * 종료일이 없거나 아직 미래라면
+             * 현재 이용 중인 멤버십으로 봅니다.
+             */
+            const stillActive =
+                !accessUntil ||
+                new Date(
+                    accessUntil
+                ) >
+                new Date();
+
+
+            if (stillActive) {
+
+                return NextResponse.json(
+                    {
+                        error:
+                            '현재 이용 중인 Song Club 멤버십이 있습니다.'
+                    },
+                    {
+                        status:
+                            409
+                    }
+                );
+
+            }
+
+        }
+
+
+        /*
+         * 5.
+         * Toss 결제창에서 사용할 customerKey 준비
+         *
+         * 자동결제용 billingKey를 만드는 것은 아닙니다.
+         * Toss가 현재 구매자를 식별하기 위한 값입니다.
+         */
         const {
             data: existingProfile,
             error: profileReadError
@@ -147,7 +256,9 @@ export async function POST() {
 
 
         if (profileReadError) {
+
             throw profileReadError;
+
         }
 
 
@@ -157,6 +268,11 @@ export async function POST() {
             `ds_${randomUUID()}`;
 
 
+        /*
+         * 기존 프로필이 없을 때만 생성
+         *
+         * billingKey나 카드정보를 저장하지 않습니다.
+         */
         if (!existingProfile) {
 
             const {
@@ -182,35 +298,59 @@ export async function POST() {
 
 
             if (insertError) {
+
                 throw insertError;
+
             }
 
         }
 
 
+        /*
+         * 6.
+         * 브라우저에 결제창을 열기 위해 필요한 값만 반환
+         */
         return NextResponse.json({
+
+            ok:
+                true,
+
             clientKey,
+
             customerKey,
+
             customerEmail:
-                user.email || ''
+                user.email ||
+                '',
+
+            plan
+
         });
 
 
     } catch (error) {
 
         console.error(
-            'billing prepare error:',
-            error
+            'payment prepare error:',
+            {
+                message:
+                    error?.message,
+
+                code:
+                    error?.code
+            }
         );
 
 
         return NextResponse.json(
             {
                 error:
-                    '결제수단 등록을 준비하지 못했습니다.'
+                    error?.message ||
+                    '결제를 준비하지 못했습니다.'
             },
             {
-                status: 500
+                status:
+                    500
             }
         );
 

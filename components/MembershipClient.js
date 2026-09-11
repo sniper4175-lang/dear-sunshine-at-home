@@ -1,10 +1,6 @@
 'use client';
 
 import {
-    useState
-} from 'react';
-
-import {
     useRouter
 } from 'next/navigation';
 
@@ -12,8 +8,8 @@ import {
     createBrowserSupabase
 } from '../lib/supabase-browser';
 
-import BillingStartButton
-    from './BillingStartButton';
+import MembershipPlans
+    from './MembershipPlans';
 
 
 function formatDate(
@@ -26,15 +22,19 @@ function formatDate(
 
 
     try {
+
         return new Intl.DateTimeFormat(
             'ko-KR',
             {
                 timeZone:
                     'Asia/Seoul',
+
                 year:
                     'numeric',
+
                 month:
                     'long',
+
                 day:
                     'numeric'
             }
@@ -43,14 +43,18 @@ function formatDate(
                 value
             )
         );
+
     } catch {
+
         return String(
             value
         ).slice(
             0,
             10
         );
+
     }
+
 }
 
 
@@ -63,54 +67,23 @@ function getAccessUntil(
     }
 
 
-    if (
-        membership.status ===
-        'trialing'
-    ) {
-        return (
-            membership.trial_ends_at ||
-            membership.current_period_end ||
-            membership.ends_at ||
-            null
-        );
-    }
-
-
     return (
         membership.current_period_end ||
         membership.ends_at ||
         null
     );
+
 }
 
 
 export default function MembershipClient({
     loggedIn,
     email,
-    membership,
-    billingProfile
+    membership
 }) {
 
     const router =
         useRouter();
-
-
-    const [
-        cancelling,
-        setCancelling
-    ] =
-        useState(
-            false
-        );
-
-
-    const [
-        cancelError,
-        setCancelError
-    ] =
-        useState(
-            ''
-        );
 
 
     async function logout() {
@@ -134,6 +107,7 @@ export default function MembershipClient({
             );
 
             return;
+
         }
 
 
@@ -142,97 +116,7 @@ export default function MembershipClient({
         );
 
         router.refresh();
-    }
 
-
-    async function cancelMembership() {
-
-        if (
-            !membership ||
-            membership.cancel_at_period_end ||
-            cancelling
-        ) {
-            return;
-        }
-
-
-        const accessUntil =
-            getAccessUntil(
-                membership
-            );
-
-
-        const message =
-            membership.status ===
-            'trialing'
-                ? `무료체험을 해지할까요?\n\n${formatDate(accessUntil)}까지 이용할 수 있고, 이후 12,900원 자동결제는 진행되지 않습니다.`
-                : `Song Club 구독을 해지할까요?\n\n${formatDate(accessUntil)}까지 이용할 수 있고, 다음 자동결제는 진행되지 않습니다.`;
-
-
-        if (
-            !window.confirm(
-                message
-            )
-        ) {
-            return;
-        }
-
-
-        setCancelling(
-            true
-        );
-
-        setCancelError(
-            ''
-        );
-
-
-        try {
-
-            const response =
-                await fetch(
-                    '/api/billing/cancel',
-                    {
-                        method:
-                            'POST',
-                        headers: {
-                            'Content-Type':
-                                'application/json'
-                        }
-                    }
-                );
-
-
-            const result =
-                await response.json();
-
-
-            if (
-                !response.ok ||
-                !result?.ok
-            ) {
-                throw new Error(
-                    result?.error ||
-                    '구독 해지에 실패했습니다.'
-                );
-            }
-
-
-            router.refresh();
-
-        } catch (error) {
-
-            setCancelError(
-                error?.message ||
-                '구독 해지 중 오류가 발생했습니다.'
-            );
-
-        } finally {
-
-            setCancelling(
-                false
-            );
-        }
     }
 
 
@@ -240,17 +124,6 @@ export default function MembershipClient({
         getAccessUntil(
             membership
         );
-
-
-    const nextBillingAt =
-        membership?.next_billing_at ||
-        null;
-
-
-    const paymentLabel =
-        billingProfile?.payment_method_label ||
-        billingProfile?.payment_method ||
-        '등록된 카드';
 
 
     return (
@@ -280,6 +153,9 @@ export default function MembershipClient({
                 특별한 Song Membership ♡
             </p>
 
+
+
+            {/* 현재 멤버십 상태 */}
 
             <div
                 className="content-card"
@@ -364,117 +240,61 @@ export default function MembershipClient({
                             >
 
                                 <div>
-                                    <strong>상태</strong>{' '}
-                                    {membership.cancel_at_period_end
-                                        ? '해지 예정'
-                                        : membership.status === 'trialing'
-                                            ? '7일 무료체험 중'
-                                            : '이용 중'}
+                                    <strong>
+                                        상태
+                                    </strong>{' '}
+                                    이용 중
                                 </div>
 
 
                                 {membership.starts_at && (
+
                                     <div>
-                                        <strong>이용 시작일</strong>{' '}
+                                        <strong>
+                                            이용 시작일
+                                        </strong>{' '}
+
                                         {formatDate(
                                             membership.starts_at
                                         )}
                                     </div>
+
                                 )}
 
 
-                                {membership.status === 'trialing' && !membership.cancel_at_period_end && (
+                                {accessUntil && (
+
                                     <div>
-                                        <strong>첫 결제 예정일</strong>{' '}
-                                        {formatDate(
-                                            nextBillingAt
-                                        )}
-                                    </div>
-                                )}
+                                        <strong>
+                                            이용 종료일
+                                        </strong>{' '}
 
-
-                                {membership.status === 'active' && !membership.cancel_at_period_end && (
-                                    <div>
-                                        <strong>다음 결제 예정일</strong>{' '}
-                                        {formatDate(
-                                            nextBillingAt
-                                        )}
-                                    </div>
-                                )}
-
-
-                                {billingProfile && (
-                                    <div>
-                                        <strong>결제수단</strong>{' '}
-                                        {paymentLabel}
-                                    </div>
-                                )}
-
-
-                                {membership.cancel_at_period_end && (
-                                    <div>
-                                        <strong>이용 가능 기간</strong>{' '}
                                         {formatDate(
                                             accessUntil
-                                        )}까지
+                                        )}
                                     </div>
+
                                 )}
 
                             </div>
 
-
-                            {membership.cancel_at_period_end && (
-                                <div
-                                    style={{
-                                        marginTop: 14,
-                                        paddingTop: 12,
-                                        borderTop: '1px solid rgba(0,0,0,0.08)',
-                                        lineHeight: 1.6,
-                                        fontSize: 14
-                                    }}
-                                >
-                                    해지 신청이 완료되었습니다.
-                                    <br />
-                                    {formatDate(accessUntil)}까지 이용할 수 있으며,
-                                    이후 자동결제는 진행되지 않습니다.
-                                </div>
-                            )}
-
                         </div>
 
 
-                        {!membership.cancel_at_period_end && (
-                            <button
-                                type="button"
-                                className="secondary-button wide"
-                                onClick={
-                                    cancelMembership
-                                }
-                                disabled={
-                                    cancelling
-                                }
-                                style={{
-                                    marginTop: 12
-                                }}
-                            >
-                                {cancelling
-                                    ? '해지 처리 중...'
-                                    : '구독 해지'}
-                            </button>
-                        )}
-
-
-                        {cancelError && (
-                            <p
-                                style={{
-                                    marginTop: 10,
-                                    marginBottom: 0,
-                                    fontSize: 14
-                                }}
-                            >
-                                {cancelError}
-                            </p>
-                        )}
+                        <p
+                            className="muted"
+                            style={{
+                                marginTop: 14,
+                                marginBottom: 0,
+                                fontSize: 13,
+                                lineHeight: 1.7
+                            }}
+                        >
+                            자동결제되지 않습니다.
+                            <br />
+                            이용기간이 끝난 후 원하실 때
+                            다시 멤버십을 구매할 수 있어요.
+                        </p>
 
                     </>
 
@@ -499,6 +319,9 @@ export default function MembershipClient({
 
             </div>
 
+
+
+            {/* Song Club 소개 및 가격 */}
 
             <div
                 className="content-card"
@@ -539,31 +362,6 @@ export default function MembershipClient({
                 </div>
 
 
-                <div
-                    style={{
-                        padding: '18px',
-                        borderRadius: 16,
-                        background: '#fff8ea',
-                        marginBottom: 18,
-                        textAlign: 'center'
-                    }}
-                >
-                    <strong
-                        style={{
-                            display: 'block',
-                            fontSize: 18,
-                            marginBottom: 6
-                        }}
-                    >
-                        첫 7일 FREE
-                    </strong>
-
-                    <span>
-                        이후 월 12,900원
-                    </span>
-                </div>
-
-
                 {
                     membership ? (
 
@@ -572,18 +370,12 @@ export default function MembershipClient({
                             className="secondary-button wide"
                             disabled
                         >
-                            {
-                                membership.cancel_at_period_end
-                                    ? '해지 예정'
-                                    : membership.status === 'trialing'
-                                        ? '7일 무료체험 이용 중'
-                                        : '현재 이용 중'
-                            }
+                            현재 Song Club 이용 중
                         </button>
 
                     ) : loggedIn ? (
 
-                        <BillingStartButton />
+                        <MembershipPlans />
 
                     ) : (
 
@@ -596,13 +388,14 @@ export default function MembershipClient({
                                 )
                             }
                         >
-                            로그인 후 시작하기
+                            로그인 후 멤버십 보기
                         </button>
 
                     )
                 }
 
             </div>
+
 
 
             {loggedIn && (
@@ -627,4 +420,5 @@ export default function MembershipClient({
         </section>
 
     );
+
 }
