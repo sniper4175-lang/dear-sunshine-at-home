@@ -12,10 +12,72 @@ import PlaylistPlayer
     from './PlaylistPlayer';
 
 
-const PROGRAM_OPTIONS = [
-    'Sunshine Toddler',
-    'Melody Book Club'
-];
+
+function todayKST() {
+
+    return new Intl.DateTimeFormat(
+        'en-CA',
+        {
+            timeZone:
+                'Asia/Seoul',
+
+            year:
+                'numeric',
+
+            month:
+                '2-digit',
+
+            day:
+                '2-digit'
+        }
+    ).format(
+        new Date()
+    );
+
+}
+
+
+
+function monthsAgo(
+    dateString,
+    months
+) {
+
+    const [
+        year,
+        month,
+        day
+    ] =
+        dateString
+            .split('-')
+            .map(Number);
+
+
+    const date =
+        new Date(
+            Date.UTC(
+                year,
+                month - 1,
+                day
+            )
+        );
+
+
+    date.setUTCMonth(
+        date.getUTCMonth() -
+        months
+    );
+
+
+    return date
+        .toISOString()
+        .slice(
+            0,
+            10
+        );
+
+}
+
 
 
 /*
@@ -29,7 +91,6 @@ function canAccessSong(
     membership,
     userPrograms
 ) {
-
     if (
         !loggedIn ||
         !membership
@@ -37,23 +98,13 @@ function canAccessSong(
         return false;
     }
 
-
-    if (
-        !Array.isArray(
-            userPrograms
-        ) ||
-        !song?.program
-    ) {
-        return false;
-    }
-
-
-    return userPrograms.includes(
-        song.program
+    return (
+        Array.isArray(userPrograms) &&
+        userPrograms.includes(
+            song.program
+        )
     );
-
 }
-
 
 export default function LibraryClient({
     songs,
@@ -64,15 +115,40 @@ export default function LibraryClient({
 
     /*
      * ==========================================
-     * 현재 계정에서 이용 가능한 프로그램
+     * 선택한 프로그램
      * ==========================================
      */
 
-    const availablePrograms =
+    const [
+        selectedProgram,
+        setSelectedProgram
+    ] =
+        useState(
+            () =>
+                Array.isArray(userPrograms) &&
+                userPrograms.length === 1
+                    ? userPrograms[0]
+                    : 'all'
+        );
+
+
+
+    
+
+    const PROGRAM_OPTIONS = [
+        'Sunshine Toddler',
+        'Melody Book Club'
+    ];
+
+
+    const allowedPrograms =
         useMemo(
             () =>
                 PROGRAM_OPTIONS.filter(
                     program =>
+                        Array.isArray(
+                            userPrograms
+                        ) &&
                         userPrograms.includes(
                             program
                         )
@@ -84,43 +160,15 @@ export default function LibraryClient({
 
 
     /*
-     * ==========================================
-     * 선택한 프로그램
+     * 로그인 + 활성 멤버십 회원에게는
+     * 관리자가 허용한 클래스의 곡만 보여줍니다.
      *
-     * 한 클래스만 권한이 있으면 그 클래스가
-     * 자동으로 선택됩니다.
-     * ==========================================
+     * 비회원/로그아웃 상태는 기존처럼
+     * 곡 목록 자체는 볼 수 있고 재생 권한만 잠깁니다.
      */
-
-    const [
-        selectedProgram,
-        setSelectedProgram
-    ] =
-        useState(
-            () =>
-                availablePrograms.length === 1
-                    ? availablePrograms[0]
-                    : 'all'
-        );
-
-
-    /*
-     * ==========================================
-     * 회원에게 보여줄 곡
-     *
-     * 활성 멤버십 회원은 관리자에서 허용한
-     * 클래스의 곡만 화면에 전달됩니다.
-     *
-     * 비회원/로그아웃 상태에서는 기존처럼
-     * 전체 공개 곡 목록을 둘러볼 수 있습니다.
-     * 실제 재생은 잠겨 있습니다.
-     * ==========================================
-     */
-
     const visibleSongs =
         useMemo(
             () => {
-
                 if (
                     !loggedIn ||
                     !membership
@@ -128,50 +176,38 @@ export default function LibraryClient({
                     return songs;
                 }
 
-
                 if (
-                    availablePrograms.length ===
-                    0
+                    allowedPrograms.length === 0
                 ) {
                     return [];
                 }
 
-
                 return songs.filter(
                     song =>
-                        availablePrograms.includes(
+                        allowedPrograms.includes(
                             song.program
                         )
                 );
-
             },
             [
                 songs,
                 loggedIn,
                 membership,
-                availablePrograms
+                allowedPrograms
             ]
         );
-
-
-    /*
+/*
      * ==========================================
-     * 현재 실제로 사용할 필터
+     * 프로그램별 곡 필터
      * ==========================================
      */
-
-    const effectiveSelectedProgram =
-        availablePrograms.length === 1
-            ? availablePrograms[0]
-            : selectedProgram;
-
 
     const filteredSongs =
         useMemo(
             () => {
 
                 if (
-                    effectiveSelectedProgram ===
+                    selectedProgram ===
                     'all'
                 ) {
                     return visibleSongs;
@@ -181,20 +217,30 @@ export default function LibraryClient({
                 return visibleSongs.filter(
                     song =>
                         song.program ===
-                        effectiveSelectedProgram
+                        selectedProgram
                 );
 
             },
             [
                 visibleSongs,
-                effectiveSelectedProgram
+                selectedProgram
             ]
         );
+
+},
+            [
+                songs,
+                selectedProgram
+            ]
+        );
+
 
 
     /*
      * ==========================================
      * 현재 필터에서 실제 재생 가능한 곡
+     *
+     * PlaylistPlayer에도 이 목록만 전달
      * ==========================================
      */
 
@@ -227,41 +273,12 @@ export default function LibraryClient({
         );
 
 
+
     /*
      * ==========================================
-     * 화면에 보여줄 프로그램 탭
-     *
-     * 로그인 + 활성 멤버십:
-     *   1개 권한 -> 해당 클래스만
-     *   2개 권한 -> 전체 + 두 클래스
-     *
-     * 비회원/로그아웃:
-     *   기존처럼 전체 프로그램 둘러보기
+     * 멤버십 표시
      * ==========================================
      */
-
-    const tabs =
-        loggedIn &&
-        membership
-            ? (
-                availablePrograms.length > 1
-                    ? [
-                        'all',
-                        ...availablePrograms
-                    ]
-                    : availablePrograms
-            )
-            : [
-                'all',
-                ...PROGRAM_OPTIONS
-            ];
-
-
-    const programLabel =
-        availablePrograms.join(
-            ' · '
-        );
-
 
     return (
 
@@ -288,36 +305,35 @@ export default function LibraryClient({
 
 
             {/* ==================================
-                현재 이용 클래스
-
-                Basic / Premium 개념은
-                더 이상 화면에 표시하지 않습니다.
+                멤버십 상태
             =================================== */}
 
-            {
-                loggedIn &&
-                membership &&
-                availablePrograms.length >
-                    0 && (
+            <div
+                style={{
+                    display:
+                        'flex',
 
-                    <div
-                        style={{
-                            display:
-                                'flex',
+                    alignItems:
+                        'center',
 
-                            alignItems:
-                                'center',
+                    gap:
+                        7,
 
-                            gap:
-                                7,
+                    flexWrap:
+                        'wrap',
 
-                            flexWrap:
-                                'wrap',
+                    marginBottom:
+                        10
+                }}
+            >
 
-                            marginBottom:
-                                12
-                        }}
-                    >
+                
+
+
+                {
+                    loggedIn &&
+                    userPrograms.length >
+                        0 && (
 
                         <div
                             style={{
@@ -334,25 +350,25 @@ export default function LibraryClient({
                                     999,
 
                                 background:
-                                    '#fff1c9',
+                                    '#f4eee6',
 
                                 color:
-                                    '#5f4631',
+                                    '#695b50',
 
                                 fontSize:
                                     12,
 
                                 fontWeight:
-                                    800
+                                    750
                             }}
                         >
-                            ☀️ {programLabel}
+                            {programLabel}
                         </div>
 
-                    </div>
+                    )
+                }
 
-                )
-            }
+            </div>
 
 
 
@@ -363,7 +379,7 @@ export default function LibraryClient({
             {
                 loggedIn &&
                 membership &&
-                availablePrograms.length ===
+                userPrograms.length ===
                     0 && (
 
                     <div
@@ -405,60 +421,67 @@ export default function LibraryClient({
                 프로그램 필터
             =================================== */}
 
-            {
-                tabs.length >
-                0 && (
+            <div
+                style={{
+                    display:
+                        'flex',
 
-                    <div
-                        style={{
-                            display:
-                                'flex',
+                    gap:
+                        8,
 
-                            gap:
-                                8,
+                    overflowX:
+                        'auto',
 
-                            overflowX:
-                                'auto',
+                    paddingBottom:
+                        18
+                }}
+            >
 
-                            paddingBottom:
-                                18
-                        }}
-                    >
+                <ProgramButton
+                    active={
+                        selectedProgram ===
+                        'all'
+                    }
+                    onClick={() =>
+                        setSelectedProgram(
+                            'all'
+                        )
+                    }
+                >
+                    전체
+                </ProgramButton>
 
-                        {
-                            tabs.map(
-                                program => (
 
-                                    <ProgramButton
-                                        key={
-                                            program
-                                        }
-                                        active={
-                                            effectiveSelectedProgram ===
-                                            program
-                                        }
-                                        onClick={() =>
-                                            setSelectedProgram(
-                                                program
-                                            )
-                                        }
-                                    >
-                                        {
-                                            program ===
-                                            'all'
-                                                ? '전체'
-                                                : program
-                                        }
-                                    </ProgramButton>
+                <ProgramButton
+                    active={
+                        selectedProgram ===
+                        'Sunshine Toddler'
+                    }
+                    onClick={() =>
+                        setSelectedProgram(
+                            'Sunshine Toddler'
+                        )
+                    }
+                >
+                    Sunshine Toddler
+                </ProgramButton>
 
-                                )
-                            )
-                        }
 
-                    </div>
+                <ProgramButton
+                    active={
+                        selectedProgram ===
+                        'Melody Book Club'
+                    }
+                    onClick={() =>
+                        setSelectedProgram(
+                            'Melody Book Club'
+                        )
+                    }
+                >
+                    Melody Book Club
+                </ProgramButton>
 
-                )
-            }
+            </div>
 
 
 
@@ -486,10 +509,10 @@ export default function LibraryClient({
                     }}
                 >
                     {
-                        effectiveSelectedProgram ===
+                        selectedProgram ===
                         'all'
                             ? '전체 프로그램'
-                            : effectiveSelectedProgram
+                            : selectedProgram
                     }
                 </p>
 
@@ -515,13 +538,14 @@ export default function LibraryClient({
 
             {/* ==================================
                 플레이리스트
+
+                실제 접근 가능한 곡만
+                플레이리스트에서 재생 가능
             =================================== */}
 
             {
                 loggedIn &&
-                membership &&
-                availablePrograms.length >
-                    0 && (
+                membership && (
 
                     <PlaylistPlayer
                         songs={
@@ -607,14 +631,7 @@ export default function LibraryClient({
                                 '#8d8175'
                         }}
                     >
-                        {
-                            loggedIn &&
-                            membership &&
-                            availablePrograms.length ===
-                                0
-                                ? '이용 가능한 클래스가 아직 연결되지 않았습니다.'
-                                : '공개된 노래가 없습니다.'
-                        }
+                        공개된 노래가 없습니다.
                     </div>
 
                 )
@@ -625,6 +642,7 @@ export default function LibraryClient({
     );
 
 }
+
 
 
 /*

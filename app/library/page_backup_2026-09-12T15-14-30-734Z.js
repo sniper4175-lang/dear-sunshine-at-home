@@ -18,11 +18,6 @@ export const dynamic =
     'force-dynamic';
 
 
-const PROGRAM_OPTIONS = [
-    'Sunshine Toddler',
-    'Melody Book Club'
-];
-
 
 function mapSong(
     row
@@ -89,6 +84,8 @@ function mapSong(
 }
 
 
+
+
 export default async function LibraryPage() {
 
     /*
@@ -110,6 +107,7 @@ export default async function LibraryPage() {
         );
 
 
+
     /*
      * ==========================================
      * 관리자 DB
@@ -119,49 +117,6 @@ export default async function LibraryPage() {
     const db =
         createAdminSupabase();
 
-
-    /*
-     * ==========================================
-     * 현재 수강 프로그램
-     * ==========================================
-     */
-
-    let userPrograms =
-        [];
-
-
-    if (user) {
-
-        try {
-
-            const savedPrograms =
-                await getUserPrograms(
-                    db,
-                    user.id
-                );
-
-
-            userPrograms =
-                (
-                    savedPrograms ||
-                    []
-                ).filter(
-                    program =>
-                        PROGRAM_OPTIONS.includes(
-                            program
-                        )
-                );
-
-        } catch (error) {
-
-            console.error(
-                'Library program access error:',
-                error
-            );
-
-        }
-
-    }
 
 
     /*
@@ -218,7 +173,7 @@ export default async function LibraryPage() {
     }
 
 
-    const allSongs =
+    const songs =
         (
             songRows ||
             []
@@ -227,23 +182,21 @@ export default async function LibraryPage() {
         );
 
 
+
     /*
      * ==========================================
-     * 활성 멤버십 회원에게는
-     * 허용된 프로그램의 곡만 브라우저로 전달
+     * 현재 수강 프로그램
      * ==========================================
      */
 
-    const songs =
-        loggedIn &&
-        membership
-            ? allSongs.filter(
-                song =>
-                    userPrograms.includes(
-                        song.program
-                    )
+    const userPrograms =
+        user
+            ? await getUserPrograms(
+                db,
+                user.id
             )
-            : allSongs;
+            : [];
+
 
 
     /*
