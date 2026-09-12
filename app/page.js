@@ -250,7 +250,11 @@ export default async function HomePage() {
                 'ds_content_songs'
             )
             .select(
-                'id,slug,title,subtitle,program,category,emoji,release_date'
+                'id,slug,title,subtitle,program,category,emoji,release_date,is_upcoming'
+            )
+            .eq(
+                'is_upcoming',
+                true
             )
             .gte(
                 'release_date',
