@@ -170,17 +170,63 @@ function nextMonthRangeKST() {
 }
 
 
+export default async function HomePage() {
+
+    const songs =
+        await getSongs();
+
+
+    const {
+        user,
+        membership
+    } =
+        await getCurrentMembership();
+
+
+    const loggedIn =
+        Boolean(
+            user
+        );
+
+
+    const db =
+        createAdminSupabase();
+
+
+    let userPrograms =
+        [];
+
+
+    if (user) {
+
+        try {
+
+            userPrograms =
+                await getUserPrograms(
+                    db,
+                    user.id
+                );
+
+        } catch (error) {
+
+            console.error(
+                'Home program access error:',
+                error
+            );
+
+        }
+
+    }
+
 
     /*
      * =====================================
      * 다음 달 공개 예정곡
      * =====================================
      *
-     * 공개되지 않은 콘텐츠도
-     * 제목/프로그램/이모지/공개일만 미리 보여줍니다.
-     *
-     * audio_path 등 실제 음원 정보는
-     * 브라우저로 보내지 않습니다.
+     * 실제 음원 URL은 보내지 않고
+     * 제목 / 프로그램 / 이모지 / 공개일만
+     * 홈 화면 미리보기에 사용합니다.
      */
     const {
         start:
@@ -279,11 +325,8 @@ function nextMonthRangeKST() {
 
     /*
      * Song Club 이용 중이고
-     * 관리자가 특정 프로그램 권한을 부여한 경우
-     * 그 프로그램의 다음 달 곡만 보여줍니다.
-     *
-     * 비회원/로그아웃 사용자는
-     * 두 프로그램의 예고를 모두 볼 수 있습니다.
+     * 관리자에서 프로그램 권한을 지정했다면
+     * 해당 프로그램의 예고곡만 보여줍니다.
      */
     if (
         membership &&
@@ -306,265 +349,6 @@ function nextMonthRangeKST() {
             0,
             4
         );
-
-
-            {/* =====================================
-                다음 달 미리보기
-            ====================================== */}
-
-            {upcomingSongs.length > 0 && (
-
-                <section className="section">
-
-                    <div
-                        className="section-head"
-                        style={{
-                            alignItems:
-                                'flex-end'
-                        }}
-                    >
-
-                        <div>
-
-                            <p className="eyebrow">
-                                COMING UP NEXT
-                            </p>
-
-
-                            <h2>
-                                다음 달에 만나요 ✨
-                            </h2>
-
-
-                            <p
-                                className="muted"
-                                style={{
-                                    margin:
-                                        '6px 0 0'
-                                }}
-                            >
-                                다음 달 새롭게 공개될 노래를
-                                미리 만나보세요.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <div className="card-grid">
-
-                        {upcomingSongs.map(
-                            song => (
-
-                                <article
-                                    key={
-                                        song.id ||
-                                        song.slug
-                                    }
-                                    className="content-card"
-                                    style={{
-                                        position:
-                                            'relative',
-
-                                        overflow:
-                                            'hidden',
-
-                                        padding:
-                                            12
-                                    }}
-                                >
-
-                                    <div
-                                        style={{
-                                            minHeight:
-                                                140,
-
-                                            borderRadius:
-                                                18,
-
-                                            background:
-                                                'linear-gradient(135deg, #fff7dc 0%, #fff0ee 100%)',
-
-                                            display:
-                                                'flex',
-
-                                            alignItems:
-                                                'center',
-
-                                            justifyContent:
-                                                'center',
-
-                                            position:
-                                                'relative'
-                                        }}
-                                    >
-
-                                        <span
-                                            style={{
-                                                fontSize:
-                                                    58
-                                            }}
-                                        >
-                                            {
-                                                song.emoji ||
-                                                '🎵'
-                                            }
-                                        </span>
-
-
-                                        <span
-                                            style={{
-                                                position:
-                                                    'absolute',
-
-                                                top:
-                                                    10,
-
-                                                right:
-                                                    10,
-
-                                                padding:
-                                                    '6px 9px',
-
-                                                borderRadius:
-                                                    999,
-
-                                                background:
-                                                    '#fff',
-
-                                                fontSize:
-                                                    10,
-
-                                                fontWeight:
-                                                    800,
-
-                                                letterSpacing:
-                                                    '0.06em',
-
-                                                color:
-                                                    '#d48618'
-                                            }}
-                                        >
-                                            COMING SOON
-                                        </span>
-
-                                    </div>
-
-
-                                    <div
-                                        style={{
-                                            padding:
-                                                '12px 4px 4px'
-                                        }}
-                                    >
-
-                                        <strong
-                                            style={{
-                                                display:
-                                                    'block',
-
-                                                fontSize:
-                                                    15
-                                            }}
-                                        >
-                                            {song.title}
-                                        </strong>
-
-
-                                        <p
-                                            className="muted"
-                                            style={{
-                                                margin:
-                                                    '5px 0 0',
-
-                                                fontSize:
-                                                    12
-                                            }}
-                                        >
-                                            {song.program}
-                                        </p>
-
-
-                                        <p
-                                            style={{
-                                                margin:
-                                                    '8px 0 0',
-
-                                                fontSize:
-                                                    12,
-
-                                                fontWeight:
-                                                    700,
-
-                                                color:
-                                                    '#d48618'
-                                            }}
-                                        >
-                                            🎵 {nextMonthLabel} 공개 예정
-                                        </p>
-
-                                    </div>
-
-                                </article>
-
-                            )
-                        )}
-
-                    </div>
-
-                </section>
-
-            )}
-
-
-export default async function HomePage() {
-
-    const songs =
-        await getSongs();
-
-
-    const {
-        user,
-        membership
-    } =
-        await getCurrentMembership();
-
-
-    const loggedIn =
-        Boolean(
-            user
-        );
-
-
-    const db =
-        createAdminSupabase();
-
-
-    let userPrograms =
-        [];
-
-
-    if (user) {
-
-        try {
-
-            userPrograms =
-                await getUserPrograms(
-                    db,
-                    user.id
-                );
-
-        } catch (error) {
-
-            console.error(
-                'Home program access error:',
-                error
-            );
-
-        }
-
-    }
 
 
     const monthKey =
@@ -763,6 +547,222 @@ export default async function HomePage() {
 
             </section>
 
+
+
+
+            {/* =====================================
+                다음 달 새로운 노래
+            ====================================== */}
+
+            <section className="section">
+
+                <div className="section-head">
+
+                    <div>
+
+                        <p className="eyebrow">
+                            COMING UP NEXT
+                        </p>
+
+
+                        <h2>
+                            다음 달에 만나요 ✨
+                        </h2>
+
+
+                        <p
+                            className="muted"
+                            style={{
+                                margin:
+                                    '6px 0 0'
+                            }}
+                        >
+                            다음 달 새롭게 공개될 노래를
+                            미리 만나보세요.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                {upcomingSongs.length > 0 ? (
+
+                    <div className="card-grid">
+
+                        {upcomingSongs.map(
+                            song => (
+
+                                <article
+                                    key={
+                                        song.id ||
+                                        song.slug
+                                    }
+                                    className="content-card"
+                                    style={{
+                                        padding:
+                                            12
+                                    }}
+                                >
+
+                                    <div
+                                        style={{
+                                            minHeight:
+                                                140,
+
+                                            borderRadius:
+                                                18,
+
+                                            background:
+                                                'linear-gradient(135deg, #fff7dc 0%, #fff0ee 100%)',
+
+                                            display:
+                                                'flex',
+
+                                            alignItems:
+                                                'center',
+
+                                            justifyContent:
+                                                'center',
+
+                                            position:
+                                                'relative'
+                                        }}
+                                    >
+
+                                        <span
+                                            style={{
+                                                fontSize:
+                                                    58
+                                            }}
+                                        >
+                                            {
+                                                song.emoji ||
+                                                '🎵'
+                                            }
+                                        </span>
+
+
+                                        <span
+                                            style={{
+                                                position:
+                                                    'absolute',
+
+                                                top:
+                                                    10,
+
+                                                right:
+                                                    10,
+
+                                                padding:
+                                                    '6px 9px',
+
+                                                borderRadius:
+                                                    999,
+
+                                                background:
+                                                    '#fff',
+
+                                                fontSize:
+                                                    10,
+
+                                                fontWeight:
+                                                    800,
+
+                                                letterSpacing:
+                                                    '0.06em',
+
+                                                color:
+                                                    '#d48618'
+                                            }}
+                                        >
+                                            COMING SOON
+                                        </span>
+
+                                    </div>
+
+
+                                    <div
+                                        style={{
+                                            padding:
+                                                '12px 4px 4px'
+                                        }}
+                                    >
+
+                                        <strong
+                                            style={{
+                                                display:
+                                                    'block',
+
+                                                fontSize:
+                                                    15
+                                            }}
+                                        >
+                                            {song.title}
+                                        </strong>
+
+
+                                        <p
+                                            className="muted"
+                                            style={{
+                                                margin:
+                                                    '5px 0 0',
+
+                                                fontSize:
+                                                    12
+                                            }}
+                                        >
+                                            {song.program}
+                                        </p>
+
+
+                                        <p
+                                            style={{
+                                                margin:
+                                                    '8px 0 0',
+
+                                                fontSize:
+                                                    12,
+
+                                                fontWeight:
+                                                    700,
+
+                                                color:
+                                                    '#d48618'
+                                            }}
+                                        >
+                                            🎵 {nextMonthLabel} 공개 예정
+                                        </p>
+
+                                    </div>
+
+                                </article>
+
+                            )
+                        )}
+
+                    </div>
+
+                ) : (
+
+                    <div
+                        className="content-card"
+                        style={{
+                            textAlign:
+                                'center'
+                        }}
+                    >
+
+                        <p className="muted">
+                            다음 달 새로운 노래를
+                            준비하고 있어요 ☀️
+                        </p>
+
+                    </div>
+
+                )}
+
+            </section>
 
 
             <section className="section">
