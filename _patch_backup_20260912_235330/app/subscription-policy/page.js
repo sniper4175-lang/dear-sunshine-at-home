@@ -1,35 +1,39 @@
 export const metadata = {
-    title: '이용권·환불 안내 | Dear Sunshine'
+    title: 'Song Club 이용권 안내 | Dear Sunshine'
 };
 
 
-export default function SubscriptionPolicyPage() {
+export default function SubscriptionPage() {
 
     return (
 
         <section className="section top-section">
 
             <p className="eyebrow">
-                MEMBERSHIP PASS
+                MEMBERSHIP
             </p>
 
 
             <h1>
-                이용권·환불 안내
+                Song Club 이용권 안내
             </h1>
 
 
             <p className="page-copy">
                 Dear Sunshine Song Club은
-                자동결제 없이 원하는 기간만 이용하는
-                기간제 이용권으로 운영됩니다.
+                자동결제 방식이 아닌 기간제 이용권으로 운영됩니다.
+                <br />
+                센터에서 결제 확인 후 회원 계정의 이용기간이 활성화됩니다.
             </p>
 
 
 
+            {/* 이용권 가격 */}
+
             <div
                 className="content-card"
                 style={{
+                    marginTop: 22,
                     marginBottom: 18,
                     textAlign: 'center',
                     background: '#fff8ea'
@@ -37,12 +41,12 @@ export default function SubscriptionPolicyPage() {
             >
 
                 <p className="eyebrow">
-                    SONG CLUB PASS
+                    MEMBERSHIP PASS
                 </p>
 
 
                 <h2>
-                    이용권 안내 ☀️
+                    원하는 기간만 이용하세요 ☀️
                 </h2>
 
 
@@ -118,34 +122,7 @@ export default function SubscriptionPolicyPage() {
 
 
 
-            <div
-                className="content-card"
-                style={{
-                    marginBottom: 18
-                }}
-            >
-
-                <h2>
-                    1. 결제 및 이용 시작
-                </h2>
-
-
-                <p
-                    style={{
-                        lineHeight: 1.9,
-                        marginBottom: 0
-                    }}
-                >
-                    Song Club 이용권은 Dear Sunshine 센터에서
-                    결제 확인 후 활성화됩니다.
-                    계정 활성화가 완료되면 회원 페이지에서
-                    이용 시작일, 종료일 및 남은 이용기간을
-                    확인할 수 있습니다.
-                </p>
-
-            </div>
-
-
+            {/* 1 */}
 
             <div
                 className="content-card"
@@ -155,26 +132,28 @@ export default function SubscriptionPolicyPage() {
             >
 
                 <h2>
-                    2. 자동결제 없음
+                    1. 등록 및 이용 시작
                 </h2>
 
 
                 <p
                     style={{
-                        lineHeight: 1.9,
-                        marginBottom: 0
+                        lineHeight: 1.9
                     }}
                 >
-                    Song Club 이용권은 자동결제 또는
-                    자동갱신 방식이 아닙니다.
-                    이용기간이 끝나도 별도의 결제가 자동으로 발생하지 않습니다.
-                    계속 이용을 원하시는 경우 센터에서 새로운 이용권을
-                    다시 등록해 주세요.
+                    Song Club 이용을 원하시는 경우
+                    Dear Sunshine 센터에서 이용권을 결제합니다.
+                    결제가 확인되면 관리자에서 회원 계정을 활성화하며,
+                    활성화된 이용기간 동안 해당 회원에게 지정된
+                    Sunshine Toddler 또는 Melody Book Club 콘텐츠를
+                    이용할 수 있습니다.
                 </p>
 
             </div>
 
 
+
+            {/* 2 */}
 
             <div
                 className="content-card"
@@ -184,7 +163,48 @@ export default function SubscriptionPolicyPage() {
             >
 
                 <h2>
-                    3. 이용기간
+                    2. 이용기간
+                </h2>
+
+
+                <p
+                    style={{
+                        lineHeight: 1.9
+                    }}
+                >
+                    이용기간은 관리자에서 등록된 시작일과 종료일을
+                    기준으로 적용됩니다.
+                    회원 페이지에서 이용 시작일, 종료일,
+                    남은 이용기간을 확인할 수 있습니다.
+                </p>
+
+
+                <p
+                    style={{
+                        lineHeight: 1.9,
+                        marginBottom: 0
+                    }}
+                >
+                    이용기간이 종료되면 Song Club 콘텐츠 이용 권한도
+                    종료됩니다. 계속 이용을 원하시는 경우
+                    센터에서 새로운 이용권을 등록해주세요.
+                </p>
+
+            </div>
+
+
+
+            {/* 3 */}
+
+            <div
+                className="content-card"
+                style={{
+                    marginBottom: 18
+                }}
+            >
+
+                <h2>
+                    3. 자동결제 및 자동갱신 없음
                 </h2>
 
 
@@ -194,13 +214,17 @@ export default function SubscriptionPolicyPage() {
                         marginBottom: 0
                     }}
                 >
-                    이용기간은 계정에 등록된 시작일과 종료일을 기준으로 합니다.
-                    이용기간이 종료되면 Song Club 콘텐츠 이용 권한도 종료됩니다.
+                    Dear Sunshine Song Club은 현재
+                    자동결제 또는 자동갱신 방식으로 운영되지 않습니다.
+                    이용기간 종료 후 별도의 결제가 자동으로 발생하지 않으며,
+                    원하실 때 센터를 통해 다시 등록하실 수 있습니다.
                 </p>
 
             </div>
 
 
+
+            {/* 4 */}
 
             <div
                 className="content-card"
@@ -220,14 +244,18 @@ export default function SubscriptionPolicyPage() {
                         marginBottom: 0
                     }}
                 >
-                    회원은 관리자에게 등록된 프로그램에 따라
-                    Sunshine Toddler 또는 Melody Book Club 콘텐츠를
-                    이용할 수 있습니다.
+                    Song Club 가입 시
+                    Sunshine Toddler 또는 Melody Book Club 중
+                    등록된 프로그램의 콘텐츠를 이용할 수 있습니다.
+                    이용 프로그램 변경이 필요한 경우
+                    Dear Sunshine 센터로 문의해주세요.
                 </p>
 
             </div>
 
 
+
+            {/* 5 */}
 
             <div
                 className="content-card"
@@ -237,45 +265,7 @@ export default function SubscriptionPolicyPage() {
             >
 
                 <h2>
-                    5. 환불 안내
-                </h2>
-
-
-                <p
-                    style={{
-                        lineHeight: 1.9
-                    }}
-                >
-                    이용권 환불을 원하시는 경우
-                    Dear Sunshine 센터로 문의해 주세요.
-                </p>
-
-
-                <p
-                    style={{
-                        lineHeight: 1.9,
-                        marginBottom: 0
-                    }}
-                >
-                    디지털 콘텐츠 특성상 이용이 시작된 이후에는
-                    실제 이용기간 및 제공된 콘텐츠 이용 여부에 따라
-                    환불 가능 여부와 환불금액이 달라질 수 있습니다.
-                    환불 요청이 접수되면 이용내역을 확인한 후 안내드립니다.
-                </p>
-
-            </div>
-
-
-
-            <div
-                className="content-card"
-                style={{
-                    marginBottom: 18
-                }}
-            >
-
-                <h2>
-                    6. 서비스 장애
+                    5. 환불 및 이용 중단
                 </h2>
 
 
@@ -285,10 +275,10 @@ export default function SubscriptionPolicyPage() {
                         marginBottom: 0
                     }}
                 >
-                    Dear Sunshine의 귀책 사유로 장기간 정상적인
-                    서비스 이용이 어려운 경우,
-                    상황에 따라 이용기간 연장 또는 기타 필요한 조치를
-                    안내할 수 있습니다.
+                    이용권의 환불 또는 이용 중단이 필요한 경우
+                    Dear Sunshine 센터로 문의해주세요.
+                    환불 가능 여부와 금액은 결제 시 안내된
+                    이용조건 및 실제 이용기간을 기준으로 확인 후 안내드립니다.
                 </p>
 
             </div>
@@ -307,16 +297,13 @@ export default function SubscriptionPolicyPage() {
             >
 
                 <strong>
-                    ☀️ 이용권 문의
+                    ☀️ Dear Sunshine Song Club
                 </strong>
 
                 <br />
 
-                010-8247-6447
-
-                <br />
-
-                syeonjamie@gmail.com
+                결제 및 이용권 관련 문의는
+                Dear Sunshine 센터로 부탁드립니다.
 
             </div>
 

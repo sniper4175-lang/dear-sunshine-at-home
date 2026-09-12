@@ -1,4 +1,4 @@
-﻿import "./globals.css";
+import "./globals.css";
 import BottomNav from "../components/BottomNav";
 import SiteFooter from "../components/SiteFooter";
 
@@ -39,4 +39,3 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-
