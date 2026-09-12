@@ -1,7 +1,3 @@
-import MembershipPaymentButton
-    from './MembershipPaymentButton';
-
-
 export default function MembershipPlans() {
 
     return (
@@ -48,6 +44,7 @@ export default function MembershipPlans() {
                     }}
                 >
                     정가 월{' '}
+
                     <span
                         style={{
                             textDecoration:
@@ -56,6 +53,7 @@ export default function MembershipPlans() {
                     >
                         16,900원
                     </span>
+
                 </div>
 
 
@@ -104,59 +102,41 @@ export default function MembershipPlans() {
                     border:
                         '1px solid #f0ddd0',
                     borderRadius: 20,
-                    background: '#fff'
+                    background: '#fff',
+                    textAlign: 'center'
                 }}
             >
 
                 <div
                     style={{
-                        textAlign: 'center'
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: '#ef2870'
                     }}
                 >
-
-                    <div
-                        style={{
-                            fontSize: 14,
-                            fontWeight: 800,
-                            color: '#ef2870'
-                        }}
-                    >
-                        1개월
-                    </div>
-
-
-                    <div
-                        style={{
-                            marginTop: 8,
-                            fontSize: 28,
-                            fontWeight: 800
-                        }}
-                    >
-                        12,900원
-                    </div>
-
-
-                    <div
-                        style={{
-                            marginTop: 4,
-                            color: '#8d8175',
-                            fontSize: 13
-                        }}
-                    >
-                        1개월 이용권
-                    </div>
-
+                    1개월
                 </div>
 
 
                 <div
                     style={{
-                        marginTop: 18
+                        marginTop: 8,
+                        fontSize: 28,
+                        fontWeight: 800
                     }}
                 >
-                    <MembershipPaymentButton
-                        plan="monthly"
-                    />
+                    12,900원
+                </div>
+
+
+                <div
+                    style={{
+                        marginTop: 5,
+                        color: '#8d8175',
+                        fontSize: 13
+                    }}
+                >
+                    1개월 이용권
                 </div>
 
             </div>
@@ -171,77 +151,56 @@ export default function MembershipPlans() {
                     border:
                         '1px solid #f0ddd0',
                     borderRadius: 20,
-                    background: '#fff'
+                    background: '#fff',
+                    textAlign: 'center'
                 }}
             >
 
                 <div
                     style={{
-                        textAlign: 'center'
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: '#ee8b17'
                     }}
                 >
-
-                    <div
-                        style={{
-                            fontSize: 14,
-                            fontWeight: 800,
-                            color: '#ee8b17'
-                        }}
-                    >
-                        6개월
-                    </div>
-
-
-                    <div
-                        style={{
-                            marginTop: 8,
-                            fontSize: 28,
-                            fontWeight: 800
-                        }}
-                    >
-                        73,500원
-                    </div>
-
-
-                    <div
-                        style={{
-                            marginTop: 4,
-                            color: '#8d8175',
-                            fontSize: 13
-                        }}
-                    >
-                        월 12,250원
-                    </div>
-
-
-                    <div
-                        style={{
-                            display:
-                                'inline-block',
-                            marginTop: 9,
-                            padding:
-                                '5px 10px',
-                            borderRadius: 999,
-                            background:
-                                '#fff6e7',
-                            fontSize: 12,
-                            fontWeight: 700
-                        }}
-                    >
-                        약 5% SAVE! ⭐
-                    </div>
-
+                    6개월
                 </div>
 
 
                 <div
                     style={{
-                        marginTop: 18
+                        marginTop: 8,
+                        fontSize: 28,
+                        fontWeight: 800
                     }}
                 >
-                    <MembershipPaymentButton
-                        plan="sixMonths"
-                    />
+                    73,500원
+                </div>
+
+
+                <div
+                    style={{
+                        marginTop: 5,
+                        color: '#8d8175',
+                        fontSize: 13
+                    }}
+                >
+                    월 12,250원
+                </div>
+
+
+                <div
+                    style={{
+                        display: 'inline-block',
+                        marginTop: 9,
+                        padding: '5px 10px',
+                        borderRadius: 999,
+                        background: '#fff6e7',
+                        fontSize: 12,
+                        fontWeight: 700
+                    }}
+                >
+                    약 5% SAVE! ⭐
                 </div>
 
             </div>
@@ -256,100 +215,104 @@ export default function MembershipPlans() {
                     border:
                         '1px solid #d6eee7',
                     borderRadius: 20,
-                    background: '#fff'
+                    background: '#fff',
+                    textAlign: 'center'
                 }}
             >
 
                 <div
                     style={{
-                        textAlign: 'center'
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: '#18a884'
                     }}
                 >
-
-                    <div
-                        style={{
-                            fontSize: 14,
-                            fontWeight: 800,
-                            color: '#18a884'
-                        }}
-                    >
-                        12개월
-                    </div>
-
-
-                    <div
-                        style={{
-                            marginTop: 8,
-                            fontSize: 28,
-                            fontWeight: 800
-                        }}
-                    >
-                        139,000원
-                    </div>
-
-
-                    <div
-                        style={{
-                            marginTop: 4,
-                            color: '#8d8175',
-                            fontSize: 13
-                        }}
-                    >
-                        월 약 11,600원
-                    </div>
-
-
-                    <div
-                        style={{
-                            display:
-                                'inline-block',
-                            marginTop: 9,
-                            padding:
-                                '5px 10px',
-                            borderRadius: 999,
-                            background:
-                                '#eaf9f5',
-                            fontSize: 12,
-                            fontWeight: 700
-                        }}
-                    >
-                        약 10% SAVE! ⭐
-                    </div>
-
+                    12개월
                 </div>
 
 
                 <div
                     style={{
-                        marginTop: 18
+                        marginTop: 8,
+                        fontSize: 28,
+                        fontWeight: 800
                     }}
                 >
-                    <MembershipPaymentButton
-                        plan="twelveMonths"
-                    />
+                    139,000원
+                </div>
+
+
+                <div
+                    style={{
+                        marginTop: 5,
+                        color: '#8d8175',
+                        fontSize: 13
+                    }}
+                >
+                    월 약 11,600원
+                </div>
+
+
+                <div
+                    style={{
+                        display: 'inline-block',
+                        marginTop: 9,
+                        padding: '5px 10px',
+                        borderRadius: 999,
+                        background: '#eaf9f5',
+                        fontSize: 12,
+                        fontWeight: 700
+                    }}
+                >
+                    약 10% SAVE! ⭐
                 </div>
 
             </div>
 
 
 
-            {/* 자동결제 안내 */}
+            {/* 결제 안내 */}
 
-            <p
+            <div
                 style={{
-                    margin: 0,
+                    marginTop: 2,
+                    padding: '18px 16px',
+                    borderRadius: 16,
+                    background: '#fff8ea',
                     textAlign: 'center',
-                    color: '#8d8175',
-                    fontSize: 12,
-                    lineHeight: 1.7
+                    lineHeight: 1.8
                 }}
             >
-                모든 멤버십은 1회 결제 상품이며
-                자동으로 갱신되지 않습니다.
-                <br />
-                이용기간 종료 후 원하실 때
-                다시 구매하실 수 있어요.
-            </p>
+
+                <strong
+                    style={{
+                        display: 'block',
+                        marginBottom: 5
+                    }}
+                >
+                    ☀️ Song Club 등록 안내
+                </strong>
+
+                <span
+                    style={{
+                        color: '#75675c',
+                        fontSize: 13
+                    }}
+                >
+                    Song Club 이용권은
+                    Dear Sunshine 센터에서 결제 후
+                    이용하실 수 있습니다.
+                    <br />
+
+                    결제 확인 후 회원 계정이
+                    활성화됩니다.
+                    <br />
+
+                    모든 이용권은 자동결제 없이
+                    선택한 기간 동안 이용할 수 있어요.
+                </span>
+
+            </div>
 
         </div>
 
