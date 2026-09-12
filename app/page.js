@@ -69,6 +69,463 @@ function currentMonthKST() {
 }
 
 
+function nextMonthRangeKST() {
+
+    const parts =
+        new Intl.DateTimeFormat(
+            'en-CA',
+            {
+                timeZone:
+                    'Asia/Seoul',
+
+                year:
+                    'numeric',
+
+                month:
+                    '2-digit'
+            }
+        )
+            .formatToParts(
+                new Date()
+            );
+
+
+    const year =
+        Number(
+            parts.find(
+                part =>
+                    part.type ===
+                    'year'
+            )?.value
+        );
+
+
+    const month =
+        Number(
+            parts.find(
+                part =>
+                    part.type ===
+                    'month'
+            )?.value
+        );
+
+
+    /*
+     * JS의 month는 0부터 시작하므로
+     * 현재 month 값을 그대로 넣으면 다음 달이 됩니다.
+     *
+     * 예:
+     * 현재 9월 → Date.UTC(2026, 9, 1) = 10월 1일
+     */
+    const nextMonthStart =
+        new Date(
+            Date.UTC(
+                year,
+                month,
+                1
+            )
+        );
+
+
+    const monthAfterNextStart =
+        new Date(
+            Date.UTC(
+                year,
+                month + 1,
+                1
+            )
+        );
+
+
+    function dateString(date) {
+
+        return (
+            `${date.getUTCFullYear()}-` +
+            `${String(
+                date.getUTCMonth() + 1
+            ).padStart(
+                2,
+                '0'
+            )}-01`
+        );
+
+    }
+
+
+    return {
+        start:
+            dateString(
+                nextMonthStart
+            ),
+
+        end:
+            dateString(
+                monthAfterNextStart
+            ),
+
+        label:
+            `${nextMonthStart.getUTCMonth() + 1}월`
+    };
+
+}
+
+
+==================================================
+2) HomePage 안에서 userPrograms 조회가 끝난 다음,
+   const monthKey = currentMonthKST(); 전에 추가
+==================================================
+
+    /*
+     * =====================================
+     * 다음 달 공개 예정곡
+     * =====================================
+     *
+     * 공개되지 않은 콘텐츠도
+     * 제목/프로그램/이모지/공개일만 미리 보여줍니다.
+     *
+     * audio_path 등 실제 음원 정보는
+     * 브라우저로 보내지 않습니다.
+     */
+    const {
+        start:
+            nextMonthStart,
+
+        end:
+            monthAfterNextStart,
+
+        label:
+            nextMonthLabel
+    } =
+        nextMonthRangeKST();
+
+
+    const {
+        data: upcomingRows,
+        error: upcomingError
+    } =
+        await db
+            .from(
+                'ds_content_songs'
+            )
+            .select(
+                'id,slug,title,subtitle,program,category,emoji,release_date'
+            )
+            .gte(
+                'release_date',
+                nextMonthStart
+            )
+            .lt(
+                'release_date',
+                monthAfterNextStart
+            )
+            .order(
+                'release_date',
+                {
+                    ascending:
+                        true
+                }
+            )
+            .order(
+                'title',
+                {
+                    ascending:
+                        true
+                }
+            )
+            .limit(
+                8
+            );
+
+
+    if (upcomingError) {
+
+        console.error(
+            'Upcoming songs load error:',
+            upcomingError
+        );
+
+    }
+
+
+    let upcomingSongs =
+        (
+            upcomingRows ||
+            []
+        )
+            .map(
+                row => ({
+                    id:
+                        row.id,
+
+                    slug:
+                        row.slug,
+
+                    title:
+                        row.title,
+
+                    subtitle:
+                        row.subtitle,
+
+                    program:
+                        row.program,
+
+                    category:
+                        row.category,
+
+                    emoji:
+                        row.emoji,
+
+                    releaseDate:
+                        row.release_date
+                })
+            );
+
+
+    /*
+     * Song Club 이용 중이고
+     * 관리자가 특정 프로그램 권한을 부여한 경우
+     * 그 프로그램의 다음 달 곡만 보여줍니다.
+     *
+     * 비회원/로그아웃 사용자는
+     * 두 프로그램의 예고를 모두 볼 수 있습니다.
+     */
+    if (
+        membership &&
+        userPrograms.length > 0
+    ) {
+
+        upcomingSongs =
+            upcomingSongs.filter(
+                song =>
+                    userPrograms.includes(
+                        song.program
+                    )
+            );
+
+    }
+
+
+    upcomingSongs =
+        upcomingSongs.slice(
+            0,
+            4
+        );
+
+
+==================================================
+3) "이번 달 새로운 노래" section이 끝난 직후,
+   "KIDS' FAVORITES" section 전에 아래 블록 추가
+==================================================
+
+            {/* =====================================
+                다음 달 미리보기
+            ====================================== */}
+
+            {upcomingSongs.length > 0 && (
+
+                <section className="section">
+
+                    <div
+                        className="section-head"
+                        style={{
+                            alignItems:
+                                'flex-end'
+                        }}
+                    >
+
+                        <div>
+
+                            <p className="eyebrow">
+                                COMING UP NEXT
+                            </p>
+
+
+                            <h2>
+                                다음 달에 만나요 ✨
+                            </h2>
+
+
+                            <p
+                                className="muted"
+                                style={{
+                                    margin:
+                                        '6px 0 0'
+                                }}
+                            >
+                                다음 달 새롭게 공개될 노래를
+                                미리 만나보세요.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div className="card-grid">
+
+                        {upcomingSongs.map(
+                            song => (
+
+                                <article
+                                    key={
+                                        song.id ||
+                                        song.slug
+                                    }
+                                    className="content-card"
+                                    style={{
+                                        position:
+                                            'relative',
+
+                                        overflow:
+                                            'hidden',
+
+                                        padding:
+                                            12
+                                    }}
+                                >
+
+                                    <div
+                                        style={{
+                                            minHeight:
+                                                140,
+
+                                            borderRadius:
+                                                18,
+
+                                            background:
+                                                'linear-gradient(135deg, #fff7dc 0%, #fff0ee 100%)',
+
+                                            display:
+                                                'flex',
+
+                                            alignItems:
+                                                'center',
+
+                                            justifyContent:
+                                                'center',
+
+                                            position:
+                                                'relative'
+                                        }}
+                                    >
+
+                                        <span
+                                            style={{
+                                                fontSize:
+                                                    58
+                                            }}
+                                        >
+                                            {
+                                                song.emoji ||
+                                                '🎵'
+                                            }
+                                        </span>
+
+
+                                        <span
+                                            style={{
+                                                position:
+                                                    'absolute',
+
+                                                top:
+                                                    10,
+
+                                                right:
+                                                    10,
+
+                                                padding:
+                                                    '6px 9px',
+
+                                                borderRadius:
+                                                    999,
+
+                                                background:
+                                                    '#fff',
+
+                                                fontSize:
+                                                    10,
+
+                                                fontWeight:
+                                                    800,
+
+                                                letterSpacing:
+                                                    '0.06em',
+
+                                                color:
+                                                    '#d48618'
+                                            }}
+                                        >
+                                            COMING SOON
+                                        </span>
+
+                                    </div>
+
+
+                                    <div
+                                        style={{
+                                            padding:
+                                                '12px 4px 4px'
+                                        }}
+                                    >
+
+                                        <strong
+                                            style={{
+                                                display:
+                                                    'block',
+
+                                                fontSize:
+                                                    15
+                                            }}
+                                        >
+                                            {song.title}
+                                        </strong>
+
+
+                                        <p
+                                            className="muted"
+                                            style={{
+                                                margin:
+                                                    '5px 0 0',
+
+                                                fontSize:
+                                                    12
+                                            }}
+                                        >
+                                            {song.program}
+                                        </p>
+
+
+                                        <p
+                                            style={{
+                                                margin:
+                                                    '8px 0 0',
+
+                                                fontSize:
+                                                    12,
+
+                                                fontWeight:
+                                                    700,
+
+                                                color:
+                                                    '#d48618'
+                                            }}
+                                        >
+                                            🎵 {nextMonthLabel} 공개 예정
+                                        </p>
+
+                                    </div>
+
+                                </article>
+
+                            )
+                        )}
+
+                    </div>
+
+                </section>
+
+            )}
+
 
 export default async function HomePage() {
 
