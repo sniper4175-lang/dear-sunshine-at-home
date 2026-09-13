@@ -3,6 +3,13 @@ export const metadata = {
 };
 
 
+const REGULAR_MONTHLY_PRICE = 16900;
+
+function formatWon(value) {
+    return `${value.toLocaleString('ko-KR')}원`;
+}
+
+
 export default function TermsPage() {
 
     return (
@@ -93,18 +100,25 @@ export default function TermsPage() {
                 </p>
 
                 <p>
-                    현재 제공되는 이용권은 다음과 같습니다.
+                    이용권의 정가는 다음과 같습니다.
                 </p>
 
                 <ul>
-                    <li>1개월 이용권: 12,900원</li>
-                    <li>6개월 이용권: 73,500원</li>
-                    <li>12개월 이용권: 139,000원</li>
+                    <li>
+                        1개월 이용권 정가: {formatWon(REGULAR_MONTHLY_PRICE)}
+                    </li>
+                    <li>
+                        6개월 이용권 정가: {formatWon(REGULAR_MONTHLY_PRICE * 6)}
+                    </li>
+                    <li>
+                        12개월 이용권 정가: {formatWon(REGULAR_MONTHLY_PRICE * 12)}
+                    </li>
                 </ul>
 
                 <p>
-                    이용권의 이용기간, 결제 방식 및 적용 조건은
-                    결제 시 안내되는 내용을 따릅니다.
+                    실제 결제 금액은 프로모션 등 적용 조건에 따라
+                    달라질 수 있으며, 이용권의 이용기간, 결제 금액 및
+                    적용 조건은 결제 시 안내되는 내용을 따릅니다.
                 </p>
 
 
