@@ -1,151 +1,18 @@
 'use client';
 
-import {
-    useState
-} from 'react';
+import SecureDownloadButton from './SecureDownloadButton';
 
-
-export default function PrintableButton({
-    slug
-}) {
-
-    const [
-        loading,
-        setLoading
-    ] =
-        useState(false);
-
-
-    const [
-        error,
-        setError
-    ] =
-        useState('');
-
-
-    async function openPrintable() {
-
-        if (loading) {
-            return;
-        }
-
-
-        setLoading(
-            true
-        );
-
-        setError(
-            ''
-        );
-
-
-        try {
-
-            const response =
-                await fetch(
-                    `/api/printable-url?slug=${encodeURIComponent(
-                        slug
-                    )}`,
-                    {
-                        cache:
-                            'no-store'
-                    }
-                );
-
-
-            const data =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    data.error ||
-                    '활동지를 열지 못했습니다.'
-                );
-
-            }
-
-
-            if (!data.url) {
-
-                throw new Error(
-                    '활동지 주소가 없습니다.'
-                );
-
-            }
-
-
-            window.open(
-                data.url,
-                '_blank',
-                'noopener,noreferrer'
-            );
-
-
-        } catch (e) {
-
-            console.error(e);
-
-            setError(
-                e.message ||
-                '활동지를 열지 못했습니다.'
-            );
-
-
-        } finally {
-
-            setLoading(
-                false
-            );
-
-        }
-
-    }
-
+export default function PrintableButton({ slug }) {
+    const url =
+        `/api/resource-file?source=${encodeURIComponent('/api/printable-url')}` +
+        `&slug=${encodeURIComponent(slug)}` +
+        '&index=0&download=1';
 
     return (
-
-        <div>
-
-            <button
-                type="button"
-                className="secondary-button"
-                onClick={
-                    openPrintable
-                }
-                disabled={
-                    loading
-                }
-            >
-                {
-                    loading
-                        ? '활동지 불러오는 중...'
-                        : '📄 활동지 열기'
-                }
-            </button>
-
-
-            {error && (
-
-                <p
-                    style={{
-                        marginTop:
-                            10,
-
-                        color:
-                            '#bd3d3d',
-
-                        fontSize:
-                            13
-                    }}
-                >
-                    {error}
-                </p>
-
-            )}
-
-        </div>
-
+        <SecureDownloadButton
+            url={url}
+            label="⬇ 활동자료 다운로드"
+            fallbackFilename="Dear-Sunshine-Printable"
+        />
     );
 }
