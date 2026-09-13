@@ -21,7 +21,7 @@ export default function SubscriptionPolicyPage() {
 
             <p className="page-copy">
                 Dear Sunshine Song Club은
-                자동결제 없이 원하는 기간만 이용하는
+                원하는 이용기간을 선택하여 이용하는
                 기간제 이용권으로 운영됩니다.
             </p>
 
@@ -110,8 +110,8 @@ export default function SubscriptionPolicyPage() {
                         lineHeight: 1.7
                     }}
                 >
-                    모든 이용권은 1회 결제 상품이며
-                    자동으로 갱신되지 않습니다.
+                    이용기간과 금액을 확인한 후
+                    원하는 이용권을 선택해 주세요.
                 </p>
 
             </div>
@@ -155,36 +155,7 @@ export default function SubscriptionPolicyPage() {
             >
 
                 <h2>
-                    2. 자동결제 없음
-                </h2>
-
-
-                <p
-                    style={{
-                        lineHeight: 1.9,
-                        marginBottom: 0
-                    }}
-                >
-                    Song Club 이용권은 자동결제 또는
-                    자동갱신 방식이 아닙니다.
-                    이용기간이 끝나도 별도의 결제가 자동으로 발생하지 않습니다.
-                    계속 이용을 원하시는 경우 센터에서 새로운 이용권을
-                    다시 등록해 주세요.
-                </p>
-
-            </div>
-
-
-
-            <div
-                className="content-card"
-                style={{
-                    marginBottom: 18
-                }}
-            >
-
-                <h2>
-                    3. 이용기간
+                    2. 이용기간
                 </h2>
 
 
@@ -210,7 +181,7 @@ export default function SubscriptionPolicyPage() {
             >
 
                 <h2>
-                    4. 이용 프로그램
+                    3. 이용 프로그램
                 </h2>
 
 
@@ -237,7 +208,7 @@ export default function SubscriptionPolicyPage() {
             >
 
                 <h2>
-                    5. 환불 안내
+                    4. 환불 안내
                 </h2>
 
 
@@ -275,7 +246,7 @@ export default function SubscriptionPolicyPage() {
             >
 
                 <h2>
-                    6. 서비스 장애
+                    5. 서비스 장애
                 </h2>
 
 
