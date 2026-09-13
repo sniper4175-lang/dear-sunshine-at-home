@@ -256,14 +256,6 @@ export default async function HomePage() {
                 'is_upcoming',
                 true
             )
-            .gte(
-                'release_date',
-                nextMonthStart
-            )
-            .lt(
-                'release_date',
-                monthAfterNextStart
-            )
             .order(
                 'release_date',
                 {
@@ -465,12 +457,12 @@ export default async function HomePage() {
                     <div>
 
                         <p className="eyebrow">
-                            NEW THIS MONTH
+                            THIS MONTH SONG
                         </p>
 
 
                         <h2>
-                            이번 달 새로운 노래
+                            이달의 노래
                         </h2>
 
                     </div>
