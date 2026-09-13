@@ -246,6 +246,9 @@ export default async function HomePage() {
      * 다음 달 공개 예정곡
      * =====================================
      *
+     * 관리자에서 '다음 달 예고'로 수동 지정한 곡을
+     * 공개일과 관계없이 홈 화면에 보여줍니다.
+     *
      * 실제 음원 URL은 보내지 않고
      * 제목 / 프로그램 / 이모지 / 공개일만
      * 홈 화면 미리보기에 사용합니다.
@@ -277,14 +280,6 @@ export default async function HomePage() {
             .eq(
                 'is_upcoming',
                 true
-            )
-            .gte(
-                'release_date',
-                nextMonthStart
-            )
-            .lt(
-                'release_date',
-                monthAfterNextStart
             )
             .order(
                 'release_date',
@@ -355,8 +350,7 @@ export default async function HomePage() {
      * 해당 프로그램의 예고곡만 보여줍니다.
      */
     if (
-        membership &&
-        userPrograms.length > 0
+        membership
     ) {
 
         upcomingSongs =
