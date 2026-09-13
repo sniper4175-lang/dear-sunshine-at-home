@@ -5,11 +5,9 @@ import {
     useState
 } from 'react';
 
-import SongCard
-    from './SongCard';
-
-import PlaylistPlayer
-    from './PlaylistPlayer';
+import {
+    useRouter
+} from 'next/navigation';
 
 
 const PROGRAM_OPTIONS = [
@@ -18,11 +16,6 @@ const PROGRAM_OPTIONS = [
 ];
 
 
-/*
- * ==========================================
- * 해당 곡을 현재 사용자가 들을 수 있는지
- * ==========================================
- */
 function canAccessSong(
     song,
     loggedIn,
@@ -55,6 +48,58 @@ function canAccessSong(
 }
 
 
+function monthKey(
+    releaseDate
+) {
+
+    if (!releaseDate) {
+        return 'unknown';
+    }
+
+    return String(
+        releaseDate
+    ).slice(
+        0,
+        7
+    );
+
+}
+
+
+function monthLabel(
+    key
+) {
+
+    if (
+        !key ||
+        key === 'unknown'
+    ) {
+        return '기타 노래';
+    }
+
+
+    const [
+        year,
+        month
+    ] =
+        key.split(
+            '-'
+        );
+
+
+    if (
+        !year ||
+        !month
+    ) {
+        return key;
+    }
+
+
+    return `${Number(month)}월 노래`;
+
+}
+
+
 export default function LibraryClient({
     songs,
     loggedIn,
@@ -62,11 +107,9 @@ export default function LibraryClient({
     userPrograms = []
 }) {
 
-    /*
-     * ==========================================
-     * 현재 계정에서 이용 가능한 프로그램
-     * ==========================================
-     */
+    const router =
+        useRouter();
+
 
     const availablePrograms =
         useMemo(
@@ -83,15 +126,6 @@ export default function LibraryClient({
         );
 
 
-    /*
-     * ==========================================
-     * 선택한 프로그램
-     *
-     * 한 클래스만 권한이 있으면 그 클래스가
-     * 자동으로 선택됩니다.
-     * ==========================================
-     */
-
     const [
         selectedProgram,
         setSelectedProgram
@@ -103,19 +137,6 @@ export default function LibraryClient({
                     : 'all'
         );
 
-
-    /*
-     * ==========================================
-     * 회원에게 보여줄 곡
-     *
-     * 활성 멤버십 회원은 관리자에서 허용한
-     * 클래스의 곡만 화면에 전달됩니다.
-     *
-     * 비회원/로그아웃 상태에서는 기존처럼
-     * 전체 공개 곡 목록을 둘러볼 수 있습니다.
-     * 실제 재생은 잠겨 있습니다.
-     * ==========================================
-     */
 
     const visibleSongs =
         useMemo(
@@ -154,12 +175,6 @@ export default function LibraryClient({
         );
 
 
-    /*
-     * ==========================================
-     * 현재 실제로 사용할 필터
-     * ==========================================
-     */
-
     const effectiveSelectedProgram =
         availablePrograms.length === 1
             ? availablePrograms[0]
@@ -192,53 +207,60 @@ export default function LibraryClient({
         );
 
 
-    /*
-     * ==========================================
-     * 현재 필터에서 실제 재생 가능한 곡
-     * ==========================================
-     */
-
-    const accessibleSlugs =
+    const groupedSongs =
         useMemo(
             () => {
 
-                return filteredSongs
-                    .filter(
-                        song =>
-                            canAccessSong(
-                                song,
-                                loggedIn,
-                                membership,
-                                userPrograms
+                const groups =
+                    new Map();
+
+
+                filteredSongs.forEach(
+                    song => {
+
+                        const key =
+                            monthKey(
+                                song.releaseDate
+                            );
+
+
+                        if (
+                            !groups.has(
+                                key
                             )
-                    )
-                    .map(
-                        song =>
-                            song.slug
-                    );
+                        ) {
+                            groups.set(
+                                key,
+                                []
+                            );
+                        }
+
+
+                        groups.get(
+                            key
+                        ).push(
+                            song
+                        );
+
+                    }
+                );
+
+
+                return Array.from(
+                    groups.entries()
+                ).sort(
+                    ([keyA], [keyB]) =>
+                        keyB.localeCompare(
+                            keyA
+                        )
+                );
 
             },
             [
-                filteredSongs,
-                loggedIn,
-                membership,
-                userPrograms
+                filteredSongs
             ]
         );
 
-
-    /*
-     * ==========================================
-     * 화면에 보여줄 프로그램 탭
-     *
-     * 로그인 + 활성 멤버십:
-     *   1개 권한 -> 해당 클래스만
-     *   2개 권한 -> 전체 + 두 클래스
-     *
-     * 비회원/로그아웃:
-     *   기존처럼 전체 프로그램 둘러보기
-     * ==========================================
-     */
 
     const tabs =
         loggedIn &&
@@ -257,10 +279,57 @@ export default function LibraryClient({
             ];
 
 
-    const programLabel =
-        availablePrograms.join(
-            ' · '
+    function openSong(
+        song
+    ) {
+
+        const accessible =
+            canAccessSong(
+                song,
+                loggedIn,
+                membership,
+                userPrograms
+            );
+
+
+        if (!loggedIn) {
+
+            router.push(
+                `/login?next=${encodeURIComponent(`/song/${song.slug}`)}`
+            );
+
+            return;
+
+        }
+
+
+        if (!membership) {
+
+            router.push(
+                '/membership'
+            );
+
+            return;
+
+        }
+
+
+        if (!accessible) {
+
+            router.push(
+                '/membership'
+            );
+
+            return;
+
+        }
+
+
+        router.push(
+            `/song/${song.slug}`
         );
+
+    }
 
 
     return (
@@ -273,352 +342,412 @@ export default function LibraryClient({
                 SONG LIBRARY
             </p>
 
-
             <h1>
-                노래
+                전체 노래
             </h1>
 
-
             <p className="page-copy">
-                Dear Sunshine 수업에서
-                아이들이 즐겨 부른 노래를
-                모았어요.
+                지금까지 공개된 Dear Sunshine의 노래를
+                월별로 모아봤어요.
             </p>
 
 
-
-            {/* ==================================
-                현재 이용 클래스
-
-                Basic / Premium 개념은
-                더 이상 화면에 표시하지 않습니다.
-            =================================== */}
-
-            {
-                loggedIn &&
+            {loggedIn &&
                 membership &&
-                availablePrograms.length >
-                    0 && (
+                availablePrograms.length === 0 && (
 
-                    <div
-                        style={{
-                            display:
-                                'flex',
-
-                            alignItems:
-                                'center',
-
-                            gap:
-                                7,
-
-                            flexWrap:
-                                'wrap',
-
-                            marginBottom:
-                                12
-                        }}
-                    >
-
-                        <div
-                            style={{
-                                display:
-                                    'inline-flex',
-
-                                alignItems:
-                                    'center',
-
-                                padding:
-                                    '8px 12px',
-
-                                borderRadius:
-                                    999,
-
-                                background:
-                                    '#fff1c9',
-
-                                color:
-                                    '#5f4631',
-
-                                fontSize:
-                                    12,
-
-                                fontWeight:
-                                    800
-                            }}
-                        >
-                            ☀️ {programLabel}
-                        </div>
-
-                    </div>
-
-                )
-            }
-
-
-
-            {/* ==================================
-                수강 연결 안내
-            =================================== */}
-
-            {
-                loggedIn &&
-                membership &&
-                availablePrograms.length ===
-                    0 && (
-
-                    <div
-                        style={{
-                            marginBottom:
-                                18,
-
-                            padding:
-                                '12px 14px',
-
-                            borderRadius:
-                                14,
-
-                            background:
-                                '#fff7e8',
-
-                            color:
-                                '#8b6528',
-
-                            fontSize:
-                                13,
-
-                            lineHeight:
-                                1.6
-                        }}
-                    >
-                        현재 계정에 연결된
-                        수강 클래스가 없습니다.
-                        수강 정보 연결 후 해당
-                        클래스의 음원을 이용할 수 있어요.
-                    </div>
-
-                )
-            }
-
-
-
-            {/* ==================================
-                프로그램 필터
-            =================================== */}
-
-            {
-                tabs.length >
-                0 && (
-
-                    <div
-                        style={{
-                            display:
-                                'flex',
-
-                            gap:
-                                8,
-
-                            overflowX:
-                                'auto',
-
-                            paddingBottom:
-                                18
-                        }}
-                    >
-
-                        {
-                            tabs.map(
-                                program => (
-
-                                    <ProgramButton
-                                        key={
-                                            program
-                                        }
-                                        active={
-                                            effectiveSelectedProgram ===
-                                            program
-                                        }
-                                        onClick={() =>
-                                            setSelectedProgram(
-                                                program
-                                            )
-                                        }
-                                    >
-                                        {
-                                            program ===
-                                            'all'
-                                                ? '전체'
-                                                : program
-                                        }
-                                    </ProgramButton>
-
-                                )
-                            )
-                        }
-
-                    </div>
-
-                )
-            }
-
-
-
-            {/* ==================================
-                곡 수
-            =================================== */}
-
-            <div
-                style={{
-                    marginBottom:
-                        16
-                }}
-            >
-
-                <p
+                <div
                     style={{
-                        margin:
-                            0,
+                        marginBottom:
+                            18,
+
+                        padding:
+                            '12px 14px',
+
+                        borderRadius:
+                            14,
+
+                        background:
+                            '#fff7e8',
+
+                        color:
+                            '#8b6528',
 
                         fontSize:
                             13,
 
-                        color:
-                            '#8d8175'
+                        lineHeight:
+                            1.6
+                    }}
+                >
+                    현재 계정에 연결된 수강 클래스가 없습니다.
+                    수강 정보 연결 후 해당 클래스의 노래를 이용할 수 있어요.
+                </div>
+
+            )}
+
+
+            {tabs.length > 0 && (
+
+                <div
+                    style={{
+                        display:
+                            'flex',
+
+                        gap:
+                            8,
+
+                        overflowX:
+                            'auto',
+
+                        paddingBottom:
+                            18
+                    }}
+                >
+
+                    {tabs.map(
+                        program => (
+
+                            <ProgramButton
+                                key={program}
+                                active={
+                                    effectiveSelectedProgram ===
+                                    program
+                                }
+                                onClick={() =>
+                                    setSelectedProgram(
+                                        program
+                                    )
+                                }
+                            >
+                                {
+                                    program === 'all'
+                                        ? '전체'
+                                        : program
+                                }
+                            </ProgramButton>
+
+                        )
+                    )}
+
+                </div>
+
+            )}
+
+
+            <div
+                style={{
+                    display:
+                        'flex',
+
+                    alignItems:
+                        'center',
+
+                    justifyContent:
+                        'space-between',
+
+                    gap:
+                        12,
+
+                    marginBottom:
+                        18
+                }}
+            >
+
+                <span
+                    className="muted"
+                    style={{
+                        fontSize:
+                            13
                     }}
                 >
                     {
-                        effectiveSelectedProgram ===
-                        'all'
+                        effectiveSelectedProgram === 'all'
                             ? '전체 프로그램'
                             : effectiveSelectedProgram
                     }
-                </p>
+                </span>
 
-
-                <strong
-                    style={{
-                        display:
-                            'block',
-
-                        marginTop:
-                            4,
-
-                        fontSize:
-                            17
-                    }}
-                >
+                <strong>
                     {filteredSongs.length}곡
                 </strong>
 
             </div>
 
 
+            {groupedSongs.length > 0 ? (
 
-            {/* ==================================
-                플레이리스트
-            =================================== */}
+                <div
+                    style={{
+                        display:
+                            'grid',
 
-            {
-                loggedIn &&
-                membership &&
-                availablePrograms.length >
-                    0 && (
+                        gap:
+                            18
+                    }}
+                >
 
-                    <PlaylistPlayer
-                        songs={
-                            filteredSongs
-                        }
-                        accessibleSlugs={
-                            accessibleSlugs
-                        }
-                    />
+                    {groupedSongs.map(
+                        ([key, monthSongs]) => (
 
-                )
-            }
+                            <section
+                                key={key}
+                                className="content-card"
+                                style={{
+                                    margin:
+                                        0,
+
+                                    padding:
+                                        '18px 18px 6px'
+                                }}
+                            >
+
+                                <div
+                                    style={{
+                                        display:
+                                            'flex',
+
+                                        justifyContent:
+                                            'space-between',
+
+                                        alignItems:
+                                            'center',
+
+                                        gap:
+                                            12,
+
+                                        paddingBottom:
+                                            12,
+
+                                        borderBottom:
+                                            '1px solid #eee3d5'
+                                    }}
+                                >
+
+                                    <h2
+                                        style={{
+                                            margin:
+                                                0,
+
+                                            fontSize:
+                                                22
+                                        }}
+                                    >
+                                        {monthLabel(key)}
+                                    </h2>
+
+                                    <span
+                                        className="muted"
+                                        style={{
+                                            fontSize:
+                                                13,
+
+                                            fontWeight:
+                                                800
+                                        }}
+                                    >
+                                        {monthSongs.length}곡
+                                    </span>
+
+                                </div>
 
 
+                                <div>
 
-            {/* ==================================
-                곡 목록
-            =================================== */}
+                                    {monthSongs.map(
+                                        song => {
 
-            {
-                filteredSongs.length >
-                0 ? (
-
-                    <div
-                        className="card-grid"
-                    >
-
-                        {
-                            filteredSongs.map(
-                                song => {
-
-                                    const accessible =
-                                        canAccessSong(
-                                            song,
-                                            loggedIn,
-                                            membership,
-                                            userPrograms
-                                        );
+                                            const accessible =
+                                                canAccessSong(
+                                                    song,
+                                                    loggedIn,
+                                                    membership,
+                                                    userPrograms
+                                                );
 
 
-                                    return (
+                                            return (
 
-                                        <SongCard
-                                            key={
-                                                song.slug
-                                            }
-                                            song={
-                                                song
-                                            }
-                                            accessible={
-                                                accessible
-                                            }
-                                            loggedIn={
-                                                loggedIn
-                                            }
-                                            membership={
-                                                membership
-                                            }
-                                            userPrograms={
-                                                userPrograms
-                                            }
-                                        />
+                                                <button
+                                                    key={song.slug}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        openSong(
+                                                            song
+                                                        )
+                                                    }
+                                                    style={{
+                                                        width:
+                                                            '100%',
 
-                                    );
+                                                        border:
+                                                            'none',
 
-                                }
-                            )
-                        }
+                                                        borderBottom:
+                                                            '1px solid #f2e9de',
 
-                    </div>
+                                                        background:
+                                                            'transparent',
 
-                ) : (
+                                                        padding:
+                                                            '13px 0',
 
-                    <div
+                                                        display:
+                                                            'grid',
+
+                                                        gridTemplateColumns:
+                                                            '54px minmax(0, 1fr) 26px',
+
+                                                        gap:
+                                                            12,
+
+                                                        alignItems:
+                                                            'center',
+
+                                                        textAlign:
+                                                            'left',
+
+                                                        cursor:
+                                                            'pointer'
+                                                    }}
+                                                >
+
+                                                    <span
+                                                        style={{
+                                                            width:
+                                                                54,
+
+                                                            height:
+                                                                54,
+
+                                                            borderRadius:
+                                                                15,
+
+                                                            display:
+                                                                'grid',
+
+                                                            placeItems:
+                                                                'center',
+
+                                                            background:
+                                                                'linear-gradient(145deg,#fff6db,#fff0ee)',
+
+                                                            fontSize:
+                                                                29
+                                                        }}
+                                                    >
+                                                        {song.emoji || '🎵'}
+                                                    </span>
+
+
+                                                    <span
+                                                        style={{
+                                                            minWidth:
+                                                                0,
+
+                                                            display:
+                                                                'grid',
+
+                                                            gap:
+                                                                4
+                                                        }}
+                                                    >
+
+                                                        <strong
+                                                            style={{
+                                                                fontSize:
+                                                                    15,
+
+                                                                lineHeight:
+                                                                    1.35
+                                                            }}
+                                                        >
+                                                            {song.title}
+                                                        </strong>
+
+                                                        <span
+                                                            className="muted"
+                                                            style={{
+                                                                fontSize:
+                                                                    12,
+
+                                                                lineHeight:
+                                                                    1.4
+                                                            }}
+                                                        >
+                                                            {song.program}
+                                                            {song.category
+                                                                ? ` · ${song.category}`
+                                                                : ''}
+                                                        </span>
+
+                                                    </span>
+
+
+                                                    <span
+                                                        style={{
+                                                            justifySelf:
+                                                                'end',
+
+                                                            color:
+                                                                accessible
+                                                                    ? '#a09184'
+                                                                    : '#b7771f',
+
+                                                            fontSize:
+                                                                accessible
+                                                                    ? 24
+                                                                    : 16
+                                                        }}
+                                                    >
+                                                        {accessible
+                                                            ? '›'
+                                                            : '🔒'}
+                                                    </span>
+
+                                                </button>
+
+                                            );
+
+                                        }
+                                    )}
+
+                                </div>
+
+                            </section>
+
+                        )
+                    )}
+
+                </div>
+
+            ) : (
+
+                <div
+                    className="content-card"
+                    style={{
+                        textAlign:
+                            'center'
+                    }}
+                >
+                    <p
+                        className="muted"
                         style={{
-                            padding:
-                                '40px 20px',
-
-                            textAlign:
-                                'center',
-
-                            color:
-                                '#8d8175'
+                            margin:
+                                0
                         }}
                     >
                         {
                             loggedIn &&
                             membership &&
-                            availablePrograms.length ===
-                                0
+                            availablePrograms.length === 0
                                 ? '이용 가능한 클래스가 아직 연결되지 않았습니다.'
                                 : '공개된 노래가 없습니다.'
                         }
-                    </div>
+                    </p>
+                </div>
 
-                )
-            }
+            )}
 
         </section>
 
@@ -627,11 +756,6 @@ export default function LibraryClient({
 }
 
 
-/*
- * ==========================================
- * 프로그램 필터 버튼
- * ==========================================
- */
 function ProgramButton({
     active,
     onClick,
@@ -642,9 +766,7 @@ function ProgramButton({
 
         <button
             type="button"
-            onClick={
-                onClick
-            }
+            onClick={onClick}
             style={{
                 flexShrink:
                     0,

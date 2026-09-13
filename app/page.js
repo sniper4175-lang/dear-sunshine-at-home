@@ -28,48 +28,17 @@ export const dynamic =
     'force-dynamic';
 
 
-function currentMonthKST() {
-
-    const parts =
-        new Intl.DateTimeFormat(
-            'en-CA',
-            {
-                timeZone:
-                    'Asia/Seoul',
-
-                year:
-                    'numeric',
-
-                month:
-                    '2-digit'
-            }
-        )
-            .formatToParts(
-                new Date()
-            );
-
-
-    const year =
-        parts.find(
-            part =>
-                part.type ===
-                'year'
-        )?.value;
-
-
-    const month =
-        parts.find(
-            part =>
-                part.type ===
-                'month'
-        )?.value;
-
-
-    return `${year}-${month}`;
-}
-
-
-function nextMonthRangeKST() {
+/*
+ * 서울 시간을 기준으로 현재 달을 구한 뒤
+ * offset만큼 이동한 월 정보를 반환합니다.
+ *
+ * offset  0 = 이번 달
+ * offset  1 = 다음 달
+ * offset -1 = 지난 달
+ */
+function monthInfoKST(
+    offset = 0
+) {
 
     const parts =
         new Intl.DateTimeFormat(
@@ -110,62 +79,90 @@ function nextMonthRangeKST() {
         );
 
 
-    /*
-     * JS의 month는 0부터 시작하므로
-     * 현재 month 값을 그대로 넣으면 다음 달이 됩니다.
-     *
-     * 예:
-     * 현재 9월 → Date.UTC(2026, 9, 1) = 10월 1일
-     */
-    const nextMonthStart =
+    const date =
         new Date(
             Date.UTC(
                 year,
-                month,
+                month - 1 + offset,
                 1
             )
         );
 
 
-    const monthAfterNextStart =
+    const next =
         new Date(
             Date.UTC(
-                year,
-                month + 1,
+                date.getUTCFullYear(),
+                date.getUTCMonth() + 1,
                 1
             )
         );
 
 
-    function dateString(date) {
+    const yyyy =
+        date.getUTCFullYear();
 
-        return (
-            `${date.getUTCFullYear()}-` +
-            `${String(
-                date.getUTCMonth() + 1
-            ).padStart(
-                2,
-                '0'
-            )}-01`
+    const mm =
+        String(
+            date.getUTCMonth() + 1
+        ).padStart(
+            2,
+            '0'
         );
 
-    }
+
+    const nextYyyy =
+        next.getUTCFullYear();
+
+    const nextMm =
+        String(
+            next.getUTCMonth() + 1
+        ).padStart(
+            2,
+            '0'
+        );
 
 
     return {
-        start:
-            dateString(
-                nextMonthStart
-            ),
-
-        end:
-            dateString(
-                monthAfterNextStart
-            ),
+        key:
+            `${yyyy}-${mm}`,
 
         label:
-            `${nextMonthStart.getUTCMonth() + 1}월`
+            `${date.getUTCMonth() + 1}월`,
+
+        start:
+            `${yyyy}-${mm}-01`,
+
+        end:
+            `${nextYyyy}-${nextMm}-01`
     };
+
+}
+
+
+function EmptyMonth({
+    children
+}) {
+
+    return (
+        <div
+            className="content-card"
+            style={{
+                textAlign:
+                    'center'
+            }}
+        >
+            <p
+                className="muted"
+                style={{
+                    margin:
+                        0
+                }}
+            >
+                {children}
+            </p>
+        </div>
+    );
 
 }
 
@@ -220,15 +217,8 @@ export default async function HomePage() {
 
 
     /*
-     * =====================================
-     * 홈 화면에 보여줄 노래
-     * =====================================
-     *
-     * Song Club 이용 중인 회원은
-     * 관리자에서 허용한 클래스의 노래만 보여줍니다.
-     *
-     * 두 클래스 권한이 있으면 두 클래스 모두 보여줍니다.
-     * 권한이 없는 클래스의 자물쇠 곡은 홈에 노출하지 않습니다.
+     * 활성 Song Club 회원에게는
+     * 관리자가 연결한 프로그램의 곡만 보여줍니다.
      */
     const visibleSongs =
         membership
@@ -241,31 +231,66 @@ export default async function HomePage() {
             : songs;
 
 
+    const currentMonth =
+        monthInfoKST(
+            0
+        );
+
+    const nextMonth =
+        monthInfoKST(
+            1
+        );
+
+    const previousMonth =
+        monthInfoKST(
+            -1
+        );
+
+
     /*
-     * =====================================
-     * 다음 달 공개 예정곡
-     * =====================================
-     *
-     * 관리자에서 '다음 달 예고'로 수동 지정한 곡을
-     * 공개일과 관계없이 홈 화면에 보여줍니다.
-     *
-     * 실제 음원 URL은 보내지 않고
-     * 제목 / 프로그램 / 이모지 / 공개일만
-     * 홈 화면 미리보기에 사용합니다.
+     * 이번 달 공개된 곡만 정확히 표시합니다.
+     * getSongs() 자체가 공개일이 오늘 이전인 곡만 반환합니다.
      */
-    const {
-        start:
-            nextMonthStart,
+    const currentMonthSongs =
+        visibleSongs
+            .filter(
+                song =>
+                    song.releaseDate &&
+                    song.releaseDate.startsWith(
+                        currentMonth.key
+                    )
+            )
+            .slice(
+                0,
+                4
+            );
 
-        end:
-            monthAfterNextStart,
 
-        label:
-            nextMonthLabel
-    } =
-        nextMonthRangeKST();
+    /*
+     * 지난 달에 공개된 곡
+     */
+    const previousMonthSongs =
+        visibleSongs
+            .filter(
+                song =>
+                    song.releaseDate &&
+                    song.releaseDate.startsWith(
+                        previousMonth.key
+                    )
+            )
+            .slice(
+                0,
+                4
+            );
 
 
+    /*
+     * COMING UP NEXT
+     *
+     * 관리자에서 is_upcoming=true로 지정한 곡 중
+     * 공개일이 '다음 달'에 속하는 곡만 보여줍니다.
+     * 따라서 9월이라면 10월 공개 예정곡만 표시됩니다.
+     */
     const {
         data: upcomingRows,
         error: upcomingError
@@ -280,6 +305,14 @@ export default async function HomePage() {
             .eq(
                 'is_upcoming',
                 true
+            )
+            .gte(
+                'release_date',
+                nextMonth.start
+            )
+            .lt(
+                'release_date',
+                nextMonth.end
             )
             .order(
                 'release_date',
@@ -344,11 +377,6 @@ export default async function HomePage() {
             );
 
 
-    /*
-     * Song Club 이용 중이고
-     * 관리자에서 프로그램 권한을 지정했다면
-     * 해당 프로그램의 예고곡만 보여줍니다.
-     */
     if (
         membership
     ) {
@@ -371,71 +399,19 @@ export default async function HomePage() {
         );
 
 
-    const monthKey =
-        currentMonthKST();
-
-
-    const thisMonthSongs =
-        visibleSongs
-            .filter(
-                song =>
-                    song.releaseDate &&
-                    song.releaseDate.startsWith(
-                        monthKey
-                    )
-            )
-            .slice(
-                0,
-                4
-            );
-
-
-    const newSongs =
-        thisMonthSongs.length > 0
-            ? thisMonthSongs
-            : visibleSongs.slice(
-                0,
-                4
-            );
-
-
-    const popularSongs =
-        visibleSongs
-            .filter(
-                song =>
-                    song.popular
-            )
-            .slice(
-                0,
-                4
-            );
-
-
-    const membershipLabel =
-        !loggedIn
-            ? '로그인 필요'
-            : membership
-                ? 'Song Club 이용 중'
-                : '멤버십 없음';
-
-
     return (
 
         <>
 
-
             <section className="hero">
-
 
                 <div className="sun">
                     ☀️
                 </div>
 
-
                 <p className="eyebrow">
-                    DEAR SUNSHINE MONTHLY SONG CLUB
+                    DEAR SUNSHINE SONG CLUB
                 </p>
-
 
                 <h1>
                     아이들이 사랑한 Dear Sunshine의 노래,
@@ -443,17 +419,15 @@ export default async function HomePage() {
                     이제 집에서도 만나요!
                 </h1>
 
-
                 <p className="hero-copy">
-                    Dear Sunshine 정규 수강생만 가입할 수 있는
-                    특별한 Song Membership ♡
+                    수업에서 만난 노래와 자료를
+                    집에서도 즐겁게 이어가요.
                 </p>
-
 
                 <Link
                     href={
                         loggedIn
-                            ? '/membership'
+                            ? '/my'
                             : '/login'
                     }
                     className="plan-pill"
@@ -462,51 +436,53 @@ export default async function HomePage() {
                         membership
                             ? '☀️ Song Club 이용 중'
                             : loggedIn
-                                ? 'Song Club 시작하기'
+                                ? 'MY에서 이용권 확인'
                                 : '로그인하기'
                     }
                 </Link>
 
-
             </section>
 
 
-
+            {/* 이번 달 */}
             <section className="section">
 
-
                 <div className="section-head">
-
 
                     <div>
 
                         <p className="eyebrow">
-                            NEW THIS MONTH
+                            THIS MONTH&apos;S SONGS
                         </p>
 
-
                         <h2>
-                            이번 달 새로운 노래
+                            {currentMonth.label} 노래
                         </h2>
+
+                        <p
+                            className="muted"
+                            style={{
+                                margin:
+                                    '6px 0 0'
+                            }}
+                        >
+                            이번 달 새롭게 공개된 노래예요.
+                        </p>
 
                     </div>
 
-
                     <Link href="/library">
-                        전체 보기
+                        전체 노래
                     </Link>
-
 
                 </div>
 
 
-
-                {newSongs.length > 0 ? (
+                {currentMonthSongs.length > 0 ? (
 
                     <div className="card-grid">
 
-
-                        {newSongs.map(
+                        {currentMonthSongs.map(
                             song => {
 
                                 const accessible =
@@ -516,67 +492,34 @@ export default async function HomePage() {
                                         userPrograms
                                     );
 
-
                                 return (
-
                                     <SongCard
-                                        key={
-                                            song.slug
-                                        }
-                                        song={
-                                            song
-                                        }
-                                        accessible={
-                                            accessible
-                                        }
-                                        loggedIn={
-                                            loggedIn
-                                        }
-                                        membership={
-                                            membership
-                                        }
-                                        userPrograms={
-                                            userPrograms
-                                        }
+                                        key={song.slug}
+                                        song={song}
+                                        accessible={accessible}
+                                        loggedIn={loggedIn}
+                                        membership={membership}
+                                        userPrograms={userPrograms}
                                     />
-
                                 );
 
                             }
                         )}
 
-
                     </div>
 
                 ) : (
 
-                    <div
-                        className="content-card"
-                        style={{
-                            textAlign:
-                                'center'
-                        }}
-                    >
-
-                        <p className="muted">
-                            공개된 새로운 노래가
-                            아직 없습니다.
-                        </p>
-
-                    </div>
+                    <EmptyMonth>
+                        {currentMonth.label}에 공개된 노래가 아직 없어요.
+                    </EmptyMonth>
 
                 )}
-
 
             </section>
 
 
-
-
-            {/* =====================================
-                다음 달 새로운 노래
-            ====================================== */}
-
+            {/* 다음 달 예고 */}
             <section className="section">
 
                 <div className="section-head">
@@ -587,11 +530,9 @@ export default async function HomePage() {
                             COMING UP NEXT
                         </p>
 
-
                         <h2>
-                            다음 달에 만나요 ✨
+                            {nextMonth.label}에 만나요 ✨
                         </h2>
-
 
                         <p
                             className="muted"
@@ -600,8 +541,7 @@ export default async function HomePage() {
                                     '6px 0 0'
                             }}
                         >
-                            다음 달 새롭게 공개될 노래를
-                            미리 만나보세요.
+                            다음 달 새롭게 공개될 노래를 미리 만나보세요.
                         </p>
 
                     </div>
@@ -659,12 +599,8 @@ export default async function HomePage() {
                                                     58
                                             }}
                                         >
-                                            {
-                                                song.emoji ||
-                                                '🎵'
-                                            }
+                                            {song.emoji || '🎵'}
                                         </span>
-
 
                                         <span
                                             style={{
@@ -704,7 +640,6 @@ export default async function HomePage() {
 
                                     </div>
 
-
                                     <div
                                         style={{
                                             padding:
@@ -718,12 +653,14 @@ export default async function HomePage() {
                                                     'block',
 
                                                 fontSize:
-                                                    15
+                                                    15,
+
+                                                lineHeight:
+                                                    1.4
                                             }}
                                         >
                                             {song.title}
                                         </strong>
-
 
                                         <p
                                             className="muted"
@@ -736,8 +673,10 @@ export default async function HomePage() {
                                             }}
                                         >
                                             {song.program}
+                                            {song.category
+                                                ? ` · ${song.category}`
+                                                : ''}
                                         </p>
-
 
                                         <p
                                             style={{
@@ -748,13 +687,13 @@ export default async function HomePage() {
                                                     12,
 
                                                 fontWeight:
-                                                    700,
+                                                    800,
 
                                                 color:
                                                     '#d48618'
                                             }}
                                         >
-                                            🎵 {nextMonthLabel} 공개 예정
+                                            🎵 {nextMonth.label} 공개 예정
                                         </p>
 
                                     </div>
@@ -768,61 +707,54 @@ export default async function HomePage() {
 
                 ) : (
 
-                    <div
-                        className="content-card"
-                        style={{
-                            textAlign:
-                                'center'
-                        }}
-                    >
-
-                        <p className="muted">
-                            다음 달 새로운 노래를
-                            준비하고 있어요 ☀️
-                        </p>
-
-                    </div>
+                    <EmptyMonth>
+                        {nextMonth.label} 새로운 노래를 준비하고 있어요 ☀️
+                    </EmptyMonth>
 
                 )}
 
             </section>
 
 
+            {/* 지난 달 */}
             <section className="section">
 
-
                 <div className="section-head">
-
 
                     <div>
 
                         <p className="eyebrow">
-                            KIDS&apos; FAVORITES
+                            LAST MONTH&apos;S SONGS
                         </p>
 
-
                         <h2>
-                            아이들이 좋아해요 💛
+                            {previousMonth.label} 노래
                         </h2>
+
+                        <p
+                            className="muted"
+                            style={{
+                                margin:
+                                    '6px 0 0'
+                            }}
+                        >
+                            지난달 공개된 노래를 다시 들어보세요.
+                        </p>
 
                     </div>
 
-
                     <Link href="/library">
-                        전체 보기
+                        전체 노래
                     </Link>
-
 
                 </div>
 
 
-
-                {popularSongs.length > 0 ? (
+                {previousMonthSongs.length > 0 ? (
 
                     <div className="card-grid">
 
-
-                        {popularSongs.map(
+                        {previousMonthSongs.map(
                             song => {
 
                                 const accessible =
@@ -832,134 +764,48 @@ export default async function HomePage() {
                                         userPrograms
                                     );
 
-
                                 return (
-
                                     <SongCard
-                                        key={
-                                            song.slug
-                                        }
-                                        song={
-                                            song
-                                        }
-                                        accessible={
-                                            accessible
-                                        }
-                                        loggedIn={
-                                            loggedIn
-                                        }
-                                        membership={
-                                            membership
-                                        }
-                                        userPrograms={
-                                            userPrograms
-                                        }
+                                        key={song.slug}
+                                        song={song}
+                                        accessible={accessible}
+                                        loggedIn={loggedIn}
+                                        membership={membership}
+                                        userPrograms={userPrograms}
                                     />
-
                                 );
 
                             }
                         )}
 
-
                     </div>
 
                 ) : (
 
-                    <div
-                        className="content-card"
-                        style={{
-                            textAlign:
-                                'center'
-                        }}
-                    >
-
-                        <p className="muted">
-                            아직 인기곡으로 지정된
-                            콘텐츠가 없습니다.
-                        </p>
-
-                    </div>
+                    <EmptyMonth>
+                        {previousMonth.label}에 공개된 노래가 없어요.
+                    </EmptyMonth>
 
                 )}
 
-
             </section>
 
 
-
-            <section className="membership-banner">
-
-                <p className="eyebrow">
-                    MEMBERSHIP
-                </p>
-
-                <h2>
-                    Dear Sunshine Monthly Song Club
-                </h2>
-
-                <p>
-                    🎵 매월 수업곡 4~5곡
-                    <br />
-                    📝 Lyrics · 💡 Play Ideas · 🎨 Printable Materials
-                </p>
-
-                <div
-                    style={{
-                        margin: '18px 0',
-                        lineHeight: 1.8
-                    }}
-                >
-                    <strong>
-                        OPENING SPECIAL
-                    </strong>
-
-                    <br />
-
-                    1개월 12,900원
-
-                    <br />
-
-                    6개월 73,500원 · 약 5% SAVE
-
-                    <br />
-
-                    12개월 139,000원 · 약 10% SAVE
-
-                    <br />
-
-                    <span
-                        style={{
-                            fontSize: 13
-                        }}
-                    >
-                        이용권별 기간과 혜택을 확인해 보세요.
-                    </span>
-                </div>
-
-                <div
-                    style={{
-                        margin: '16px 0'
-                    }}
-                >
-                    <strong>
-                        현재 상태: {membershipLabel}
-                    </strong>
-                </div>
+            <div
+                style={{
+                    padding:
+                        '0 18px 36px'
+                }}
+            >
 
                 <Link
-                    className="primary-button"
-                    href="/membership"
+                    href="/library"
+                    className="primary-button wide"
                 >
-                    {
-                        membership
-                            ? '내 멤버십 보기'
-                            : 'Song Club 멤버십 보기'
-                    }
+                    🎵 전체 노래 라이브러리 보기
                 </Link>
 
-            </section>
-
+            </div>
 
         </>
 

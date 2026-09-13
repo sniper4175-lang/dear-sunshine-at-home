@@ -16,7 +16,7 @@ function formatDate(
 ) {
 
     if (!value) {
-        return '무제한';
+        return '-';
     }
 
 
@@ -52,6 +52,155 @@ function formatDate(
                     '2-digit'
             }
         );
+
+}
+
+
+function membershipStart(
+    membership
+) {
+
+    return (
+        membership?.current_period_start ||
+        membership?.trial_starts_at ||
+        membership?.starts_at ||
+        null
+    );
+
+}
+
+
+function membershipEnd(
+    membership
+) {
+
+    return (
+        membership?.current_period_end ||
+        membership?.trial_ends_at ||
+        membership?.ends_at ||
+        null
+    );
+
+}
+
+
+function MenuLink({
+    href,
+    icon,
+    title,
+    description
+}) {
+
+    return (
+
+        <Link
+            href={href}
+            style={{
+                display:
+                    'grid',
+
+                gridTemplateColumns:
+                    '42px minmax(0,1fr) 24px',
+
+                gap:
+                    12,
+
+                alignItems:
+                    'center',
+
+                padding:
+                    '13px 0',
+
+                borderBottom:
+                    '1px solid #f1e8dd'
+            }}
+        >
+
+            <span
+                style={{
+                    width:
+                        42,
+
+                    height:
+                        42,
+
+                    display:
+                        'grid',
+
+                    placeItems:
+                        'center',
+
+                    borderRadius:
+                        13,
+
+                    background:
+                        '#fff6df',
+
+                    fontSize:
+                        21
+                }}
+            >
+                {icon}
+            </span>
+
+            <span
+                style={{
+                    minWidth:
+                        0
+                }}
+            >
+
+                <strong
+                    style={{
+                        display:
+                            'block',
+
+                        fontSize:
+                            14
+                    }}
+                >
+                    {title}
+                </strong>
+
+                {description && (
+                    <span
+                        className="muted"
+                        style={{
+                            display:
+                                'block',
+
+                            marginTop:
+                                3,
+
+                            fontSize:
+                                12,
+
+                            lineHeight:
+                                1.4
+                        }}
+                    >
+                        {description}
+                    </span>
+                )}
+
+            </span>
+
+            <span
+                className="muted"
+                style={{
+                    justifySelf:
+                        'end',
+
+                    fontSize:
+                        22
+                }}
+            >
+                ›
+            </span>
+
+        </Link>
+
+    );
 
 }
 
@@ -106,43 +255,47 @@ export default function MyPageClient({
 
             <main
                 style={{
-                    maxWidth: 520,
-                    margin: '0 auto',
-                    padding: '50px 20px 110px'
+                    maxWidth:
+                        520,
+
+                    margin:
+                        '0 auto',
+
+                    padding:
+                        '50px 20px 110px'
                 }}
             >
 
                 <div
                     style={{
-                        textAlign: 'center'
+                        textAlign:
+                            'center'
                     }}
                 >
 
                     <div
                         style={{
-                            fontSize: 50,
-                            marginBottom: 12
+                            fontSize:
+                                50,
+
+                            marginBottom:
+                                12
                         }}
                     >
                         ☀️
                     </div>
 
-
                     <p className="eyebrow">
                         MY SUNSHINE
                     </p>
 
-
                     <h1>
-                        내 계정
+                        MY
                     </h1>
 
-
                     <p className="page-copy">
-                        로그인 후 현재 멤버십과
-                        이용 정보를 확인할 수 있어요.
+                        로그인 후 이용권 상태와 계정 정보를 확인할 수 있어요.
                     </p>
-
 
                     <Link
                         href="/login"
@@ -160,50 +313,70 @@ export default function MyPageClient({
     }
 
 
+    const startsAt =
+        membershipStart(
+            membership
+        );
+
+    const endsAt =
+        membershipEnd(
+            membership
+        );
+
+
     return (
 
         <main
             style={{
-                maxWidth: 520,
-                margin: '0 auto',
-                padding: '40px 20px 110px'
+                maxWidth:
+                    520,
+
+                margin:
+                    '0 auto',
+
+                padding:
+                    '40px 20px 110px'
             }}
         >
 
             <div
                 style={{
-                    textAlign: 'center',
-                    marginBottom: 28
+                    textAlign:
+                        'center',
+
+                    marginBottom:
+                        28
                 }}
             >
 
                 <div
                     style={{
-                        fontSize: 48,
-                        marginBottom: 8
+                        fontSize:
+                            48,
+
+                        marginBottom:
+                            8
                     }}
                 >
                     ☀️
                 </div>
 
-
                 <p className="eyebrow">
                     MY SUNSHINE
                 </p>
 
-
                 <h1>
-                    내 계정
+                    MY
                 </h1>
 
             </div>
 
 
-
             <section
                 className="content-card"
                 style={{
-                    marginBottom: 18
+                    marginBottom:
+                        18
                 }}
             >
 
@@ -211,100 +384,66 @@ export default function MyPageClient({
                     ACCOUNT
                 </p>
 
+                <h2
+                    style={{
+                        marginBottom:
+                            7,
 
-                <h2>
+                        overflowWrap:
+                            'anywhere'
+                    }}
+                >
                     {email}
                 </h2>
 
-
                 <p
+                    className="muted"
                     style={{
-                        marginBottom: 0,
-                        color: '#8d8175'
+                        margin:
+                            0,
+
+                        fontSize:
+                            13
                     }}
                 >
-                    DEAR SUNSHINE MONTHLY SONG CLUB 회원
+                    Dear Sunshine Song Club 계정
                 </p>
 
             </section>
 
 
+            <section
+                className="content-card"
+                style={{
+                    marginBottom:
+                        18
+                }}
+            >
 
-            {!membership && (
+                <p className="eyebrow">
+                    MY PASS
+                </p>
 
-                <section
-                    className="content-card"
-                    style={{
-                        marginBottom: 18,
-                        textAlign: 'center'
-                    }}
-                >
+                {membership ? (
 
-                    <div
-                        style={{
-                            fontSize: 34,
-                            marginBottom: 10
-                        }}
-                    >
-                        🔒
-                    </div>
-
-
-                    <p className="eyebrow">
-                        MEMBERSHIP
-                    </p>
-
-
-                    <h2>
-                        이용 중인 멤버십이 없어요
-                    </h2>
-
-
-                    <p className="page-copy">
-                        Dear Sunshine Monthly Song Club에
-                        가입하면 음원과 활동자료를
-                        이용할 수 있어요.
-                    </p>
-
-
-                    <Link
-                        href="/membership"
-                        className="primary-button"
-                    >
-                        Song Club 보기
-                    </Link>
-
-                </section>
-
-            )}
-
-
-
-            {membership && (
-
-                <>
-
-                    <section
-                        className="content-card"
-                        style={{
-                            marginBottom: 18
-                        }}
-                    >
-
-                        <p className="eyebrow">
-                            MY MEMBERSHIP
-                        </p>
-
+                    <>
 
                         <div
                             style={{
-                                display: 'flex',
+                                display:
+                                    'flex',
+
                                 justifyContent:
                                     'space-between',
+
                                 alignItems:
                                     'center',
-                                gap: 12,
-                                flexWrap: 'wrap'
+
+                                gap:
+                                    12,
+
+                                flexWrap:
+                                    'wrap'
                             }}
                         >
 
@@ -312,154 +451,320 @@ export default function MyPageClient({
 
                                 <h2
                                     style={{
-                                        marginBottom: 6
+                                        margin:
+                                            '0 0 6px'
                                     }}
                                 >
-                                    ☀️ Monthly Song Club
+                                    ☀️ Song Club 이용 중
                                 </h2>
 
-
                                 <p
+                                    className="muted"
                                     style={{
-                                        margin: 0,
-                                        color: '#8d8175'
+                                        margin:
+                                            0,
+
+                                        fontSize:
+                                            13
                                     }}
                                 >
-                                    Dear Sunshine의 노래와
-                                    활동자료를 이용하고 있어요.
+                                    현재 이용권이 활성화되어 있어요.
                                 </p>
 
                             </div>
 
-
-                            <div
+                            <span
                                 style={{
-                                    padding: '7px 12px',
-                                    borderRadius: 999,
+                                    padding:
+                                        '7px 12px',
+
+                                    borderRadius:
+                                        999,
+
                                     background:
                                         '#eef8ef',
-                                    fontSize: 13,
-                                    fontWeight: 800
+
+                                    fontSize:
+                                        13,
+
+                                    fontWeight:
+                                        800
                                 }}
                             >
                                 🟢 이용중
-                            </div>
+                            </span>
 
                         </div>
 
 
                         <div
                             style={{
-                                marginTop: 22,
-                                paddingTop: 18,
+                                marginTop:
+                                    20,
+
+                                paddingTop:
+                                    16,
+
                                 borderTop:
-                                    '1px solid #eee',
-                                display: 'grid',
-                                gap: 14
+                                    '1px solid #eee3d5',
+
+                                display:
+                                    'grid',
+
+                                gap:
+                                    12
                             }}
                         >
 
                             <div
                                 style={{
-                                    display: 'flex',
+                                    display:
+                                        'flex',
+
                                     justifyContent:
                                         'space-between',
-                                    gap: 20
+
+                                    gap:
+                                        18
                                 }}
                             >
-                                <span
-                                    style={{
-                                        color:
-                                            '#8d8175'
-                                    }}
-                                >
+                                <span className="muted">
                                     이용 시작일
                                 </span>
-
                                 <strong>
-                                    {
-                                        formatDate(
-                                            membership.starts_at
-                                        )
-                                    }
+                                    {formatDate(startsAt)}
                                 </strong>
                             </div>
 
-
                             <div
                                 style={{
-                                    display: 'flex',
+                                    display:
+                                        'flex',
+
                                     justifyContent:
                                         'space-between',
-                                    gap: 20
+
+                                    gap:
+                                        18
                                 }}
                             >
-                                <span
-                                    style={{
-                                        color:
-                                            '#8d8175'
-                                    }}
-                                >
+                                <span className="muted">
                                     이용 종료일
                                 </span>
-
                                 <strong>
-                                    {
-                                        formatDate(
-                                            membership.ends_at
-                                        )
-                                    }
+                                    {formatDate(endsAt)}
                                 </strong>
                             </div>
 
                         </div>
 
-                    </section>
+                        <Link
+                            href="/membership"
+                            className="secondary-button wide"
+                            style={{
+                                marginTop:
+                                    18
+                            }}
+                        >
+                            이용권 자세히 보기
+                        </Link>
 
+                    </>
 
-                    <section
-                        className="content-card"
+                ) : (
+
+                    <div
                         style={{
-                            marginBottom: 18
+                            textAlign:
+                                'center'
                         }}
                     >
 
-                        <p className="eyebrow">
-                            SONG CLUB BENEFITS
-                        </p>
-
-
-                        <h2>
-                            Song Club 이용 안내
-                        </h2>
-
-
                         <div
                             style={{
-                                lineHeight: 2
+                                fontSize:
+                                    32,
+
+                                marginBottom:
+                                    8
                             }}
                         >
-                            🎵 매월 수업곡 4~5곡
-                            <br />
-                            📝 Lyrics
-                            <br />
-                            💡 Play Ideas
-                            <br />
-                            🎨 Printable Materials
+                            🔒
                         </div>
 
-                    </section>
+                        <h2>
+                            이용 중인 이용권이 없어요
+                        </h2>
 
-                </>
+                        <p className="page-copy">
+                            Song Club 이용권 등록 후 음원과 활동자료를 이용할 수 있어요.
+                        </p>
 
-            )}
+                        <Link
+                            href="/membership"
+                            className="primary-button"
+                        >
+                            이용권 보기
+                        </Link>
 
+                    </div>
+
+                )}
+
+            </section>
 
 
             <section
                 className="content-card"
                 style={{
-                    marginBottom: 18
+                    marginBottom:
+                        18
+                }}
+            >
+
+                <p className="eyebrow">
+                    MENU
+                </p>
+
+                <h2
+                    style={{
+                        marginBottom:
+                            6
+                    }}
+                >
+                    이용 안내
+                </h2>
+
+                <MenuLink
+                    href="/subscription-policy"
+                    icon="🎟️"
+                    title="이용권·환불 안내"
+                    description="이용기간과 환불 기준을 확인해요."
+                />
+
+                <MenuLink
+                    href="/terms"
+                    icon="📄"
+                    title="이용약관"
+                    description="Song Club 서비스 이용약관이에요."
+                />
+
+                <MenuLink
+                    href="/privacy"
+                    icon="🔐"
+                    title="개인정보처리방침"
+                    description="개인정보 처리 기준을 확인해요."
+                />
+
+            </section>
+
+
+            <section
+                className="content-card"
+                style={{
+                    marginBottom:
+                        18
+                }}
+            >
+
+                <p className="eyebrow">
+                    APP INSTALL
+                </p>
+
+                <h2>
+                    홈 화면에 추가하기 📱
+                </h2>
+
+                <p className="page-copy">
+                    Song Club을 홈 화면에 추가하면 앱처럼 빠르게 열 수 있어요.
+                </p>
+
+                <details
+                    style={{
+                        borderTop:
+                            '1px solid #eee3d5',
+
+                        padding:
+                            '14px 0'
+                    }}
+                >
+                    <summary
+                        style={{
+                            cursor:
+                                'pointer',
+
+                            fontWeight:
+                                800
+                        }}
+                    >
+                        🍎 iPhone 설치 방법
+                    </summary>
+
+                    <p
+                        className="muted"
+                        style={{
+                            margin:
+                                '12px 0 0',
+
+                            lineHeight:
+                                1.8,
+
+                            fontSize:
+                                13
+                        }}
+                    >
+                        Safari에서 Song Club을 연 뒤 공유 버튼을 누르고
+                        ‘홈 화면에 추가’를 선택해 주세요.
+                    </p>
+                </details>
+
+                <details
+                    style={{
+                        borderTop:
+                            '1px solid #eee3d5',
+
+                        padding:
+                            '14px 0 2px'
+                    }}
+                >
+                    <summary
+                        style={{
+                            cursor:
+                                'pointer',
+
+                            fontWeight:
+                                800
+                        }}
+                    >
+                        🤖 Android 설치 방법
+                    </summary>
+
+                    <p
+                        className="muted"
+                        style={{
+                            margin:
+                                '12px 0 0',
+
+                            lineHeight:
+                                1.8,
+
+                            fontSize:
+                                13
+                        }}
+                    >
+                        Chrome에서 Song Club을 연 뒤 오른쪽 상단 메뉴를 누르고
+                        ‘홈 화면에 추가’ 또는 ‘앱 설치’를 선택해 주세요.
+                    </p>
+                </details>
+
+            </section>
+
+
+            <section
+                className="content-card"
+                style={{
+                    marginBottom:
+                        18
                 }}
             >
 
@@ -467,16 +772,17 @@ export default function MyPageClient({
                     ACCOUNT
                 </p>
 
-
                 <h2>
                     계정 관리
                 </h2>
 
-
                 <div
                     style={{
-                        display: 'grid',
-                        gap: 10
+                        display:
+                            'grid',
+
+                        gap:
+                            10
                     }}
                 >
 
@@ -484,19 +790,17 @@ export default function MyPageClient({
                         href="/forgot-password"
                         className="secondary-button"
                         style={{
-                            textAlign: 'center'
+                            textAlign:
+                                'center'
                         }}
                     >
                         비밀번호 변경
                     </Link>
 
-
                     <button
                         type="button"
                         className="secondary-button"
-                        onClick={
-                            logout
-                        }
+                        onClick={logout}
                     >
                         로그아웃
                     </button>
