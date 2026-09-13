@@ -287,9 +287,10 @@ export default async function HomePage() {
     /*
      * COMING UP NEXT
      *
-     * 관리자에서 is_upcoming=true로 지정한 곡 중
-     * 공개일이 '다음 달'에 속하는 곡만 보여줍니다.
-     * 따라서 9월이라면 10월 공개 예정곡만 표시됩니다.
+     * 관리자에서 'COMING UP NEXT'로 직접 지정한 곡을 보여줍니다.
+     * 공개일이 다음 달로 입력되어 있지 않아도 is_upcoming=true이면
+     * 예고 영역에는 표시합니다. 실제 음원/자료 공개 여부는
+     * 기존 공개일 및 is_published 규칙을 그대로 따릅니다.
      */
     const {
         data: upcomingRows,
@@ -305,14 +306,6 @@ export default async function HomePage() {
             .eq(
                 'is_upcoming',
                 true
-            )
-            .gte(
-                'release_date',
-                nextMonth.start
-            )
-            .lt(
-                'release_date',
-                nextMonth.end
             )
             .order(
                 'release_date',
