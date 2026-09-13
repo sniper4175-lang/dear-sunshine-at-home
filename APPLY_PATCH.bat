@@ -1,6 +1,6 @@
 ﻿@echo off
 chcp 65001 >nul
-cd /d "%~dp0"
+cd  "%~dp0"
 
 echo.
 echo Dear Sunshine Song Library 패치

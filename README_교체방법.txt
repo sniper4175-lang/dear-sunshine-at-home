@@ -1,44 +1,33 @@
-Dear Sunshine Song Library 최종 교체본
-=====================================
+Dear Sunshine 홈 최종 교체본
+================================
 
-이 패치는 '자동 삽입' 방식이 아닙니다.
-두 파일을 통째로 교체하는 방식입니다.
+이번 수정은 두 기능을 동시에 유지합니다.
+
+1. 클래스 권한 필터
+- Sunshine Toddler 회원 -> Toddler 음원만
+- Melody Book Club 회원 -> Book Club 음원만
+- 두 클래스 회원 -> 두 클래스 모두
+- 권한 없는 클래스의 자물쇠 음원은 홈에서 숨김
+
+2. COMING UP NEXT 수동 지정
+- 관리자에서 '다음 달 예고 지정'을 누르면 공개일과 상관없이 표시
+- release_date가 이번 달/지난 달이어도 is_upcoming=true면 표시
+- 단, 회원에게 허용된 클래스의 예고곡만 표시
+- '다음 달 예고 해제'를 누르면 사라짐
 
 교체 파일
 ---------
-1. components/LibraryClient.js
-2. app/library/page.js
-
-변경 내용
----------
-- Basic / Premium 표시 완전 제거
-- Sunshine Toddler 권한만 있는 회원:
-  -> Sunshine Toddler 탭만 표시
-- Melody Book Club 권한만 있는 회원:
-  -> Melody Book Club 탭만 표시
-- 두 클래스 권한이 모두 있는 회원:
-  -> 전체 / Sunshine Toddler / Melody Book Club 표시
-- 활성 멤버십 회원에게는 허용된 클래스의 곡만 서버에서 브라우저로 전달
-- PlaylistPlayer에도 허용된 클래스의 곡만 전달
-- 기존 SongCard의 프로그램 권한 체크 유지
-- 프로그램 연결이 없는 회원은 안내문 표시
+app/page.js
 
 적용 방법
 ---------
-1. ZIP 압축을 풉니다.
-2. 압축 안의 components/LibraryClient.js를
-   프로젝트의 components/LibraryClient.js에 덮어씁니다.
-3. 압축 안의 app/library/page.js를
-   프로젝트의 app/library/page.js에 덮어씁니다.
-4. 프로젝트 루트에서:
+1. 이 ZIP의 app/page.js를 프로젝트의 app/page.js에 통째로 덮어씁니다.
+2. 프로젝트 루트에서:
    npm run build
 
 성공하면:
-git add .
-git commit -m "filter library by Song Club program"
+git add app/page.js
+git commit -m "fix manual upcoming songs and home program filter"
 git push
 
-중요
-----
-현재 빌드가 정상인 상태에서 이 두 파일만 교체하세요.
-이전 자동 패치 스크립트는 다시 실행하지 마세요.
+이전 자동 패치 파일은 실행하지 마세요.
