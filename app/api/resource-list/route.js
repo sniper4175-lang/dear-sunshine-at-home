@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+import { createAdminSupabase } from '../../../lib/supabase-server';
+import { todayKST } from '../../../lib/release-date';
+
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -56,6 +59,25 @@ async function getSourceData(request, source, slug) {
     };
 }
 
+async function checkReleasedSong(slug) {
+    const db = createAdminSupabase();
+
+    const { data, error } =
+        await db
+            .from('ds_content_songs')
+            .select('slug')
+            .eq('slug', slug)
+            .eq('is_published', true)
+            .lte('release_date', todayKST())
+            .maybeSingle();
+
+    if (error) {
+        throw error;
+    }
+
+    return Boolean(data);
+}
+
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -89,6 +111,23 @@ export async function GET(request) {
                 }
             );
         }
+
+        const released =
+            await checkReleasedSong(
+                slug
+            );
+
+        if (!released) {
+            return NextResponse.json(
+                {
+                    error: '아직 공개되지 않은 콘텐츠입니다.'
+                },
+                {
+                    status: 404
+                }
+            );
+        }
+
 
         const {
             response,

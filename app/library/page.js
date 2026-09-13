@@ -13,6 +13,10 @@ import {
     getUserPrograms
 } from '../../lib/program-access';
 
+import {
+    todayKST
+} from '../../lib/release-date';
+
 
 export const dynamic =
     'force-dynamic';
@@ -184,6 +188,10 @@ export default async function LibraryPage() {
             .eq(
                 'is_published',
                 true
+            )
+            .lte(
+                'release_date',
+                todayKST()
             )
             .order(
                 'release_date',
