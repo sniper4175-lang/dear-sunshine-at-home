@@ -221,6 +221,28 @@ export default async function HomePage() {
 
     /*
      * =====================================
+     * 홈 화면에 보여줄 노래
+     * =====================================
+     *
+     * Song Club 이용 중인 회원은
+     * 관리자에서 허용한 클래스의 노래만 보여줍니다.
+     *
+     * 두 클래스 권한이 있으면 두 클래스 모두 보여줍니다.
+     * 권한이 없는 클래스의 자물쇠 곡은 홈에 노출하지 않습니다.
+     */
+    const visibleSongs =
+        membership
+            ? songs.filter(
+                song =>
+                    userPrograms.includes(
+                        song.program
+                    )
+            )
+            : songs;
+
+
+    /*
+     * =====================================
      * 다음 달 공개 예정곡
      * =====================================
      *
@@ -255,6 +277,14 @@ export default async function HomePage() {
             .eq(
                 'is_upcoming',
                 true
+            )
+            .gte(
+                'release_date',
+                nextMonthStart
+            )
+            .lt(
+                'release_date',
+                monthAfterNextStart
             )
             .order(
                 'release_date',
@@ -352,7 +382,7 @@ export default async function HomePage() {
 
 
     const thisMonthSongs =
-        songs
+        visibleSongs
             .filter(
                 song =>
                     song.releaseDate &&
@@ -369,14 +399,14 @@ export default async function HomePage() {
     const newSongs =
         thisMonthSongs.length > 0
             ? thisMonthSongs
-            : songs.slice(
+            : visibleSongs.slice(
                 0,
                 4
             );
 
 
     const popularSongs =
-        songs
+        visibleSongs
             .filter(
                 song =>
                     song.popular
@@ -457,12 +487,12 @@ export default async function HomePage() {
                     <div>
 
                         <p className="eyebrow">
-                            THIS MONTH SONG
+                            NEW THIS MONTH
                         </p>
 
 
                         <h2>
-                            이달의 노래
+                            이번 달 새로운 노래
                         </h2>
 
                     </div>
@@ -510,6 +540,9 @@ export default async function HomePage() {
                                         }
                                         membership={
                                             membership
+                                        }
+                                        userPrograms={
+                                            userPrograms
                                         }
                                     />
 
@@ -823,6 +856,9 @@ export default async function HomePage() {
                                         }
                                         membership={
                                             membership
+                                        }
+                                        userPrograms={
+                                            userPrograms
                                         }
                                     />
 
