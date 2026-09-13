@@ -308,8 +308,8 @@ export default function MembershipPlans() {
                     활성화됩니다.
                     <br />
 
-                    모든 이용권은 자동결제 없이
-                    선택한 기간 동안 이용할 수 있어요.
+                    이용권별 이용기간과 금액을 확인한 후
+                    원하는 이용권을 선택해 주세요.
                 </span>
 
             </div>

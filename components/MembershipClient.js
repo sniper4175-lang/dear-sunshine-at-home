@@ -488,10 +488,9 @@ export default function MembershipClient({
                                 lineHeight: 1.7
                             }}
                         >
-                            모든 이용권은 자동결제되지 않습니다.
+                            회원 페이지에서 이용 시작일과 종료일을 확인할 수 있어요.
                             <br />
-                            이용기간 종료 후 원하실 때
-                            센터에서 다시 등록하실 수 있어요.
+                            이용권 관련 문의는 Dear Sunshine 센터로 부탁드립니다.
                         </p>
 
                     </>

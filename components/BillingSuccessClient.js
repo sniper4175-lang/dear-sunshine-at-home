@@ -285,7 +285,7 @@ export default function BillingSuccessClient() {
                                             13
                                     }}
                                 >
-                                    자동결제되지 않습니다.
+                                    회원 페이지에서 이용기간을 확인할 수 있습니다.
                                 </span>
 
                             </div>

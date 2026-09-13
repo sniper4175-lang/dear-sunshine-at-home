@@ -21,8 +21,8 @@ export default function SubscriptionPolicyPage() {
 
             <p className="page-copy">
                 Dear Sunshine Song Club은
-                원하는 이용기간을 선택하여 이용하는
-                기간제 이용권으로 운영됩니다.
+                선택한 이용권의 이용기간 동안 콘텐츠를 이용할 수 있는
+                멤버십 서비스입니다.
             </p>
 
 
@@ -110,7 +110,7 @@ export default function SubscriptionPolicyPage() {
                         lineHeight: 1.7
                     }}
                 >
-                    이용기간과 금액을 확인한 후
+                    이용권별 이용기간과 금액을 확인한 후
                     원하는 이용권을 선택해 주세요.
                 </p>
 
@@ -144,6 +144,8 @@ export default function SubscriptionPolicyPage() {
                 </p>
 
             </div>
+
+
 
 
 

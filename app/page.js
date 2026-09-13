@@ -933,7 +933,7 @@ export default async function HomePage() {
                             fontSize: 13
                         }}
                     >
-                        자동결제 없이 원하는 기간만 이용해요.
+                        이용권별 기간과 혜택을 확인해 보세요.
                     </span>
                 </div>
 
