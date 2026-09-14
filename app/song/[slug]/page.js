@@ -132,7 +132,7 @@ export default async function SongPage({ params }) {
             slug={song.slug}
             apiPath="/api/play-ideas-url"
             eyebrow="PLAY IDEAS"
-            title="이 노래로 놀아요"
+            title="이렇게 놀아요"
             description="집에서 바로 따라 할 수 있는 놀이 아이디어를 확인해보세요."
             emptyMessage="등록된 놀이 아이디어가 없습니다."
           />
@@ -167,7 +167,7 @@ export default async function SongPage({ params }) {
                   MONTHLY SONG CLUB
                 </p>
 
-                <h2>이 노래로 놀아요</h2>
+                <h2>이렇게 놀아요</h2>
 
                 <div className="steps">
                   {song.activities.map(
