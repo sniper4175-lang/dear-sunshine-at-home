@@ -123,26 +123,27 @@ export default async function SongPage({ params }) {
             slug={song.slug}
           />
 
+          <LyricsSheet
+            slug={song.slug}
+            title={song.title}
+          />
+
           <ResourceGallery
             slug={song.slug}
             apiPath="/api/play-ideas-url"
             eyebrow="PLAY IDEAS"
             title="이 노래로 놀아요"
-            description="집에서 바로 따라 할 수 있는 플래시 카드를 확인해보세요."
-            emptyMessage="등록된 플래시 카드가 없습니다."
+            description="집에서 바로 따라 할 수 있는 놀이 아이디어를 확인해보세요."
+            emptyMessage="등록된 놀이 아이디어가 없습니다."
           />
 
           <ResourceGallery
             slug={song.slug}
             apiPath="/api/printable-url"
             eyebrow="PRINTABLE"
-            title="플래시 카드"
-            description="노래와 함께 활용할 수 있는 플래시 카드예요."
-            emptyMessage="등록된 플래시 카드가 없습니다."
-          />
-          <LyricsSheet
-            slug={song.slug}
-            title={song.title}
+            title="활동자료"
+            description="노래와 함께 활용할 수 있는 활동자료예요."
+            emptyMessage="등록된 활동자료가 없습니다."
           />
 
           {song.lyrics && song.lyrics.length > 0 && (

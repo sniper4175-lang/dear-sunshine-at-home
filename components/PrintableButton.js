@@ -11,7 +11,7 @@ export default function PrintableButton({ slug }) {
     return (
         <SecureDownloadButton
             url={url}
-            label="⬇ 활동자료 다운로드"
+            label="⬇ 플래시 카드 다운로드"
             fallbackFilename="Dear-Sunshine-Printable"
         />
     );

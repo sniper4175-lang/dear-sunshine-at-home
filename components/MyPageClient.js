@@ -597,7 +597,7 @@ export default function MyPageClient({
                         </h2>
 
                         <p className="page-copy">
-                            Song Club 이용권 등록 후 음원과 활동자료를 이용할 수 있어요.
+                            Song Club 이용권 등록 후 음원과 플래시 카드를 이용할 수 있어요.
                         </p>
 
                         <Link

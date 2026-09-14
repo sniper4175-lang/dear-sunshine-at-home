@@ -59,7 +59,7 @@ export async function GET(request) {
         if (songError) {
             console.error('printable-url song error:', songError);
             return NextResponse.json(
-                { error: '활동자료 정보를 확인하지 못했습니다.' },
+                { error: '플래시 카드 정보를 확인하지 못했습니다.' },
                 { status: 500 }
             );
         }
@@ -91,7 +91,7 @@ export async function GET(request) {
             )
         ) {
             return NextResponse.json(
-                { error: `${song.program} 수강 회원만 이용할 수 있는 활동자료입니다.` },
+                { error: `${song.program} 수강 회원만 이용할 수 있는 플래시 카드입니다.` },
                 { status: 403 }
             );
         }
@@ -108,7 +108,7 @@ export async function GET(request) {
 
         if (items.length === 0) {
             return NextResponse.json(
-                { error: '등록된 활동자료 파일이 없습니다.' },
+                { error: '등록된 플래시 카드 파일이 없습니다.' },
                 { status: 404 }
             );
         }
@@ -120,7 +120,7 @@ export async function GET(request) {
     } catch (error) {
         console.error('printable-url error:', error);
         return NextResponse.json(
-            { error: '활동자료 처리 중 오류가 발생했습니다.' },
+            { error: '플래시 카드 처리 중 오류가 발생했습니다.' },
             { status: 500 }
         );
     }

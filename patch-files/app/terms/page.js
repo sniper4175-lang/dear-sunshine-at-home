@@ -144,7 +144,7 @@ export default function TermsPage() {
 
                 <p>
                     Song Club에서 제공되는 음원, 가사, 이미지,
-                    활동자료, 워크시트 등 모든 콘텐츠의 저작권은
+                    플래시 카드, 워크시트 등 모든 콘텐츠의 저작권은
                     Dear Sunshine 또는 정당한 권리자에게 있습니다.
                 </p>
 

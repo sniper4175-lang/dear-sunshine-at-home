@@ -4,7 +4,7 @@ import { createAdminSupabase } from '../../../lib/supabase-server';
 import { getCurrentMembership } from '../../../lib/membership';
 import { getUserPrograms } from '../../../lib/program-access';
 import { canAccessSong } from '../../../lib/content-access';
-import { createSongResourceSignedUrls } from '../../../lib/storage-resource';
+import { createResourceSignedUrls } from '../../../lib/storage-resource';
 import { todayKST } from '../../../lib/release-date';
 
 export const dynamic = 'force-dynamic';
@@ -46,7 +46,6 @@ export async function GET(request) {
                     slug,
                     title,
                     program,
-                    audio_path,
                     play_ideas_path,
                     release_date,
                     is_published
@@ -59,7 +58,7 @@ export async function GET(request) {
         if (songError) {
             console.error('play-ideas-url song error:', songError);
             return NextResponse.json(
-                { error: '놀이 아이디어 정보를 확인하지 못했습니다.' },
+                { error: '플래시 카드 정보를 확인하지 못했습니다.' },
                 { status: 500 }
             );
         }
@@ -91,24 +90,25 @@ export async function GET(request) {
             )
         ) {
             return NextResponse.json(
-                { error: `${song.program} 수강 회원만 이용할 수 있는 놀이 아이디어입니다.` },
+                { error: `${song.program} 수강 회원만 이용할 수 있는 플래시 카드입니다.` },
                 { status: 403 }
             );
         }
 
-        const items = await createSongResourceSignedUrls({
+        const resourcePath =
+            song.play_ideas_path ||
+            `${song.program}/${song.title}`;
+
+        const items = await createResourceSignedUrls({
             db,
             bucket: 'dear-sunshine-play-ideas',
-            program: song.program,
-            audioPath: song.audio_path,
-            title: song.title,
-            legacyPath: song.play_ideas_path,
+            pathOrFolder: resourcePath,
             expiresIn: 60 * 30
         });
 
         if (items.length === 0) {
             return NextResponse.json(
-                { error: '등록된 놀이 아이디어가 없습니다.' },
+                { error: '등록된 플래시 카드가 없습니다.' },
                 { status: 404 }
             );
         }
@@ -120,7 +120,7 @@ export async function GET(request) {
     } catch (error) {
         console.error('play-ideas-url error:', error);
         return NextResponse.json(
-            { error: '놀이 아이디어 처리 중 오류가 발생했습니다.' },
+            { error: '플래시 카드 처리 중 오류가 발생했습니다.' },
             { status: 500 }
         );
     }
