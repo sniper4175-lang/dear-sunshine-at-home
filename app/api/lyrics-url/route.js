@@ -4,7 +4,7 @@ import { createAdminSupabase } from '../../../lib/supabase-server';
 import { getCurrentMembership } from '../../../lib/membership';
 import { getUserPrograms } from '../../../lib/program-access';
 import { canAccessSong } from '../../../lib/content-access';
-import { createResourceSignedUrls } from '../../../lib/storage-resource';
+import { createSongResourceSignedUrls } from '../../../lib/storage-resource';
 import { todayKST } from '../../../lib/release-date';
 
 export const dynamic = 'force-dynamic';
@@ -53,6 +53,7 @@ export async function GET(request) {
                     slug,
                     title,
                     program,
+                    audio_path,
                     lyrics_path,
                     release_date,
                     is_published
@@ -102,27 +103,20 @@ export async function GET(request) {
             );
         }
 
-        const resourcePath =
+        const legacyPath =
             song.lyrics_path && !isExamplePath(song.lyrics_path)
                 ? song.lyrics_path
-                : `${song.program}/${song.title}`;
+                : '';
 
-        let items = [];
-
-        try {
-            items = await createResourceSignedUrls({
-                db,
-                bucket: 'dear-sunshine-lyrics',
-                pathOrFolder: resourcePath,
-                expiresIn: 60 * 30
-            });
-        } catch (error) {
-            console.error('lyrics-url storage error:', error);
-            return NextResponse.json(
-                { error: '가사지 파일을 확인하지 못했습니다.' },
-                { status: 500 }
-            );
-        }
+        const items = await createSongResourceSignedUrls({
+            db,
+            bucket: 'dear-sunshine-lyrics',
+            program: song.program,
+            audioPath: song.audio_path,
+            title: song.title,
+            legacyPath,
+            expiresIn: 60 * 30
+        });
 
         if (items.length === 0) {
             return NextResponse.json(

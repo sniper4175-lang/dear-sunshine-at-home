@@ -4,7 +4,7 @@ import { createAdminSupabase } from '../../../lib/supabase-server';
 import { getCurrentMembership } from '../../../lib/membership';
 import { getUserPrograms } from '../../../lib/program-access';
 import { canAccessSong } from '../../../lib/content-access';
-import { createResourceSignedUrls } from '../../../lib/storage-resource';
+import { createSongResourceSignedUrls } from '../../../lib/storage-resource';
 import { todayKST } from '../../../lib/release-date';
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +46,7 @@ export async function GET(request) {
                     slug,
                     title,
                     program,
+                    audio_path,
                     play_ideas_path,
                     release_date,
                     is_published
@@ -95,14 +96,13 @@ export async function GET(request) {
             );
         }
 
-        const resourcePath =
-            song.play_ideas_path ||
-            `${song.program}/${song.title}`;
-
-        const items = await createResourceSignedUrls({
+        const items = await createSongResourceSignedUrls({
             db,
             bucket: 'dear-sunshine-play-ideas',
-            pathOrFolder: resourcePath,
+            program: song.program,
+            audioPath: song.audio_path,
+            title: song.title,
+            legacyPath: song.play_ideas_path,
             expiresIn: 60 * 30
         });
 

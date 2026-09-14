@@ -4,7 +4,7 @@ import { createAdminSupabase } from '../../../lib/supabase-server';
 import { getCurrentMembership } from '../../../lib/membership';
 import { getUserPrograms } from '../../../lib/program-access';
 import { canAccessSong } from '../../../lib/content-access';
-import { createResourceSignedUrls } from '../../../lib/storage-resource';
+import { createSongResourceSignedUrls } from '../../../lib/storage-resource';
 import { todayKST } from '../../../lib/release-date';
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +46,7 @@ export async function GET(request) {
                     slug,
                     title,
                     program,
+                    audio_path,
                     printable_path,
                     release_date,
                     is_published
@@ -58,14 +59,14 @@ export async function GET(request) {
         if (songError) {
             console.error('printable-url song error:', songError);
             return NextResponse.json(
-                { error: '활동지 정보를 확인하지 못했습니다.' },
+                { error: '활동자료 정보를 확인하지 못했습니다.' },
                 { status: 500 }
             );
         }
 
-        if (!song || !song.printable_path) {
+        if (!song) {
             return NextResponse.json(
-                { error: '아직 공개되지 않았거나 등록된 활동지가 없습니다.' },
+                { error: '아직 공개되지 않았거나 곡 정보를 찾을 수 없습니다.' },
                 { status: 404 }
             );
         }
@@ -90,21 +91,24 @@ export async function GET(request) {
             )
         ) {
             return NextResponse.json(
-                { error: `${song.program} 수강 회원만 이용할 수 있는 활동지입니다.` },
+                { error: `${song.program} 수강 회원만 이용할 수 있는 활동자료입니다.` },
                 { status: 403 }
             );
         }
 
-        const items = await createResourceSignedUrls({
+        const items = await createSongResourceSignedUrls({
             db,
             bucket: 'dear-sunshine-printables',
-            pathOrFolder: song.printable_path,
+            program: song.program,
+            audioPath: song.audio_path,
+            title: song.title,
+            legacyPath: song.printable_path,
             expiresIn: 60 * 30
         });
 
         if (items.length === 0) {
             return NextResponse.json(
-                { error: '등록된 활동지 파일이 없습니다.' },
+                { error: '등록된 활동자료 파일이 없습니다.' },
                 { status: 404 }
             );
         }
@@ -116,7 +120,7 @@ export async function GET(request) {
     } catch (error) {
         console.error('printable-url error:', error);
         return NextResponse.json(
-            { error: '활동지 처리 중 오류가 발생했습니다.' },
+            { error: '활동자료 처리 중 오류가 발생했습니다.' },
             { status: 500 }
         );
     }
