@@ -27,9 +27,6 @@ export default function SignupPage() {
     ] =
         useState('');
 
-    /* DS_STUDENT_NAME_SIGNUP_PATCH */
-    const [studentName, setStudentName] = useState('');
-
 
     const [
         password,
@@ -86,11 +83,6 @@ export default function SignupPage() {
 
         setError('');
         setMessage('');
-        if (!studentName.trim()) {
-            setError('학생 이름을 입력해주세요.');
-            return;
-        }
-
 
 
         if (
@@ -155,9 +147,6 @@ export default function SignupPage() {
                                 `${window.location.origin}/login`,
 
                             data: {
-                                student_name:
-                                    studentName.trim(),
-
                                 terms_version:
                                     '2026-09-06',
 
@@ -301,26 +290,6 @@ export default function SignupPage() {
                         16
                 }}
             >
-                <label>
-                    학생 이름
-                    <input
-                        className="normal"
-                        type="text"
-                        value={studentName}
-                        onChange={e =>
-                            setStudentName(e.target.value)
-                        }
-                        required
-                        maxLength={30}
-                        autoComplete="name"
-                        placeholder="아이 이름을 입력해주세요."
-                        style={{
-                            width: '100%',
-                            marginTop: 7
-                        }}
-                    />
-                </label>
-
 
                 <label>
                     이메일
@@ -489,7 +458,7 @@ export default function SignupPage() {
                             >
                                 목적: 회원가입·로그인·서비스 제공
                                 <br />
-                                항목: 이메일, 학생 이름, 회원 식별자
+                                항목: 이메일, 회원 식별자
                                 <br />
                                 보유: 회원탈퇴 시까지
                                 (법령상 보존 의무가 있는 경우 제외)
