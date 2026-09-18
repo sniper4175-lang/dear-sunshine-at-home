@@ -115,7 +115,11 @@ export default async function HomePackagePage() {
     const db = createAdminSupabase();
     const dashboard = await getHomePackageDashboard(db, homePackage);
 
-    const releaseWeeks = Number(homePackage.release_weeks || 0);
+    const storedReleaseWeeks = Number(homePackage.release_weeks_effective || homePackage.release_weeks || 0);
+    const releaseWeeks =
+        homePackage.plan_code === 'home_20'
+            ? Math.max(21, storedReleaseWeeks)
+            : storedReleaseWeeks;
     const currentWeek = Math.min(
         Number(homePackage.current_week || 0),
         releaseWeeks

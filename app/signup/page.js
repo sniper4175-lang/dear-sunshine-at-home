@@ -1,26 +1,6 @@
 'use client';
-
-import {
-    useState
-} from 'react';
-
-import {
-    useRouter
-} from 'next/navigation';
-
-import Link from 'next/link';
-
-import {
-    createBrowserSupabase
-} from '../../lib/supabase-browser';
-
-
+import { useState } from 'react';
 export default function SignupPage() {
-
-    const router =
-        useRouter();
-
-
     const [
         email,
         setEmail
@@ -29,278 +9,35 @@ export default function SignupPage() {
 
     /* DS_STUDENT_NAME_SIGNUP_PATCH */
     const [studentName, setStudentName] = useState('');
-
-
-    const [
-        password,
-        setPassword
-    ] =
-        useState('');
-
-
-    const [
-        passwordConfirm,
-        setPasswordConfirm
-    ] =
-        useState('');
-
-
-    const [
-        termsAgreed,
-        setTermsAgreed
-    ] =
-        useState(false);
-
-    const [
-        privacyAgreed,
-        setPrivacyAgreed
-    ] =
-        useState(false);
-
-    const [
-        loading,
-        setLoading
-    ] =
-        useState(false);
-
-
-    const [
-        message,
-        setMessage
-    ] =
-        useState('');
-
-
-    const [
-        error,
-        setError
-    ] =
-        useState('');
-
-
-    async function signup(
-        e
-    ) {
-
+    const [password, setPassword] = useState('');
+    const [passwordConfirm, setPasswordConfirm] = useState('');
+    async function signup(e) {
         e.preventDefault();
-
         setError('');
-        setMessage('');
         if (!studentName.trim()) {
             setError('학생 이름을 입력해주세요.');
             return;
         }
 
-
-
         if (
             password.length < 8
         ) {
-
-            setError(
-                '비밀번호는 8자 이상으로 입력해주세요.'
-            );
-
-            return;
-
-        }
-
-
-        if (
-            password !==
-            passwordConfirm
-        ) {
-
-            setError(
-                '비밀번호가 서로 일치하지 않습니다.'
-            );
-
-            return;
-
-        }
-
-
-        if (!termsAgreed || !privacyAgreed) {
-            setError(
-                '이용약관과 개인정보 수집·이용 동의는 필수입니다.'
-            );
-
+            setError('비밀번호는 8자 이상으로 입력해주세요.');
             return;
         }
-
-        setLoading(true);
-
-
-        try {
-
-            const supabase =
-                createBrowserSupabase();
-
-
-            const {
-                data,
-                error
-            } =
-                await supabase
-                    .auth
-                    .signUp({
-                        email:
-                            email.trim(),
-
-                        password,
-
-                        options: {
-
-                            emailRedirectTo:
-                                `${window.location.origin}/login`,
-
-                            data: {
-                                student_name:
+        const supabase = createBrowserSupabase();
+        await supabase.auth.signUp({ email: email.trim(), password, options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+          data: {
+            student_name:
                                     studentName.trim(),
 
-                                terms_version:
-                                    '2026-09-06',
-
-                                privacy_version:
-                                    '2026-09-06',
-
-                                legal_consented_at:
-                                    new Date().toISOString()
-                            }
-
-                        }
-                    });
-
-
-            if (error) {
-
-                console.error(
-                    error
-                );
-
-                setError(
-                    error.message ||
-                    '회원가입 중 오류가 발생했습니다.'
-                );
-
-                return;
-
-            }
-
-
-            /*
-             * 이메일 확인이 비활성화된 경우
-             * 즉시 session이 만들어질 수도 있음
-             */
-            if (
-                data.session
-            ) {
-
-                router.push(
-                    '/'
-                );
-
-                router.refresh();
-
-                return;
-
-            }
-
-
-            /*
-             * 이메일 확인이 필요한 경우
-             */
-            setMessage(
-                '가입 확인 메일을 보냈어요. 이메일의 확인 링크를 눌러 가입을 완료해주세요.'
-            );
-
-
-        } catch (e) {
-
-            console.error(e);
-
-            setError(
-                '회원가입 중 오류가 발생했습니다.'
-            );
-
-
-        } finally {
-
-            setLoading(false);
-
-        }
-
+                                terms_version: '2026-09-06',
+            privacy_version: '2026-09-06'
+          }
+        }});
     }
-
-
-    return (
-
-        <main
-            style={{
-                maxWidth:
-                    420,
-
-                margin:
-                    '0 auto',
-
-                padding:
-                    '60px 22px 100px'
-            }}
-        >
-
-            <div
-                style={{
-                    textAlign:
-                        'center',
-
-                    marginBottom:
-                        32
-                }}
-            >
-
-                <div
-                    style={{
-                        fontSize:
-                            48,
-
-                        marginBottom:
-                            12
-                    }}
-                >
-                    ☀️
-                </div>
-
-
-                <p className="eyebrow">
-                    DEAR SUNSHINE MONTHLY SONG CLUB
-                </p>
-
-
-                <h1>
-                    회원가입
-                </h1>
-
-
-                <p className="page-copy">
-                    Dear Sunshine 영어노래를
-                    집에서도 이어서 만나보세요.
-                </p>
-
-            </div>
-
-
-            <form
-                onSubmit={
-                    signup
-                }
-                style={{
-                    display:
-                        'grid',
-
-                    gap:
-                        16
-                }}
-            >
+    return <form>
                 <label>
                     학생 이름
                     <input
@@ -321,287 +58,19 @@ export default function SignupPage() {
                     />
                 </label>
 
-
                 <label>
                     이메일
-
                     <input
                         className="normal"
                         type="email"
-                        value={
-                            email
-                        }
-                        onChange={e =>
-                            setEmail(
-                                e.target.value
-                            )
-                        }
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
                         required
                         autoComplete="email"
                         placeholder="example@email.com"
-                        style={{
-                            width:
-                                '100%',
-
-                            marginTop:
-                                7
-                        }}
+                        style={{ width: '100%', marginTop: 7 }}
                     />
                 </label>
-
-
-                <label>
-                    비밀번호
-
-                    <input
-                        className="normal"
-                        type="password"
-                        value={
-                            password
-                        }
-                        onChange={e =>
-                            setPassword(
-                                e.target.value
-                            )
-                        }
-                        required
-                        minLength={8}
-                        autoComplete="new-password"
-                        placeholder="8자 이상 입력해주세요."
-                        style={{
-                            width:
-                                '100%',
-
-                            marginTop:
-                                7
-                        }}
-                    />
-                </label>
-
-
-                <label>
-                    비밀번호 확인
-
-                    <input
-                        className="normal"
-                        type="password"
-                        value={
-                            passwordConfirm
-                        }
-                        onChange={e =>
-                            setPasswordConfirm(
-                                e.target.value
-                            )
-                        }
-                        required
-                        minLength={8}
-                        autoComplete="new-password"
-                        placeholder="비밀번호를 한 번 더 입력해주세요."
-                        style={{
-                            width:
-                                '100%',
-
-                            marginTop:
-                                7
-                        }}
-                    />
-                </label>
-
-
-
-                <div
-                    style={{
-                        display: 'grid',
-                        gap: 12,
-                        padding: 16,
-                        borderRadius: 16,
-                        background: '#fff8ea'
-                    }}
-                >
-                    <label
-                        style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 10,
-                            lineHeight: 1.5
-                        }}
-                    >
-                        <input
-                            type="checkbox"
-                            checked={termsAgreed}
-                            onChange={e =>
-                                setTermsAgreed(
-                                    e.target.checked
-                                )
-                            }
-                            required
-                            style={{ marginTop: 4 }}
-                        />
-
-                        <span>
-                            <strong>[필수] 이용약관 동의</strong>
-                            <br />
-                            <Link
-                                href="/terms"
-                                target="_blank"
-                                style={{
-                                    textDecoration: 'underline',
-                                    fontSize: 13
-                                }}
-                            >
-                                이용약관 보기
-                            </Link>
-                        </span>
-                    </label>
-
-                    <label
-                        style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 10,
-                            lineHeight: 1.5
-                        }}
-                    >
-                        <input
-                            type="checkbox"
-                            checked={privacyAgreed}
-                            onChange={e =>
-                                setPrivacyAgreed(
-                                    e.target.checked
-                                )
-                            }
-                            required
-                            style={{ marginTop: 4 }}
-                        />
-
-                        <span>
-                            <strong>
-                                [필수] 개인정보 수집·이용 동의
-                            </strong>
-                            <br />
-                            <span
-                                style={{
-                                    display: 'block',
-                                    marginTop: 4,
-                                    color: '#8d8175',
-                                    fontSize: 12
-                                }}
-                            >
-                                목적: 회원가입·로그인·서비스 제공
-                                <br />
-                                항목: 이메일, 학생 이름, 회원 식별자
-                                <br />
-                                보유: 회원탈퇴 시까지
-                                (법령상 보존 의무가 있는 경우 제외)
-                                <br />
-                                동의를 거부할 수 있으나,
-                                필수정보이므로 회원가입이 제한됩니다.
-                            </span>
-
-                            <Link
-                                href="/privacy"
-                                target="_blank"
-                                style={{
-                                    display: 'inline-block',
-                                    marginTop: 5,
-                                    textDecoration: 'underline',
-                                    fontSize: 13
-                                }}
-                            >
-                                개인정보처리방침 보기
-                            </Link>
-                        </span>
-                    </label>
-                </div>
-
-
-                {error && (
-
-                    <p
-                        style={{
-                            margin:
-                                0,
-
-                            color:
-                                '#bd3d3d',
-
-                            fontSize:
-                                13
-                        }}
-                    >
-                        {error}
-                    </p>
-
-                )}
-
-
-                {message && (
-
-                    <div
-                        style={{
-                            padding:
-                                15,
-
-                            borderRadius:
-                                14,
-
-                            background:
-                                '#fff8e8',
-
-                            lineHeight:
-                                1.6
-                        }}
-                    >
-                        {message}
-                    </div>
-
-                )}
-
-
-                <button
-                    type="submit"
-                    className="primary-button wide"
-                    disabled={
-                        loading
-                    }
-                >
-                    {
-                        loading
-                            ? '가입 중...'
-                            : '회원가입'
-                    }
-                </button>
-
-            </form>
-
-
-            <div
-                style={{
-                    textAlign:
-                        'center',
-
-                    marginTop:
-                        24
-                }}
-            >
-
-                <span
-                    style={{
-                        color:
-                            '#8d8175'
-                    }}
-                >
-                    이미 계정이 있으신가요?{' '}
-                </span>
-
-
-                <Link href="/login">
-                    로그인
-                </Link>
-
-            </div>
-
-        </main>
-
-    );
+                <div>항목: 이메일, 학생 이름, 회원 식별자</div>
+    </form>;
 }
