@@ -1,0 +1,730 @@
+
+
+        /*
+         * =====================================
+         * Home Package 관리자 데이터 조회
+         * =====================================
+         */
+        if (
+            b.action ===
+            'getHomePackageAdminData'
+        ) {
+
+            const {
+                data: products,
+                error: productsError
+            } =
+                await db
+                    .from(
+                        'ds_user_products'
+                    )
+                    .select(
+                        'id,user_id,product_type,plan_code,program,status,starts_at,ends_at,release_weeks,created_at,updated_at'
+                    )
+                    .eq(
+                        'product_type',
+                        'home_package'
+                    )
+                    .order(
+                        'created_at',
+                        {
+                            ascending: false
+                        }
+                    );
+
+            if (productsError) {
+                return NextResponse.json(
+                    {
+                        error:
+                            'Home Package 테이블을 읽지 못했습니다. Supabase SQL Editor에서 supabase/home-package-mode.sql을 먼저 실행해주세요.'
+                    },
+                    {
+                        status: 409
+                    }
+                );
+            }
+
+            const {
+                data: tracks,
+                error: tracksError
+            } =
+                await db
+                    .from(
+                        'ds_home_package_tracks'
+                    )
+                    .select(
+                        'id,program,song_id,unlock_week,position,created_at'
+                    )
+                    .order(
+                        'program',
+                        {
+                            ascending: true
+                        }
+                    )
+                    .order(
+                        'unlock_week',
+                        {
+                            ascending: true
+                        }
+                    )
+                    .order(
+                        'position',
+                        {
+                            ascending: true
+                        }
+                    );
+
+            if (tracksError) {
+                return NextResponse.json(
+                    {
+                        error:
+                            'Home Package 곡 구성 테이블을 읽지 못했습니다. Supabase SQL을 확인해주세요.'
+                    },
+                    {
+                        status: 409
+                    }
+                );
+            }
+
+            return NextResponse.json({
+                ok: true,
+                products:
+                    products || [],
+                tracks:
+                    tracks || []
+            });
+        }
+
+
+        /*
+         * =====================================
+         * Home Package 회원 활성화
+         * =====================================
+         */
+        if (
+            b.action ===
+            'createHomePackageProduct'
+        ) {
+
+            const allowedPlans = [
+                'home_8',
+                'home_12',
+                'home_20'
+            ];
+
+            const allowedPrograms = [
+                'Sunshine Toddler',
+                'Melody Book Club'
+            ];
+
+            const userId =
+                String(
+                    b.userId || ''
+                ).trim();
+
+            const planCode =
+                String(
+                    b.planCode || ''
+                ).trim();
+
+            const program =
+                String(
+                    b.program || ''
+                ).trim();
+
+            const startsAt =
+                String(
+                    b.startsAt || ''
+                ).slice(0, 10);
+
+            const endsAt =
+                b.endsAt
+                    ? String(
+                        b.endsAt
+                    ).slice(0, 10)
+                    : null;
+
+            if (!userId) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '회원을 선택해주세요.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            if (
+                !allowedPlans.includes(
+                    planCode
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            'Home Package 상품을 확인해주세요.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            if (
+                !allowedPrograms.includes(
+                    program
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '이용 클래스를 확인해주세요.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            if (
+                !/^\d{4}-\d{2}-\d{2}$/.test(
+                    startsAt
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '시작일을 확인해주세요.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            if (
+                endsAt &&
+                endsAt < startsAt
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '종료일은 시작일보다 빠를 수 없습니다.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            const {
+                data: existing,
+                error: existingError
+            } =
+                await db
+                    .from(
+                        'ds_user_products'
+                    )
+                    .select(
+                        'id'
+                    )
+                    .eq(
+                        'user_id',
+                        userId
+                    )
+                    .eq(
+                        'product_type',
+                        'home_package'
+                    )
+                    .eq(
+                        'status',
+                        'active'
+                    )
+                    .maybeSingle();
+
+            if (existingError) {
+                throw existingError;
+            }
+
+            if (existing) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '이미 이용 중인 Home Package가 있는 회원입니다.'
+                    },
+                    {
+                        status: 409
+                    }
+                );
+            }
+
+            const {
+                data,
+                error
+            } =
+                await db
+                    .from(
+                        'ds_user_products'
+                    )
+                    .insert({
+                        user_id:
+                            userId,
+                        product_type:
+                            'home_package',
+                        plan_code:
+                            planCode,
+                        program,
+                        status:
+                            'active',
+                        starts_at:
+                            startsAt,
+                        ends_at:
+                            endsAt
+                    })
+                    .select(
+                        'id,user_id,product_type,plan_code,program,status,starts_at,ends_at,release_weeks,created_at,updated_at'
+                    )
+                    .single();
+
+            if (error) {
+                throw error;
+            }
+
+            return NextResponse.json({
+                ok: true,
+                product: data
+            });
+        }
+
+
+        /*
+         * =====================================
+         * Home Package 회원 수정
+         * =====================================
+         */
+        if (
+            b.action ===
+            'updateHomePackageProduct'
+        ) {
+
+            const allowedPlans = [
+                'home_8',
+                'home_12',
+                'home_20'
+            ];
+
+            const allowedPrograms = [
+                'Sunshine Toddler',
+                'Melody Book Club'
+            ];
+
+            const allowedStatuses = [
+                'active',
+                'paused',
+                'cancelled',
+                'expired'
+            ];
+
+            const id =
+                String(
+                    b.id || ''
+                ).trim();
+
+            const planCode =
+                String(
+                    b.planCode || ''
+                ).trim();
+
+            const program =
+                String(
+                    b.program || ''
+                ).trim();
+
+            const status =
+                String(
+                    b.status || ''
+                ).trim();
+
+            const startsAt =
+                String(
+                    b.startsAt || ''
+                ).slice(0, 10);
+
+            const endsAt =
+                b.endsAt
+                    ? String(
+                        b.endsAt
+                    ).slice(0, 10)
+                    : null;
+
+            if (!id) {
+                return NextResponse.json(
+                    {
+                        error:
+                            'Home Package 회원 정보를 확인해주세요.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            if (
+                !allowedPlans.includes(
+                    planCode
+                ) ||
+                !allowedPrograms.includes(
+                    program
+                ) ||
+                !allowedStatuses.includes(
+                    status
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '상품, 프로그램 또는 상태 값을 확인해주세요.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            if (
+                !/^\d{4}-\d{2}-\d{2}$/.test(
+                    startsAt
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '시작일을 확인해주세요.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            if (
+                endsAt &&
+                endsAt < startsAt
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '종료일은 시작일보다 빠를 수 없습니다.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            const {
+                data,
+                error
+            } =
+                await db
+                    .from(
+                        'ds_user_products'
+                    )
+                    .update({
+                        plan_code:
+                            planCode,
+                        program,
+                        status,
+                        starts_at:
+                            startsAt,
+                        ends_at:
+                            endsAt,
+                        updated_at:
+                            new Date()
+                                .toISOString()
+                    })
+                    .eq(
+                        'id',
+                        id
+                    )
+                    .select(
+                        'id,user_id,product_type,plan_code,program,status,starts_at,ends_at,release_weeks,created_at,updated_at'
+                    )
+                    .single();
+
+            if (error) {
+                if (
+                    String(
+                        error.code || ''
+                    ) === '23505'
+                ) {
+                    return NextResponse.json(
+                        {
+                            error:
+                                '이 회원에게 이미 다른 활성 Home Package가 있습니다.'
+                        },
+                        {
+                            status: 409
+                        }
+                    );
+                }
+
+                throw error;
+            }
+
+            return NextResponse.json({
+                ok: true,
+                product: data
+            });
+        }
+
+
+        /*
+         * =====================================
+         * Home Package 곡 구성 저장
+         * =====================================
+         */
+        if (
+            b.action ===
+            'saveHomePackageTrackSchedule'
+        ) {
+
+            const allowedPrograms = [
+                'Sunshine Toddler',
+                'Melody Book Club'
+            ];
+
+            const program =
+                String(
+                    b.program || ''
+                ).trim();
+
+            if (
+                !allowedPrograms.includes(
+                    program
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '프로그램을 확인해주세요.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            const rawTracks =
+                Array.isArray(
+                    b.tracks
+                )
+                    ? b.tracks
+                    : [];
+
+            const tracks =
+                rawTracks
+                    .map(
+                        row => ({
+                            song_id:
+                                String(
+                                    row.songId || ''
+                                ).trim(),
+                            unlock_week:
+                                Number(
+                                    row.unlockWeek
+                                ),
+                            position:
+                                Number(
+                                    row.position || 1
+                                )
+                        })
+                    )
+                    .filter(
+                        row =>
+                            row.song_id &&
+                            Number.isInteger(
+                                row.unlock_week
+                            ) &&
+                            row.unlock_week >= 0 &&
+                            row.unlock_week <= 20 &&
+                            Number.isInteger(
+                                row.position
+                            ) &&
+                            row.position >= 1 &&
+                            row.position <= 2
+                    );
+
+            const baseTracks =
+                tracks.filter(
+                    row =>
+                        row.unlock_week === 0
+                );
+
+            if (
+                baseTracks.length !== 2 ||
+                !baseTracks.some(
+                    row =>
+                        row.position === 1
+                ) ||
+                !baseTracks.some(
+                    row =>
+                        row.position === 2
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '기본곡 2곡을 모두 지정해주세요.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            const songIds =
+                tracks.map(
+                    row =>
+                        row.song_id
+                );
+
+            if (
+                new Set(
+                    songIds
+                ).size !==
+                songIds.length
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '같은 곡을 여러 주차에 중복 지정할 수 없습니다.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            const weeklyKeys =
+                tracks
+                    .filter(
+                        row =>
+                            row.unlock_week > 0
+                    )
+                    .map(
+                        row =>
+                            `${row.unlock_week}:${row.position}`
+                    );
+
+            if (
+                new Set(
+                    weeklyKeys
+                ).size !==
+                weeklyKeys.length
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '같은 주차에 곡이 중복 지정되어 있습니다.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            const {
+                data: songRows,
+                error: songError
+            } =
+                await db
+                    .from(
+                        'ds_content_songs'
+                    )
+                    .select(
+                        'id,program'
+                    )
+                    .in(
+                        'id',
+                        songIds
+                    );
+
+            if (songError) {
+                throw songError;
+            }
+
+            if (
+                (songRows || []).length !==
+                songIds.length ||
+                (songRows || []).some(
+                    row =>
+                        row.program !== program
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            '선택한 곡 중 현재 프로그램에 속하지 않은 곡이 있습니다.'
+                    },
+                    {
+                        status: 400
+                    }
+                );
+            }
+
+            const {
+                error: deleteError
+            } =
+                await db
+                    .from(
+                        'ds_home_package_tracks'
+                    )
+                    .delete()
+                    .eq(
+                        'program',
+                        program
+                    );
+
+            if (deleteError) {
+                throw deleteError;
+            }
+
+            const rows =
+                tracks.map(
+                    row => ({
+                        program,
+                        song_id:
+                            row.song_id,
+                        unlock_week:
+                            row.unlock_week,
+                        position:
+                            row.position
+                    })
+                );
+
+            if (
+                rows.length > 0
+            ) {
+                const {
+                    error: insertError
+                } =
+                    await db
+                        .from(
+                            'ds_home_package_tracks'
+                        )
+                        .insert(
+                            rows
+                        );
+
+                if (insertError) {
+                    throw insertError;
+                }
+            }
+
+            return NextResponse.json({
+                ok: true
+            });
+        }

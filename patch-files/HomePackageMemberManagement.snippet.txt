@@ -1,0 +1,788 @@
+
+
+/*
+ * =====================================================
+ * Home Package 회원 관리
+ * =====================================================
+ *
+ * 기존 Song Club 회원가입 계정을 그대로 사용합니다.
+ * 별도 회원가입은 필요하지 않습니다.
+ *
+ * Home Package 규칙
+ * - 기본곡 2곡: unlock_week = 0
+ * - 이후 매주 신곡 1곡: unlock_week = 1 ~ 20
+ * - 8회: 8주차까지
+ * - 12회: 12주차까지
+ * - 20회: 20주차까지
+ */
+function HomePackageMemberManagement({
+  authUsers,
+  contents,
+  loading,
+}) {
+  const PLAN_OPTIONS = [
+    { code: "home_8", label: "8회 Home Package", weeks: 8, price: 29000 },
+    { code: "home_12", label: "12회 Home Package", weeks: 12, price: 39000 },
+    { code: "home_20", label: "20회 Home Package", weeks: 20, price: 59000 },
+  ];
+
+  const PROGRAM_OPTIONS = [
+    "Sunshine Toddler",
+    "Melody Book Club",
+  ];
+
+  const [adminData, setAdminData] = useState({
+    products: [],
+    tracks: [],
+  });
+
+  const [dataLoading, setDataLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [dataError, setDataError] = useState("");
+
+  const [newForm, setNewForm] = useState({
+    userId: "",
+    planCode: "home_8",
+    program: "Sunshine Toddler",
+    startsAt: todayKST(),
+    endsAt: "",
+  });
+
+  const [memberSearch, setMemberSearch] = useState("");
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editForm, setEditForm] = useState({
+    planCode: "home_8",
+    program: "Sunshine Toddler",
+    status: "active",
+    startsAt: "",
+    endsAt: "",
+  });
+
+  const [scheduleProgram, setScheduleProgram] = useState("Sunshine Toddler");
+  const [schedule, setSchedule] = useState(() => emptySchedule());
+
+  function emptySchedule() {
+    const weeks = {};
+    for (let week = 1; week <= 20; week += 1) {
+      weeks[week] = "";
+    }
+    return {
+      base1: "",
+      base2: "",
+      weeks,
+    };
+  }
+
+  function planLabel(code) {
+    return PLAN_OPTIONS.find((item) => item.code === code)?.label || code || "Home Package";
+  }
+
+  function statusLabel(status) {
+    if (status === "active") return "🟢 이용 중";
+    if (status === "paused") return "⏸️ 일시중지";
+    if (status === "cancelled") return "⚪ 이용 종료";
+    if (status === "expired") return "⚪ 기간 만료";
+    return status || "-";
+  }
+
+  function getUserEmail(userId) {
+    return (
+      (authUsers || []).find((user) => user.id === userId)?.email ||
+      userId ||
+      "알 수 없는 회원"
+    );
+  }
+
+  async function post(body) {
+    const response = await fetch("/api/admin/manage", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    let result = {};
+    try {
+      result = await response.json();
+    } catch {
+      result = {};
+    }
+
+    if (!response.ok) {
+      throw new Error(result.error || "처리 중 오류가 발생했습니다.");
+    }
+
+    return result;
+  }
+
+  async function loadAdminData() {
+    setDataLoading(true);
+    setDataError("");
+
+    try {
+      const result = await post({
+        action: "getHomePackageAdminData",
+      });
+
+      setAdminData({
+        products: result.products || [],
+        tracks: result.tracks || [],
+      });
+    } catch (error) {
+      console.error(error);
+      setDataError(error?.message || "Home Package 정보를 불러오지 못했습니다.");
+    } finally {
+      setDataLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadAdminData();
+  }, []);
+
+  useEffect(() => {
+    const next = emptySchedule();
+
+    (adminData.tracks || [])
+      .filter((row) => row.program === scheduleProgram)
+      .forEach((row) => {
+        const week = Number(row.unlock_week || 0);
+        const position = Number(row.position || 1);
+
+        if (week === 0) {
+          if (position === 1) next.base1 = row.song_id;
+          if (position === 2) next.base2 = row.song_id;
+          return;
+        }
+
+        if (week >= 1 && week <= 20) {
+          next.weeks[week] = row.song_id;
+        }
+      });
+
+    setSchedule(next);
+  }, [adminData.tracks, scheduleProgram]);
+
+  const songsForSchedule = (contents || [])
+    .filter((song) => song.program === scheduleProgram)
+    .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "ko"));
+
+  const latestProducts = (() => {
+    const rows = [...(adminData.products || [])].sort((a, b) =>
+      String(b.created_at || "").localeCompare(String(a.created_at || "")),
+    );
+    const seen = new Set();
+    return rows.filter((row) => {
+      if (seen.has(row.user_id)) return false;
+      seen.add(row.user_id);
+      return true;
+    });
+  })();
+
+  const filteredProducts = latestProducts.filter((row) => {
+    const q = memberSearch.trim().toLowerCase();
+    if (!q) return true;
+    return String(getUserEmail(row.user_id)).toLowerCase().includes(q);
+  });
+
+  const activeUserIds = new Set(
+    (adminData.products || [])
+      .filter((row) => row.status === "active")
+      .map((row) => row.user_id),
+  );
+
+  const selectableUsers = [...(authUsers || [])]
+    .sort((a, b) => String(a.email || "").localeCompare(String(b.email || "")))
+    .filter((user) => !activeUserIds.has(user.id));
+
+  async function createProduct() {
+    if (!newForm.userId) {
+      alert("회원 이메일을 선택해주세요.");
+      return;
+    }
+
+    if (!newForm.startsAt) {
+      alert("Home Package 시작일을 선택해주세요.");
+      return;
+    }
+
+    const option = PLAN_OPTIONS.find((item) => item.code === newForm.planCode);
+    const email = getUserEmail(newForm.userId);
+
+    if (!confirm(
+      `${email} 회원에게 Home Package를 활성화할까요?\n\n` +
+      `상품: ${option?.label || newForm.planCode}\n` +
+      `프로그램: ${newForm.program}\n` +
+      `센터 결제금액: ${money(option?.price || 0)}\n` +
+      `시작일: ${newForm.startsAt}\n` +
+      `${newForm.endsAt ? `종료일: ${newForm.endsAt}\n` : "종료일: 별도 지정 없음\n"}` +
+      `\n기본곡 2곡은 즉시 열리고 이후 매주 1곡씩 자동으로 열립니다.`,
+    )) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await post({
+        action: "createHomePackageProduct",
+        userId: newForm.userId,
+        planCode: newForm.planCode,
+        program: newForm.program,
+        startsAt: newForm.startsAt,
+        endsAt: newForm.endsAt || null,
+      });
+
+      setNewForm({
+        userId: "",
+        planCode: "home_8",
+        program: "Sunshine Toddler",
+        startsAt: todayKST(),
+        endsAt: "",
+      });
+
+      await loadAdminData();
+      alert("Home Package가 활성화되었습니다.");
+    } catch (error) {
+      console.error(error);
+      alert(error?.message || "Home Package 활성화에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openEditProduct(product) {
+    setEditingProduct(product);
+    setEditForm({
+      planCode: product.plan_code || "home_8",
+      program: product.program || "Sunshine Toddler",
+      status: product.status || "active",
+      startsAt: String(product.starts_at || "").slice(0, 10),
+      endsAt: product.ends_at ? String(product.ends_at).slice(0, 10) : "",
+    });
+  }
+
+  async function saveProductEdit() {
+    if (!editingProduct) return;
+
+    if (!editForm.startsAt) {
+      alert("시작일을 입력해주세요.");
+      return;
+    }
+
+    if (editForm.endsAt && editForm.endsAt < editForm.startsAt) {
+      alert("종료일은 시작일보다 빠를 수 없습니다.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await post({
+        action: "updateHomePackageProduct",
+        id: editingProduct.id,
+        planCode: editForm.planCode,
+        program: editForm.program,
+        status: editForm.status,
+        startsAt: editForm.startsAt,
+        endsAt: editForm.endsAt || null,
+      });
+
+      setEditingProduct(null);
+      await loadAdminData();
+      alert("Home Package 회원 정보가 수정되었습니다.");
+    } catch (error) {
+      console.error(error);
+      alert(error?.message || "회원 정보를 수정하지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function quickStatus(product, status) {
+    const label = status === "paused" ? "일시중지" : status === "active" ? "다시 활성화" : "이용 종료";
+
+    if (!confirm(`${getUserEmail(product.user_id)} 회원의 Home Package를 ${label}할까요?`)) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await post({
+        action: "updateHomePackageProduct",
+        id: product.id,
+        planCode: product.plan_code,
+        program: product.program,
+        status,
+        startsAt: String(product.starts_at || "").slice(0, 10),
+        endsAt: product.ends_at ? String(product.ends_at).slice(0, 10) : null,
+      });
+      await loadAdminData();
+    } catch (error) {
+      console.error(error);
+      alert(error?.message || "상태를 변경하지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function updateWeekSong(week, songId) {
+    setSchedule((current) => ({
+      ...current,
+      weeks: {
+        ...current.weeks,
+        [week]: songId,
+      },
+    }));
+  }
+
+  async function saveSchedule() {
+    if (!schedule.base1 || !schedule.base2) {
+      alert("Home Package 기본곡 2곡을 모두 선택해주세요.");
+      return;
+    }
+
+    const selectedSongIds = [
+      schedule.base1,
+      schedule.base2,
+      ...Array.from({ length: 20 }, (_, index) => schedule.weeks[index + 1]).filter(Boolean),
+    ];
+
+    if (new Set(selectedSongIds).size !== selectedSongIds.length) {
+      alert("같은 노래를 두 주차 이상에 중복 지정할 수 없습니다.");
+      return;
+    }
+
+    const tracks = [
+      { songId: schedule.base1, unlockWeek: 0, position: 1 },
+      { songId: schedule.base2, unlockWeek: 0, position: 2 },
+      ...Array.from({ length: 20 }, (_, index) => {
+        const week = index + 1;
+        const songId = schedule.weeks[week];
+        return songId
+          ? { songId, unlockWeek: week, position: 1 }
+          : null;
+      }).filter(Boolean),
+    ];
+
+    if (!confirm(
+      `${scheduleProgram} Home Package 곡 구성을 저장할까요?\n\n` +
+      `기본곡 2곡 + 등록된 주차별 신곡 ${tracks.length - 2}곡\n` +
+      `8회 상품은 8주차까지, 12회는 12주차까지, 20회는 20주차까지 자동 적용됩니다.`,
+    )) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await post({
+        action: "saveHomePackageTrackSchedule",
+        program: scheduleProgram,
+        tracks,
+      });
+      await loadAdminData();
+      alert("Home Package 곡 구성이 저장되었습니다.");
+    } catch (error) {
+      console.error(error);
+      alert(error?.message || "곡 구성을 저장하지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="panel">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 12,
+          flexWrap: "wrap",
+          marginBottom: 20,
+        }}
+      >
+        <div>
+          <h2 style={{ marginBottom: 6 }}>Home Package 회원 관리</h2>
+          <p className="hint" style={{ margin: 0 }}>
+            기존 Song Club 가입 계정을 그대로 사용합니다. 새 회원가입 없이 상품만 연결하면 됩니다.
+          </p>
+        </div>
+
+        <div
+          style={{
+            background: "#fff7e8",
+            borderRadius: 14,
+            padding: "10px 14px",
+            fontSize: 13,
+            lineHeight: 1.55,
+          }}
+        >
+          <b>현재 이용 중 {latestProducts.filter((row) => row.status === "active").length}명</b>
+          <br />
+          전체 이용 이력 {(adminData.products || []).length}건
+        </div>
+      </div>
+
+      {dataError && (
+        <div
+          style={{
+            border: "1px solid #f2c8c8",
+            background: "#fff5f5",
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 18,
+            color: "#9f3030",
+          }}
+        >
+          {dataError}
+          <div className="hint" style={{ marginTop: 6 }}>
+            처음 적용하는 경우 Supabase SQL Editor에서 supabase/home-package-mode.sql을 한 번 실행해주세요.
+          </div>
+        </div>
+      )}
+
+      <EditBox title="🏠 새 Home Package 회원 활성화">
+        <label>
+          회원 이메일
+          <select
+            className="normal"
+            value={newForm.userId}
+            onChange={(event) => setNewForm({ ...newForm, userId: event.target.value })}
+          >
+            <option value="">회원 선택</option>
+            {selectableUsers.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.email || user.id}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          이용 상품
+          <select
+            className="normal"
+            value={newForm.planCode}
+            onChange={(event) => setNewForm({ ...newForm, planCode: event.target.value })}
+          >
+            {PLAN_OPTIONS.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.label} · {money(option.price)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          이용 클래스
+          <select
+            className="normal"
+            value={newForm.program}
+            onChange={(event) => setNewForm({ ...newForm, program: event.target.value })}
+          >
+            {PROGRAM_OPTIONS.map((program) => (
+              <option key={program} value={program}>{program}</option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          시작일
+          <input
+            className="normal"
+            type="date"
+            value={newForm.startsAt}
+            onChange={(event) => setNewForm({ ...newForm, startsAt: event.target.value })}
+          />
+        </label>
+
+        <label>
+          종료일 (선택)
+          <input
+            className="normal"
+            type="date"
+            value={newForm.endsAt}
+            onChange={(event) => setNewForm({ ...newForm, endsAt: event.target.value })}
+          />
+        </label>
+
+        <div style={{ display: "flex", alignItems: "end" }}>
+          <button
+            type="button"
+            onClick={createProduct}
+            disabled={loading || saving || dataLoading}
+            style={{ width: "100%" }}
+          >
+            {saving ? "처리 중..." : "Home Package 활성화"}
+          </button>
+        </div>
+      </EditBox>
+
+      <div style={{ height: 22 }} />
+
+      <EditBox title="🎵 Home Package 곡 구성">
+        <div style={{ gridColumn: "1 / -1" }}>
+          <p className="hint" style={{ marginTop: 0 }}>
+            한 번만 구성해두면 회원별로 곡을 직접 넣을 필요가 없습니다. 8회는 8주차까지, 12회는 12주차까지, 20회는 20주차까지 자동으로 열립니다.
+          </p>
+        </div>
+
+        <label>
+          프로그램
+          <select
+            className="normal"
+            value={scheduleProgram}
+            onChange={(event) => setScheduleProgram(event.target.value)}
+          >
+            {PROGRAM_OPTIONS.map((program) => (
+              <option key={program} value={program}>{program}</option>
+            ))}
+          </select>
+        </label>
+
+        <div />
+
+        <SongSelect
+          label="기본곡 1 · 즉시 공개"
+          value={schedule.base1}
+          songs={songsForSchedule}
+          onChange={(value) => setSchedule((current) => ({ ...current, base1: value }))}
+        />
+
+        <SongSelect
+          label="기본곡 2 · 즉시 공개"
+          value={schedule.base2}
+          songs={songsForSchedule}
+          onChange={(value) => setSchedule((current) => ({ ...current, base2: value }))}
+        />
+
+        {Array.from({ length: 20 }, (_, index) => index + 1).map((week) => (
+          <SongSelect
+            key={week}
+            label={`${week}주차 신곡${week === 8 ? " · 8회 마지막" : week === 12 ? " · 12회 마지막" : week === 20 ? " · 20회 마지막" : ""}`}
+            value={schedule.weeks[week] || ""}
+            songs={songsForSchedule}
+            allowEmpty
+            onChange={(value) => updateWeekSong(week, value)}
+          />
+        ))}
+
+        <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            onClick={saveSchedule}
+            disabled={saving || dataLoading}
+          >
+            곡 구성 저장
+          </button>
+        </div>
+      </EditBox>
+
+      <div style={{ height: 22 }} />
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          alignItems: "center",
+          flexWrap: "wrap",
+          marginBottom: 14,
+        }}
+      >
+        <h3 style={{ margin: 0 }}>등록된 Home Package 회원</h3>
+        <input
+          className="normal"
+          style={{ maxWidth: 320 }}
+          value={memberSearch}
+          onChange={(event) => setMemberSearch(event.target.value)}
+          placeholder="회원 이메일 검색"
+        />
+      </div>
+
+      {dataLoading ? (
+        <p className="hint">Home Package 회원 정보를 불러오는 중...</p>
+      ) : filteredProducts.length === 0 ? (
+        <div
+          style={{
+            border: "1px dashed #dfd2c5",
+            borderRadius: 14,
+            padding: 22,
+            textAlign: "center",
+          }}
+        >
+          등록된 Home Package 회원이 없습니다.
+        </div>
+      ) : (
+        <div style={{ display: "grid", gap: 12 }}>
+          {filteredProducts.map((product) => (
+            <div
+              key={product.id}
+              style={{
+                border: "1px solid #eadfd6",
+                borderRadius: 16,
+                padding: 16,
+                background: "#fffdfb",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  alignItems: "flex-start",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div>
+                  <b style={{ fontSize: 16 }}>{getUserEmail(product.user_id)}</b>
+                  <div className="hint" style={{ marginTop: 6 }}>
+                    {planLabel(product.plan_code)} · {product.program}
+                    <br />
+                    {String(product.starts_at || "").slice(0, 10)} 시작
+                    {product.ends_at ? ` · ${String(product.ends_at).slice(0, 10)} 종료` : " · 종료일 없음"}
+                  </div>
+                </div>
+
+                <div style={{ textAlign: "right" }}>
+                  <b>{statusLabel(product.status)}</b>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginTop: 14,
+                }}
+              >
+                <button type="button" onClick={() => openEditProduct(product)} disabled={saving}>
+                  수정
+                </button>
+
+                {product.status === "active" ? (
+                  <>
+                    <button type="button" onClick={() => quickStatus(product, "paused")} disabled={saving}>
+                      일시중지
+                    </button>
+                    <button type="button" onClick={() => quickStatus(product, "cancelled")} disabled={saving}>
+                      이용 종료
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" onClick={() => quickStatus(product, "active")} disabled={saving}>
+                    다시 활성화
+                  </button>
+                )}
+              </div>
+
+              {editingProduct?.id === product.id && (
+                <div
+                  style={{
+                    marginTop: 16,
+                    paddingTop: 16,
+                    borderTop: "1px solid #eee2d8",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))",
+                    gap: 12,
+                  }}
+                >
+                  <label>
+                    이용 상품
+                    <select
+                      className="normal"
+                      value={editForm.planCode}
+                      onChange={(event) => setEditForm({ ...editForm, planCode: event.target.value })}
+                    >
+                      {PLAN_OPTIONS.map((option) => (
+                        <option key={option.code} value={option.code}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    프로그램
+                    <select
+                      className="normal"
+                      value={editForm.program}
+                      onChange={(event) => setEditForm({ ...editForm, program: event.target.value })}
+                    >
+                      {PROGRAM_OPTIONS.map((program) => (
+                        <option key={program} value={program}>{program}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    상태
+                    <select
+                      className="normal"
+                      value={editForm.status}
+                      onChange={(event) => setEditForm({ ...editForm, status: event.target.value })}
+                    >
+                      <option value="active">이용 중</option>
+                      <option value="paused">일시중지</option>
+                      <option value="cancelled">이용 종료</option>
+                      <option value="expired">기간 만료</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    시작일
+                    <input
+                      className="normal"
+                      type="date"
+                      value={editForm.startsAt}
+                      onChange={(event) => setEditForm({ ...editForm, startsAt: event.target.value })}
+                    />
+                  </label>
+
+                  <label>
+                    종료일 (선택)
+                    <input
+                      className="normal"
+                      type="date"
+                      value={editForm.endsAt}
+                      onChange={(event) => setEditForm({ ...editForm, endsAt: event.target.value })}
+                    />
+                  </label>
+
+                  <div style={{ display: "flex", alignItems: "end", gap: 8 }}>
+                    <button type="button" onClick={saveProductEdit} disabled={saving}>
+                      저장
+                    </button>
+                    <button type="button" onClick={() => setEditingProduct(null)} disabled={saving}>
+                      취소
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SongSelect({ label, value, songs, onChange, allowEmpty = false }) {
+  return (
+    <label>
+      {label}
+      <select
+        className="normal"
+        value={value || ""}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">{allowEmpty ? "아직 지정하지 않음" : "곡 선택"}</option>
+        {(songs || []).map((song) => (
+          <option key={song.id} value={song.id}>
+            {song.title || song.slug}
+            {song.is_published === false ? " · 비공개" : ""}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
