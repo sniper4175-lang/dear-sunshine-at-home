@@ -141,7 +141,7 @@ export default async function HomePackagePage() {
                     집에서도 자연스럽게 이어가요.
                 </h1>
                 <p className="hero-copy">
-                    기본곡 2곡은 바로 듣고, 이후 매주 새로운 노래 1곡이 열려요.
+                    기본곡은 최대 3곡까지 바로 듣고, 이후 각 주차에 지정된 노래가 최대 3곡까지 열려요.
                 </p>
 
                 <div className="plan-pill">
@@ -193,7 +193,7 @@ export default async function HomePackagePage() {
             <SongSection
                 eyebrow="YOUR NEW SONGS"
                 title="지금까지 열린 신곡"
-                description="시작일을 기준으로 매주 한 곡씩 차례로 열려요."
+                description="시작일을 기준으로 주차별로 지정된 노래가 차례로 열려요."
                 songs={dashboard.weeklySongs}
                 membership={membership}
             />
@@ -206,7 +206,7 @@ export default async function HomePackagePage() {
                 membership={membership}
             />
 
-            {dashboard.nextSong ? (
+            {dashboard.nextSongs?.length ? (
                 <section className="section">
                     <div className="section-head">
                         <div>
@@ -220,50 +220,58 @@ export default async function HomePackagePage() {
                         </div>
                     </div>
 
-                    <article className="content-card" style={{ padding: 16 }}>
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: '64px minmax(0,1fr)',
-                                gap: 14,
-                                alignItems: 'center'
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: 64,
-                                    height: 64,
-                                    borderRadius: 18,
-                                    display: 'grid',
-                                    placeItems: 'center',
-                                    background: 'linear-gradient(145deg,#fff6db,#fff0ee)',
-                                    fontSize: 32,
-                                    position: 'relative'
-                                }}
+                    <div style={{ display: 'grid', gap: 10 }}>
+                        {dashboard.nextSongs.map((song) => (
+                            <article
+                                key={song.id || `${song.unlockWeek}-${song.position}`}
+                                className="content-card"
+                                style={{ padding: 16 }}
                             >
-                                {dashboard.nextSong.emoji || '🎵'}
-                                <span
+                                <div
                                     style={{
-                                        position: 'absolute',
-                                        right: -4,
-                                        bottom: -4,
-                                        fontSize: 18
+                                        display: 'grid',
+                                        gridTemplateColumns: '64px minmax(0,1fr)',
+                                        gap: 14,
+                                        alignItems: 'center'
                                     }}
                                 >
-                                    🔒
-                                </span>
-                            </div>
-                            <div>
-                                <strong style={{ display: 'block', fontSize: 16 }}>
-                                    {dashboard.nextSong.title}
-                                </strong>
-                                <span className="muted" style={{ fontSize: 12 }}>
-                                    Week {dashboard.nextSong.unlockWeek}
-                                    {nextDays !== null ? ` · ${nextDays}일 후 오픈` : ''}
-                                </span>
-                            </div>
-                        </div>
-                    </article>
+                                    <div
+                                        style={{
+                                            width: 64,
+                                            height: 64,
+                                            borderRadius: 18,
+                                            display: 'grid',
+                                            placeItems: 'center',
+                                            background: 'linear-gradient(145deg,#fff6db,#fff0ee)',
+                                            fontSize: 32,
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        {song.emoji || '🎵'}
+                                        <span
+                                            style={{
+                                                position: 'absolute',
+                                                right: -4,
+                                                bottom: -4,
+                                                fontSize: 18
+                                            }}
+                                        >
+                                            🔒
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <strong style={{ display: 'block', fontSize: 16 }}>
+                                            {song.title}
+                                        </strong>
+                                        <span className="muted" style={{ fontSize: 12 }}>
+                                            Week {song.unlockWeek}
+                                            {nextDays !== null ? ` · ${nextDays}일 후 오픈` : ''}
+                                        </span>
+                                    </div>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
                 </section>
             ) : (
                 <section className="section">
