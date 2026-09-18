@@ -406,7 +406,11 @@ export default function MyPageClient({
                             13
                     }}
                 >
-                    Dear Sunshine Song Club 계정
+                    {membership?.product_type === 'home_package'
+                        ? 'Dear Sunshine Home Package 계정'
+                        : membership?.product_type === 'combined'
+                            ? 'Dear Sunshine Song Club + Home Package 계정'
+                            : 'Dear Sunshine Song Club 계정'}
                 </p>
 
             </section>
@@ -455,7 +459,11 @@ export default function MyPageClient({
                                             '0 0 6px'
                                     }}
                                 >
-                                    ☀️ Song Club 이용 중
+                                    {membership?.product_type === 'home_package'
+                                        ? '🏠 Home Package 이용 중'
+                                        : membership?.product_type === 'combined'
+                                            ? '☀️ Song Club + 🏠 Home Package 이용 중'
+                                            : '☀️ Song Club 이용 중'}
                                 </h2>
 
                                 <p
@@ -559,15 +567,31 @@ export default function MyPageClient({
                         </div>
 
                         <Link
-                            href="/membership"
+                            href={
+                                membership?.product_type === 'home_package'
+                                    ? '/home-package'
+                                    : '/membership'
+                            }
                             className="secondary-button wide"
                             style={{
                                 marginTop:
                                     18
                             }}
                         >
-                            이용권 자세히 보기
+                            {membership?.product_type === 'home_package'
+                                ? 'Home Package 열기'
+                                : '이용권 자세히 보기'}
                         </Link>
+
+                        {membership?.product_type === 'combined' && (
+                            <Link
+                                href="/home-package"
+                                className="secondary-button wide"
+                                style={{ marginTop: 10 }}
+                            >
+                                🏠 Home Package 열기
+                            </Link>
+                        )}
 
                     </>
 
@@ -676,7 +700,7 @@ export default function MyPageClient({
                 </h2>
 
                 <p className="page-copy">
-                    Song Club을 홈 화면에 추가하면 앱처럼 빠르게 열 수 있어요.
+                    Dear Sunshine at Home을 홈 화면에 추가하면 앱처럼 빠르게 열 수 있어요.
                 </p>
 
                 <details
@@ -713,7 +737,7 @@ export default function MyPageClient({
                                 13
                         }}
                     >
-                        Safari에서 Song Club을 연 뒤 공유 버튼을 누르고
+                        Safari에서 Dear Sunshine at Home을 연 뒤 공유 버튼을 누르고
                         ‘홈 화면에 추가’를 선택해 주세요.
                     </p>
                 </details>
@@ -752,7 +776,7 @@ export default function MyPageClient({
                                 13
                         }}
                     >
-                        Chrome에서 Song Club을 연 뒤 오른쪽 상단 메뉴를 누르고
+                        Chrome에서 Dear Sunshine at Home을 연 뒤 오른쪽 상단 메뉴를 누르고
                         ‘홈 화면에 추가’ 또는 ‘앱 설치’를 선택해 주세요.
                     </p>
                 </details>

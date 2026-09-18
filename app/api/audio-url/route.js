@@ -109,6 +109,7 @@ export async function GET(request) {
                 )
                 .select(
                     `
+                    id,
                     slug,
                     title,
                     program,
@@ -192,9 +193,7 @@ export async function GET(request) {
 
         if (
             !canAccessSong(
-                {
-                    program: song.program
-                },
+                { id: song.id, program: song.program },
                 membership,
                 userPrograms
             )

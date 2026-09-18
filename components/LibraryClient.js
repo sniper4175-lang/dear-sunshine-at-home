@@ -33,6 +33,29 @@ function canAccessSong(
         return false;
     }
 
+    const homePackageSongIds =
+        Array.isArray(
+            membership.home_package_unlocked_song_ids
+        )
+            ? membership.home_package_unlocked_song_ids
+            : [];
+
+    if (
+        song?.id &&
+        homePackageSongIds.includes(
+            song.id
+        )
+    ) {
+        return true;
+    }
+
+    if (
+        membership.product_type === 'home_package' ||
+        membership.song_club_active === false
+    ) {
+        return false;
+    }
+
     if (
         !Array.isArray(
             userPrograms
@@ -112,13 +135,15 @@ export default function LibraryClient({
                     program =>
                         userPrograms.includes(
                             program
-                        )
+                        ) ||
+                        membership?.home_package_program ===
+                            program
                 ),
             [
-                userPrograms
+                userPrograms,
+                membership
             ]
         );
-
     const [
         mainView,
         setMainView

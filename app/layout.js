@@ -3,18 +3,18 @@ import BottomNav from "../components/BottomNav";
 import SiteFooter from "../components/SiteFooter";
 
 export const metadata = {
-  title: "Dear Sunshine Monthly Song Club",
+  title: "Dear Sunshine at Home",
   description:
     "디어 선샤인의 영어노래와 놀이를 집에서도 자연스럽게 이어가요.",
   manifest: "/manifest.webmanifest",
-  applicationName: "Dear Sunshine Monthly Song Club",
+  applicationName: "Dear Sunshine at Home",
   icons: {
     icon: "/Dear_Sunshine_logo.png",
     apple: "/Dear_Sunshine_logo.png",
   },
   appleWebApp: {
     capable: true,
-    title: "Sunshine Monthly Song Club",
+    title: "Dear Sunshine at Home",
     statusBarStyle: "default",
   },
 };

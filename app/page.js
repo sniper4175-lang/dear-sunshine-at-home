@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 import {
     getSongs
@@ -175,7 +176,9 @@ export default async function HomePage() {
 
     const {
         user,
-        membership
+        membership,
+        songClubMembership,
+        homePackage
     } =
         await getCurrentMembership();
 
@@ -184,6 +187,17 @@ export default async function HomePage() {
         Boolean(
             user
         );
+
+
+    if (
+        loggedIn &&
+        homePackage &&
+        !songClubMembership
+    ) {
+        redirect(
+            '/home-package'
+        );
+    }
 
 
     const db =

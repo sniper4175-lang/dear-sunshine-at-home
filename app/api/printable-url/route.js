@@ -43,6 +43,7 @@ export async function GET(request) {
             await db
                 .from('ds_content_songs')
                 .select(`
+                    id,
                     slug,
                     title,
                     program,
@@ -85,7 +86,7 @@ export async function GET(request) {
 
         if (
             !canAccessSong(
-                { program: song.program },
+                { id: song.id, program: song.program },
                 membership,
                 userPrograms
             )

@@ -1,0 +1,239 @@
+DEAR SUNSHINE at Home - Home Package 모드 적용 가이드
+=====================================================
+
+이번 패치는 기존 Song Club을 없애지 않고 같은 앱 안에 Home Package 모드를 추가합니다.
+
+Home Package 규칙
+- 기본곡 2곡: 시작 즉시 공개 (unlock_week = 0)
+- 신곡: 시작일 기준 7일마다 1곡씩 공개
+- home_8  : 8주차까지 공개
+- home_12 : 12주차까지 공개
+- home_20 : 20주차까지 공개
+- 보너스곡: 특정 회원에게만 별도 추가 가능
+- Song Club + Home Package를 동시에 가진 계정도 지원
+
+중요: 이번 기능은 '누가 어떤 상품을 샀는지'와 '몇 주차에 어떤 곡을 열지'를
+저장해야 하므로 Supabase SQL을 한 번 실행해야 합니다.
+기존 Song Club 테이블은 삭제/변경하지 않고 새 테이블 3개만 추가합니다.
+
+
+[1] 패치 적용
+----------------
+이 ZIP의 파일들을 dear-sunshine-at-home 프로젝트 최상위에 풀어주세요.
+(package.json과 APPLY_HOME_PACKAGE_PATCH.js가 같은 위치가 되면 됩니다.)
+
+Windows에서는:
+  APPLY_HOME_PACKAGE_PATCH.bat
+
+또는 터미널에서:
+  node APPLY_HOME_PACKAGE_PATCH.js
+
+패치는 기존 파일을 수정하기 전에
+.home-package-patch-backup/ 폴더에 자동 백업합니다.
+
+
+[2] Supabase SQL 1회 실행
+--------------------------
+Supabase > SQL Editor에서 아래 파일 내용을 전체 실행하세요.
+
+  supabase/home-package-mode.sql
+
+생성되는 테이블:
+- ds_user_products
+- ds_home_package_tracks
+- ds_user_product_bonus_songs
+
+
+[3] 현재 곡 slug 확인
+----------------------
+먼저 SQL Editor에서 실행:
+
+select id, slug, title, program, release_date, is_published
+from public.ds_content_songs
+order by program, release_date, title;
+
+여기서 실제 slug와 제목을 확인하세요.
+
+
+[4] Home Package 기본곡 2곡 지정
+---------------------------------
+예: Sunshine Toddler의 기본곡을
+Dear Sunshine Hello Song / Dear Sunshine Weather Song으로 설정
+
+insert into public.ds_home_package_tracks
+(program, song_id, unlock_week, position)
+select 'Sunshine Toddler', id, 0, 1
+from public.ds_content_songs
+where program = 'Sunshine Toddler'
+  and title = 'Dear Sunshine Hello Song'
+on conflict (program, song_id) do update
+set unlock_week = excluded.unlock_week,
+    position = excluded.position;
+
+insert into public.ds_home_package_tracks
+(program, song_id, unlock_week, position)
+select 'Sunshine Toddler', id, 0, 2
+from public.ds_content_songs
+where program = 'Sunshine Toddler'
+  and title = 'Dear Sunshine Weather Song'
+on conflict (program, song_id) do update
+set unlock_week = excluded.unlock_week,
+    position = excluded.position;
+
+Melody Book Club도 동일하게 program만 'Melody Book Club'으로 바꾸면 됩니다.
+
+
+[5] 매주 공개할 곡 지정
+------------------------
+unlock_week 1 = 시작일 + 7일
+unlock_week 2 = 시작일 + 14일
+unlock_week 3 = 시작일 + 21일
+...
+
+예시:
+
+insert into public.ds_home_package_tracks
+(program, song_id, unlock_week, position)
+select 'Sunshine Toddler', id, 1, 1
+from public.ds_content_songs
+where program = 'Sunshine Toddler'
+  and title = 'Peekaboo Apple'
+on conflict (program, song_id) do update
+set unlock_week = excluded.unlock_week,
+    position = excluded.position;
+
+insert into public.ds_home_package_tracks
+(program, song_id, unlock_week, position)
+select 'Sunshine Toddler', id, 2, 1
+from public.ds_content_songs
+where program = 'Sunshine Toddler'
+  and title = 'Parts of an Apple'
+on conflict (program, song_id) do update
+set unlock_week = excluded.unlock_week,
+    position = excluded.position;
+
+주의:
+같은 program + 같은 unlock_week + 같은 position에는 한 곡만 둘 수 있습니다.
+주차당 1곡이면 position은 항상 1로 두면 됩니다.
+
+
+[6] Home Package 회원 등록
+----------------------------
+예: 어떤 회원에게 Sunshine Toddler 8회 Home Package를 2026-09-20 시작으로 지급
+
+insert into public.ds_user_products
+(user_id, product_type, plan_code, program, status, starts_at)
+select
+    id,
+    'home_package',
+    'home_8',
+    'Sunshine Toddler',
+    'active',
+    '2026-09-20'::date
+from auth.users
+where email = '회원이메일@example.com';
+
+plan_code는 아래 중 하나:
+- home_8
+- home_12
+- home_20
+
+release_weeks는 자동으로 8 / 12 / 20이 저장됩니다.
+
+
+[7] 회원에게 보너스곡 1곡 추가
+--------------------------------
+예: Peekaboo Apple을 특정 Home Package 회원에게 즉시 추가
+
+insert into public.ds_user_product_bonus_songs
+(product_id, song_id)
+select
+    p.id,
+    s.id
+from public.ds_user_products p
+join auth.users u on u.id = p.user_id
+join public.ds_content_songs s
+  on s.slug = 'toddler-peekaboo-apple'
+where u.email = '회원이메일@example.com'
+  and p.product_type = 'home_package'
+  and p.status = 'active'
+on conflict (product_id, song_id) do nothing;
+
+
+[8] 정상 등록 확인
+-------------------
+Home Package 회원 확인:
+
+select
+    u.email,
+    p.plan_code,
+    p.program,
+    p.status,
+    p.starts_at,
+    p.release_weeks
+from public.ds_user_products p
+join auth.users u on u.id = p.user_id
+order by p.created_at desc;
+
+곡 순서 확인:
+
+select
+    t.program,
+    t.unlock_week,
+    t.position,
+    s.title,
+    s.slug
+from public.ds_home_package_tracks t
+join public.ds_content_songs s on s.id = t.song_id
+order by t.program, t.unlock_week, t.position;
+
+
+[9] 앱 동작
+-------------
+Home Package만 있는 회원:
+  / 접속 -> 자동으로 /home-package 이동
+
+Song Club만 있는 회원:
+  기존 Song Club 화면 그대로 사용
+
+둘 다 있는 회원:
+  / 에서는 Song Club
+  /home-package 에서는 Home Package
+  MY 화면에서 Home Package 버튼으로 이동 가능
+
+Home Package 화면:
+- 기본곡 2곡
+- 현재까지 열린 주차곡
+- 보너스곡
+- 다음에 열릴 곡 + 오픈 예정일
+- 진행률(Week N of 8/12/20)
+
+Library:
+- Song Club 권한이 있는 곡 + Home Package에서 이미 열린 곡만 표시
+
+노래 상세/음원/가사지/활동지/놀이 아이디어:
+- 기존 Song Club 권한 또는 Home Package에서 이미 열린 곡이면 접근 가능
+
+
+[10] 꼭 확인할 점
+------------------
+Home Package에 지정한 곡은 실제로 들을 시점에
+- ds_content_songs.is_published = true
+- release_date <= 오늘
+이어야 음원/가사지/활동자료 API까지 정상적으로 열립니다.
+
+
+[11] 빌드 및 배포
+------------------
+패치 후:
+
+npm run build
+
+git add .
+git commit -m "Add Home Package mode"
+git push
+
+Vercel이 GitHub와 연결되어 있으면 push 후 자동 배포됩니다.
+
+※ 프로젝트 폴더 안에 큰 .zip 파일은 넣지 마세요.
+GitHub는 100MB가 넘는 파일 push를 막습니다.

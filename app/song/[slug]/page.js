@@ -74,6 +74,15 @@ export default async function SongPage({ params }) {
     lockedButton = "Song Club 보기";
 
     lockedHref = "/membership";
+  } else if (membership?.product_type === "home_package") {
+    lockedTitle = "아직 열리지 않은 노래예요";
+
+    lockedDescription =
+      "Home Package에서는 시작일을 기준으로 매주 한 곡씩 자동으로 열려요.";
+
+    lockedButton = "Home Package 보기";
+
+    lockedHref = "/home-package";
   } else {
     lockedTitle = "현재 이용할 수 없는 콘텐츠예요";
 
@@ -87,8 +96,15 @@ export default async function SongPage({ params }) {
 
   return (
     <section className="song-page">
-      <Link className="back-link" href="/library">
-        ← 노래 목록
+      <Link
+        className="back-link"
+        href={
+          membership?.product_type === "home_package"
+            ? "/home-package"
+            : "/library"
+        }
+      >
+        ← {membership?.product_type === "home_package" ? "Home Package" : "노래 목록"}
       </Link>
 
       <div className="song-cover large">
@@ -164,7 +180,9 @@ export default async function SongPage({ params }) {
             song.activities.length > 0 && (
               <section className="content-card">
                 <p className="eyebrow">
-                  MONTHLY SONG CLUB
+                  {membership?.product_type === "home_package"
+                    ? "HOME PACKAGE"
+                    : "MONTHLY SONG CLUB"}
                 </p>
 
                 <h2>이렇게 놀아요</h2>

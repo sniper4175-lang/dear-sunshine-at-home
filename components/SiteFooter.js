@@ -55,7 +55,7 @@ export default function SiteFooter() {
                         fontSize: 14
                     }}
                 >
-                    Dear Sunshine Monthly Song Club
+                    Dear Sunshine at Home
                 </strong>
 
 

@@ -17,6 +17,10 @@ import {
     todayKST
 } from '../../lib/release-date';
 
+import {
+    canAccessSong
+} from '../../lib/content-access';
+
 
 export const dynamic =
     'force-dynamic';
@@ -247,8 +251,10 @@ export default async function LibraryPage() {
         membership
             ? allSongs.filter(
                 song =>
-                    userPrograms.includes(
-                        song.program
+                    canAccessSong(
+                        song,
+                        membership,
+                        userPrograms
                     )
             )
             : allSongs;
