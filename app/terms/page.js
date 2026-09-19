@@ -1,5 +1,5 @@
 export const metadata = {
-    title: '이용약관 | Dear Sunshine at Home'
+    title: '이용약관 | Dear Sunshine Home'
 };
 
 const sectionStyle = {
@@ -25,16 +25,16 @@ export default function TermsPage() {
         <main style={{ minHeight: '100vh', background: '#fffaf2', padding: '34px 18px 60px' }}>
             <article style={{ width: '100%', maxWidth: 760, margin: '0 auto', color: '#2b211b' }}>
                 <a href="/" style={{ color: '#8a664f', fontSize: 13, textDecoration: 'none' }}>
-                    ← Dear Sunshine at Home
+                    ← Dear Sunshine Home
                 </a>
 
                 <h1 style={{ margin: '24px 0 8px', fontSize: 30 }}>이용약관</h1>
-                <p style={{ ...pStyle, marginTop: 0 }}>Dear Sunshine at Home 서비스 이용에 관한 기본 사항입니다.</p>
+                <p style={{ ...pStyle, marginTop: 0 }}>Dear Sunshine Home 서비스 이용에 관한 기본 사항입니다.</p>
 
                 <section style={sectionStyle}>
                     <h2 style={h2Style}>1. 서비스</h2>
                     <p style={pStyle}>
-                        Dear Sunshine at Home은 디어 선샤인의 영어 음원과 가사지, 활동자료, 놀이 아이디어 등을 온라인으로 제공하는 서비스입니다.
+                        Dear Sunshine Home은 디어 선샤인의 영어 음원과 가사지, 활동자료, 놀이 아이디어 등을 온라인으로 제공하는 디지털 서비스입니다.
                     </p>
                     <p style={pStyle}>
                         서비스 상품은 <strong>Monthly Song Club</strong>과 <strong>Home Package</strong>로 구분되며, 회원에게 활성화된 상품과 클래스에 따라 이용 가능한 콘텐츠가 달라질 수 있습니다.
@@ -80,7 +80,7 @@ export default function TermsPage() {
                 </section>
 
                 <footer style={{ marginTop: 42, paddingTop: 22, borderTop: '1px solid #eadfd3', ...pStyle, fontSize: 12 }}>
-                    Dear Sunshine at Home · 디어 선샤인 영어 발달놀이 &amp; 북클럽
+                    Dear Sunshine Home · Monthly Song Club · Home Package
                 </footer>
             </article>
         </main>
