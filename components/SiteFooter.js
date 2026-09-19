@@ -1,10 +1,7 @@
 import Link from 'next/link';
 
-
 export default function SiteFooter() {
-
     return (
-
         <footer
             style={{
                 marginTop: 50,
@@ -13,14 +10,12 @@ export default function SiteFooter() {
                 background: '#fffaf4'
             }}
         >
-
             <div
                 style={{
                     maxWidth: 760,
                     margin: '0 auto'
                 }}
             >
-
                 <nav
                     style={{
                         display: 'flex',
@@ -30,23 +25,18 @@ export default function SiteFooter() {
                         fontSize: 13
                     }}
                 >
-
                     <Link href="/privacy">
                         개인정보처리방침
                     </Link>
-
 
                     <Link href="/terms">
                         이용약관
                     </Link>
 
-
-                    <Link href="/subscription-policy">
+                    <Link href="/refund">
                         이용권·환불 안내
                     </Link>
-
                 </nav>
-
 
                 <strong
                     style={{
@@ -55,9 +45,19 @@ export default function SiteFooter() {
                         fontSize: 14
                     }}
                 >
-                    Dear Sunshine at Home
+                    Dear Sunshine Home
                 </strong>
 
+                <div
+                    style={{
+                        marginBottom: 10,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: '#8a664f'
+                    }}
+                >
+                    Monthly Song Club · Home Package
+                </div>
 
                 <div
                     style={{
@@ -66,26 +66,20 @@ export default function SiteFooter() {
                         color: '#75675c'
                     }}
                 >
-
-                    상호: 디어 선샤인 영어 발달놀이 & 북클럽
+                    상호: 디어 선샤인 영어 발달놀이 &amp; 북클럽
                     <br />
-
                     대표자: 경서연
                     {' · '}
                     사업자등록번호: 219-14-14366
                     <br />
-
                     주소: 서울특별시 마포구 신촌로 230,
-                    3층 302호 디어 선샤인 영어 발달놀이 & 북클럽
+                    3층 302호 디어 선샤인 영어 발달놀이 &amp; 북클럽
                     (아현동, 리즈건물)
                     <br />
-
                     고객문의: 010-8247-6447
                     {' · '}
                     이메일: syeonjamie@gmail.com
-
                 </div>
-
 
                 <div
                     style={{
@@ -96,11 +90,7 @@ export default function SiteFooter() {
                 >
                     © Dear Sunshine. All rights reserved.
                 </div>
-
             </div>
-
         </footer>
-
     );
-
 }
