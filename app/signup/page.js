@@ -402,6 +402,8 @@ export default function SignupPage() {
                     <div style={{ color: '#5d4436', fontWeight: 700, fontSize: 12, marginBottom: 5 }}>
                         Dear Sunshine at Home
                     </div>
+                    <div>제공 서비스: Dear Sunshine Monthly Song Club · Home Package</div>
+                    <div>Home Package 이용권: 8회(10주) · 12회(15주) · 20회(25주)</div>
                     <div>상호: 디어 선샤인 영어 발달놀이 &amp; 북클럽</div>
                     <div>대표자: 경서연 · 사업자등록번호: 219-14-14366</div>
                     <div>주소: 서울특별시 마포구 신촌로 230, 3층 302호 디어 선샤인 영어 발달놀이 &amp; 북클럽 (아현동, 리즈건물)</div>
