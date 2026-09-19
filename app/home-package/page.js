@@ -200,7 +200,7 @@ export default async function HomePackagePage() {
                 </p>
 
                 <div className="plan-pill">
-                    🏠 {homePackagePlanLabel(homePackage.plan_code)} · {homePackage.program}
+                    🏠 {homePackagePlanLabel(homePackage.plan_code)} · {(homePackage.programs || [homePackage.program]).filter(Boolean).join(' + ')}
                 </div>
             </section>
 
