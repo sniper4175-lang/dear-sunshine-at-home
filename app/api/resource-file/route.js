@@ -39,6 +39,54 @@ function extensionOf(filename) {
     return match?.[1] || '';
 }
 
+
+function contentTypeFromFilename(filename) {
+    const ext = extensionOf(filename).toLowerCase();
+
+    switch (ext) {
+        case '.png':
+            return 'image/png';
+        case '.jpg':
+        case '.jpeg':
+            return 'image/jpeg';
+        case '.webp':
+            return 'image/webp';
+        case '.gif':
+            return 'image/gif';
+        case '.avif':
+            return 'image/avif';
+        case '.pdf':
+            return 'application/pdf';
+        default:
+            return '';
+    }
+}
+
+function resolvedContentType(remoteResponse, filename) {
+    const remoteType = String(
+        remoteResponse.headers.get('content-type') || ''
+    )
+        .split(';')[0]
+        .trim()
+        .toLowerCase();
+
+    const genericTypes = new Set([
+        '',
+        'application/octet-stream',
+        'binary/octet-stream',
+        'application/binary'
+    ]);
+
+    if (!genericTypes.has(remoteType)) {
+        return remoteType;
+    }
+
+    return (
+        contentTypeFromFilename(filename) ||
+        'application/octet-stream'
+    );
+}
+
 function asciiFallback(filename) {
     const ext = extensionOf(filename);
     return `Dear-Sunshine-Resource${ext}`;
@@ -108,8 +156,10 @@ async function proxyRemoteFile({
 
     headers.set(
         'content-type',
-        remoteResponse.headers.get('content-type') ||
-        'application/octet-stream'
+        resolvedContentType(
+            remoteResponse,
+            filename
+        )
     );
 
     headers.set(
