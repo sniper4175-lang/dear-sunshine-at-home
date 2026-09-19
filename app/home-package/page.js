@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import SongCard from '../../components/SongCard';
 import { getCurrentMembership } from '../../lib/membership';
 import {
     getHomePackageDashboard,
@@ -48,7 +47,67 @@ function daysUntil(value) {
     );
 }
 
-function SongSection({ eyebrow, title, description, songs, membership }) {
+function HomePackageSongCard({ song }) {
+    return (
+        <Link
+            href={`/home-package/song/${encodeURIComponent(song.slug)}`}
+            className="content-card"
+            style={{
+                display: 'grid',
+                gridTemplateColumns: '76px minmax(0, 1fr)',
+                gap: 14,
+                alignItems: 'center',
+                padding: 14,
+                textDecoration: 'none',
+                color: 'inherit'
+            }}
+        >
+            <div
+                style={{
+                    width: 76,
+                    height: 76,
+                    borderRadius: 20,
+                    display: 'grid',
+                    placeItems: 'center',
+                    background: 'linear-gradient(145deg,#fff6db,#fff0ee)',
+                    fontSize: 36
+                }}
+            >
+                {song.emoji || '🎵'}
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+                <p className="eyebrow" style={{ marginBottom: 5 }}>
+                    {song.program || 'HOME PACKAGE'}
+                </p>
+                <strong
+                    style={{
+                        display: 'block',
+                        fontSize: 17,
+                        lineHeight: 1.4
+                    }}
+                >
+                    {song.title}
+                </strong>
+                {song.subtitle && (
+                    <span
+                        className="muted"
+                        style={{
+                            display: 'block',
+                            marginTop: 5,
+                            fontSize: 12,
+                            lineHeight: 1.5
+                        }}
+                    >
+                        {song.subtitle}
+                    </span>
+                )}
+            </div>
+        </Link>
+    );
+}
+
+function SongSection({ eyebrow, title, description, songs }) {
     if (!songs?.length) {
         return null;
     }
@@ -69,12 +128,9 @@ function SongSection({ eyebrow, title, description, songs, membership }) {
 
             <div className="card-grid">
                 {songs.map((song) => (
-                    <SongCard
+                    <HomePackageSongCard
                         key={song.id || song.slug}
                         song={song}
-                        accessible={true}
-                        loggedIn={true}
-                        membership={membership}
                     />
                 ))}
             </div>
@@ -85,7 +141,6 @@ function SongSection({ eyebrow, title, description, songs, membership }) {
 export default async function HomePackagePage() {
     const {
         user,
-        membership,
         homePackage
     } = await getCurrentMembership();
 
@@ -187,7 +242,6 @@ export default async function HomePackagePage() {
                 title="처음부터 함께하는 기본곡"
                 description="Home Package를 시작하면 바로 열리는 노래예요."
                 songs={dashboard.baseSongs}
-                membership={membership}
             />
 
             <SongSection
@@ -195,7 +249,6 @@ export default async function HomePackagePage() {
                 title="지금까지 열린 신곡"
                 description="시작일을 기준으로 주차별로 지정된 노래가 차례로 열려요."
                 songs={dashboard.weeklySongs}
-                membership={membership}
             />
 
             <SongSection
@@ -203,7 +256,6 @@ export default async function HomePackagePage() {
                 title="보너스곡"
                 description="회원에게 추가로 선물된 곡이에요."
                 songs={dashboard.bonusSongs}
-                membership={membership}
             />
 
             {dashboard.nextSongs?.length ? (
@@ -286,8 +338,8 @@ export default async function HomePackagePage() {
             )}
 
             <div style={{ padding: '0 18px 36px' }}>
-                <Link href="/library" className="secondary-button wide">
-                    🎵 내 노래 모아보기
+                <Link href="/my" className="secondary-button wide">
+                    MY로 돌아가기
                 </Link>
             </div>
         </>
