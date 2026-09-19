@@ -1,19 +1,382 @@
 import { NextResponse } from 'next/server';
 
 import { createAdminSupabase } from '../../../lib/supabase-server';
+import { getCurrentMembership } from '../../../lib/membership';
+import { getUserPrograms } from '../../../lib/program-access';
+import { canAccessSong } from '../../../lib/content-access';
+import { listSongResourceFiles } from '../../../lib/storage-resource';
 import { todayKST } from '../../../lib/release-date';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-/*
- * 브라우저가 Supabase signed URL로 직접 이동하지 않도록
- * Dear Sunshine 서버가 파일을 대신 받아서 전달합니다.
- *
- * 기존 /api/*-url API가 로그인/멤버십/프로그램 권한을
- * 검사하고 있으므로, 그 API를 같은 쿠키로 서버에서 호출합니다.
- */
+const RESOURCE_KINDS = {
+    lyrics: {
+        bucket: 'dear-sunshine-lyrics',
+        legacyField: 'lyrics_path'
+    },
+    printables: {
+        bucket: 'dear-sunshine-printables',
+        legacyField: 'printable_path'
+    },
+    'play-ideas': {
+        bucket: null,
+        legacyField: 'play_ideas_path'
+    }
+};
 
+function safeFilename(value) {
+    return String(value || '')
+        .replace(/[\r\n]/g, '')
+        .replace(/[\\/]/g, '-')
+        .trim();
+}
+
+function extensionOf(filename) {
+    const match = String(filename || '')
+        .match(/(\.[a-z0-9]{1,10})$/i);
+
+    return match?.[1] || '';
+}
+
+function asciiFallback(filename) {
+    const ext = extensionOf(filename);
+    return `Dear-Sunshine-Resource${ext}`;
+}
+
+function encodeRFC5987(value) {
+    return encodeURIComponent(value)
+        .replace(/['()]/g, escape)
+        .replace(/\*/g, '%2A');
+}
+
+function filenameFromRemoteUrl(url) {
+    try {
+        const pathname = new URL(url).pathname;
+        const raw = pathname.split('/').pop() || '';
+        return safeFilename(decodeURIComponent(raw));
+    } catch {
+        return '';
+    }
+}
+
+function chooseFilename(item, remoteUrl, index) {
+    const itemName = safeFilename(item?.name);
+    const remoteName = filenameFromRemoteUrl(remoteUrl);
+
+    if (itemName) {
+        if (extensionOf(itemName)) {
+            return itemName;
+        }
+
+        const ext = extensionOf(remoteName);
+        return ext ? `${itemName}${ext}` : itemName;
+    }
+
+    if (remoteName) {
+        return remoteName;
+    }
+
+    return `Dear-Sunshine-Resource-${index + 1}`;
+}
+
+async function proxyRemoteFile({
+    remoteUrl,
+    item,
+    index,
+    download
+}) {
+    const remoteResponse = await fetch(remoteUrl, {
+        method: 'GET',
+        cache: 'no-store'
+    });
+
+    if (!remoteResponse.ok || !remoteResponse.body) {
+        return NextResponse.json(
+            { error: '파일을 불러오지 못했습니다.' },
+            { status: 502 }
+        );
+    }
+
+    const filename = chooseFilename(
+        item,
+        remoteUrl,
+        index
+    );
+
+    const headers = new Headers();
+
+    headers.set(
+        'content-type',
+        remoteResponse.headers.get('content-type') ||
+        'application/octet-stream'
+    );
+
+    headers.set(
+        'content-disposition',
+        `${download ? 'attachment' : 'inline'}; ` +
+        `filename="${asciiFallback(filename)}"; ` +
+        `filename*=UTF-8''${encodeRFC5987(filename)}`
+    );
+
+    headers.set(
+        'cache-control',
+        download
+            ? 'private, no-store'
+            : 'private, max-age=60, stale-while-revalidate=300'
+    );
+
+    headers.set('x-content-type-options', 'nosniff');
+
+    const length = remoteResponse.headers.get('content-length');
+    if (length) {
+        headers.set('content-length', length);
+    }
+
+    return new Response(
+        remoteResponse.body,
+        {
+            status: 200,
+            headers
+        }
+    );
+}
+
+function isSongClubPublished(song) {
+    if (!song?.is_published) {
+        return false;
+    }
+
+    if (!song.release_date) {
+        return true;
+    }
+
+    return String(song.release_date).slice(0, 10) <= todayKST();
+}
+
+async function userCanAccessSong({
+    db,
+    song,
+    user,
+    songClubMembership,
+    homePackage
+}) {
+    const unlockedHomeSongIds = Array.isArray(
+        homePackage?.unlocked_song_ids
+    )
+        ? homePackage.unlocked_song_ids
+        : [];
+
+    if (unlockedHomeSongIds.includes(song.id)) {
+        return true;
+    }
+
+    if (
+        !songClubMembership ||
+        !isSongClubPublished(song)
+    ) {
+        return false;
+    }
+
+    let userPrograms = [];
+
+    try {
+        userPrograms = await getUserPrograms(
+            db,
+            user.id
+        );
+    } catch (error) {
+        console.error(
+            'resource-file program access error:',
+            error
+        );
+        return false;
+    }
+
+    return canAccessSong(
+        {
+            id: song.id,
+            program: song.program
+        },
+        songClubMembership,
+        userPrograms
+    );
+}
+
+async function handleDirectResource(request, searchParams) {
+    const slug = String(
+        searchParams.get('slug') || ''
+    ).trim();
+
+    const kind = String(
+        searchParams.get('kind') || ''
+    ).trim();
+
+    const config = RESOURCE_KINDS[kind];
+
+    if (!slug || !config) {
+        return NextResponse.json(
+            { error: '자료 정보를 확인해주세요.' },
+            { status: 400 }
+        );
+    }
+
+    const indexValue = Number(
+        searchParams.get('index') || 0
+    );
+
+    const index =
+        Number.isInteger(indexValue) && indexValue >= 0
+            ? indexValue
+            : 0;
+
+    const download =
+        searchParams.get('download') === '1';
+
+    const db = createAdminSupabase();
+
+    const [
+        membershipState,
+        songResult
+    ] = await Promise.all([
+        getCurrentMembership({
+            includeBillingProfile: false
+        }),
+        db
+            .from('ds_content_songs')
+            .select(`
+                id,
+                slug,
+                title,
+                program,
+                audio_path,
+                lyrics_path,
+                printable_path,
+                play_ideas_path,
+                release_date,
+                is_published
+            `)
+            .eq('slug', slug)
+            .maybeSingle()
+    ]);
+
+    const {
+        user,
+        songClubMembership,
+        homePackage
+    } = membershipState;
+
+    if (!user) {
+        return NextResponse.json(
+            { error: '로그인이 필요합니다.' },
+            { status: 401 }
+        );
+    }
+
+    const {
+        data: song,
+        error: songError
+    } = songResult;
+
+    if (songError) {
+        console.error(
+            'resource-file song lookup error:',
+            songError
+        );
+
+        return NextResponse.json(
+            { error: '콘텐츠 정보를 확인하지 못했습니다.' },
+            { status: 500 }
+        );
+    }
+
+    if (!song) {
+        return NextResponse.json(
+            { error: '콘텐츠를 찾을 수 없습니다.' },
+            { status: 404 }
+        );
+    }
+
+    const allowed = await userCanAccessSong({
+        db,
+        song,
+        user,
+        songClubMembership,
+        homePackage
+    });
+
+    if (!allowed) {
+        return NextResponse.json(
+            { error: '현재 이용할 수 없는 자료입니다.' },
+            { status: 403 }
+        );
+    }
+
+    const bucket =
+        kind === 'play-ideas'
+            ? (
+                String(
+                    process.env.DEAR_SUNSHINE_PLAY_IDEAS_BUCKET || ''
+                ).trim() ||
+                'dear-sunshine-play-ideas'
+            )
+            : config.bucket;
+
+    const items = await listSongResourceFiles({
+        db,
+        bucket,
+        program: song.program,
+        audioPath: song.audio_path,
+        title: song.title,
+        legacyPath: song[config.legacyField]
+    });
+
+    const item = items[index];
+
+    if (!item?.path) {
+        return NextResponse.json(
+            { error: '요청한 자료를 찾을 수 없습니다.' },
+            { status: 404 }
+        );
+    }
+
+    const {
+        data: signedData,
+        error: signedError
+    } = await db.storage
+        .from(bucket)
+        .createSignedUrl(
+            item.path,
+            60 * 5
+        );
+
+    if (
+        signedError ||
+        !signedData?.signedUrl
+    ) {
+        console.error(
+            'resource-file sign error:',
+            signedError
+        );
+
+        return NextResponse.json(
+            { error: '자료를 불러오지 못했습니다.' },
+            { status: 500 }
+        );
+    }
+
+    return proxyRemoteFile({
+        remoteUrl: signedData.signedUrl,
+        item,
+        index,
+        download
+    });
+}
+
+/*
+ * 예전 컴포넌트 호환용 source 모드입니다.
+ * 새 화면은 kind=lyrics|printables|play-ideas 모드를 사용합니다.
+ */
 function isAllowedSource(source) {
     if (!source) {
         return false;
@@ -30,66 +393,6 @@ function isAllowedSource(source) {
     ]);
 
     return !blocked.has(source.toLowerCase());
-}
-
-function safeFilename(value) {
-    return String(value || '')
-        .replace(/[\r\n]/g, '')
-        .replace(/[\\/]/g, '-')
-        .trim();
-}
-
-function filenameFromRemoteUrl(url) {
-    try {
-        const pathname = new URL(url).pathname;
-        const raw = pathname.split('/').pop() || '';
-
-        return safeFilename(
-            decodeURIComponent(raw)
-        );
-    } catch {
-        return '';
-    }
-}
-
-function extensionOf(filename) {
-    const match = String(filename || '').match(/(\.[a-z0-9]{1,10})$/i);
-    return match?.[1] || '';
-}
-
-function chooseFilename(item, remoteUrl, index) {
-    const remoteFilename = filenameFromRemoteUrl(remoteUrl);
-    const itemName = safeFilename(item?.name);
-
-    if (itemName) {
-        if (extensionOf(itemName)) {
-            return itemName;
-        }
-
-        const remoteExtension = extensionOf(remoteFilename);
-
-        return remoteExtension
-            ? `${itemName}${remoteExtension}`
-            : itemName;
-    }
-
-    if (remoteFilename) {
-        return remoteFilename;
-    }
-
-    return `Dear-Sunshine-Resource-${index + 1}`;
-}
-
-function asciiFallback(filename) {
-    const ext = extensionOf(filename);
-
-    return `Dear-Sunshine-Resource${ext}`;
-}
-
-function encodeRFC5987(value) {
-    return encodeURIComponent(value)
-        .replace(/['()]/g, escape)
-        .replace(/\*/g, '%2A');
 }
 
 async function getSourceData(request, source, slug) {
@@ -121,200 +424,108 @@ async function getSourceData(request, source, slug) {
     };
 }
 
-async function checkReleasedSong(slug) {
-    const db = createAdminSupabase();
+async function handleLegacySource(request, searchParams) {
+    const source = String(
+        searchParams.get('source') || ''
+    ).trim();
 
-    const { data, error } =
-        await db
-            .from('ds_content_songs')
-            .select('slug')
-            .eq('slug', slug)
-            .eq('is_published', true)
-            .lte('release_date', todayKST())
-            .maybeSingle();
+    const slug = String(
+        searchParams.get('slug') || ''
+    ).trim();
 
-    if (error) {
-        throw error;
+    if (!isAllowedSource(source) || !slug) {
+        return NextResponse.json(
+            { error: '허용되지 않은 자료 요청입니다.' },
+            { status: 400 }
+        );
     }
 
-    return Boolean(data);
+    const indexValue = Number(
+        searchParams.get('index') || 0
+    );
+
+    const index =
+        Number.isInteger(indexValue) && indexValue >= 0
+            ? indexValue
+            : 0;
+
+    const download =
+        searchParams.get('download') === '1';
+
+    const {
+        response,
+        data
+    } = await getSourceData(
+        request,
+        source,
+        slug
+    );
+
+    if (!response.ok) {
+        return NextResponse.json(
+            {
+                error:
+                    data?.error ||
+                    '자료를 불러오지 못했습니다.'
+            },
+            {
+                status: response.status
+            }
+        );
+    }
+
+    const sourceItems = Array.isArray(data?.items)
+        ? data.items.filter(item => item?.url)
+        : data?.url
+            ? [
+                {
+                    name: '',
+                    url: data.url
+                }
+            ]
+            : [];
+
+    const item = sourceItems[index];
+
+    if (!item?.url) {
+        return NextResponse.json(
+            { error: '요청한 자료가 없습니다.' },
+            { status: 404 }
+        );
+    }
+
+    return proxyRemoteFile({
+        remoteUrl: item.url,
+        item,
+        index,
+        download
+    });
 }
 
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
 
-        const source = String(
-            searchParams.get('source') || ''
-        ).trim();
-
-        const slug = String(
-            searchParams.get('slug') || ''
-        ).trim();
-
-        const indexValue = Number(
-            searchParams.get('index') || 0
-        );
-
-        const download =
-            searchParams.get('download') === '1';
-
-        const index =
-            Number.isInteger(indexValue) && indexValue >= 0
-                ? indexValue
-                : 0;
-
-        if (!isAllowedSource(source)) {
-            return NextResponse.json(
-                {
-                    error: '허용되지 않은 자료 요청입니다.'
-                },
-                {
-                    status: 400
-                }
+        if (searchParams.get('kind')) {
+            return await handleDirectResource(
+                request,
+                searchParams
             );
         }
 
-        if (!slug) {
-            return NextResponse.json(
-                {
-                    error: '콘텐츠 정보를 확인해주세요.'
-                },
-                {
-                    status: 400
-                }
-            );
-        }
-
-        const released =
-            await checkReleasedSong(
-                slug
-            );
-
-        if (!released) {
-            return NextResponse.json(
-                {
-                    error: '아직 공개되지 않은 콘텐츠입니다.'
-                },
-                {
-                    status: 404
-                }
-            );
-        }
-
-
-        const {
-            response,
-            data
-        } = await getSourceData(
+        return await handleLegacySource(
             request,
-            source,
-            slug
+            searchParams
         );
-
-        if (!response.ok) {
-            return NextResponse.json(
-                {
-                    error:
-                        data?.error ||
-                        '자료를 불러오지 못했습니다.'
-                },
-                {
-                    status: response.status
-                }
-            );
-        }
-
-        const sourceItems = Array.isArray(data?.items)
-            ? data.items.filter(item => item?.url)
-            : data?.url
-                ? [
-                    {
-                        name: '',
-                        url: data.url
-                    }
-                ]
-                : [];
-
-        const item = sourceItems[index];
-
-        if (!item?.url) {
-            return NextResponse.json(
-                {
-                    error: '다운로드할 자료가 없습니다.'
-                },
-                {
-                    status: 404
-                }
-            );
-        }
-
-        const remoteResponse = await fetch(item.url, {
-            method: 'GET',
-            cache: 'no-store'
-        });
-
-        if (!remoteResponse.ok || !remoteResponse.body) {
-            return NextResponse.json(
-                {
-                    error: '파일을 불러오지 못했습니다.'
-                },
-                {
-                    status: 502
-                }
-            );
-        }
-
-        const filename = chooseFilename(
-            item,
-            item.url,
-            index
+    } catch (error) {
+        console.error(
+            'resource-file error:',
+            error
         );
-
-        const dispositionType =
-            download ? 'attachment' : 'inline';
-
-        const headers = new Headers();
-
-        headers.set(
-            'content-type',
-            remoteResponse.headers.get('content-type') ||
-            'application/octet-stream'
-        );
-
-        headers.set(
-            'content-disposition',
-            `${dispositionType}; filename="${asciiFallback(filename)}"; ` +
-            `filename*=UTF-8''${encodeRFC5987(filename)}`
-        );
-
-        headers.set(
-            'cache-control',
-            'private, no-store'
-        );
-
-        headers.set(
-            'x-content-type-options',
-            'nosniff'
-        );
-
-        return new Response(
-            remoteResponse.body,
-            {
-                status: 200,
-                headers
-            }
-        );
-    } catch (e) {
-        console.error('resource-file error:', e);
 
         return NextResponse.json(
-            {
-                error: '파일을 불러오지 못했습니다.'
-            },
-            {
-                status: 500
-            }
+            { error: '파일을 불러오지 못했습니다.' },
+            { status: 500 }
         );
     }
 }

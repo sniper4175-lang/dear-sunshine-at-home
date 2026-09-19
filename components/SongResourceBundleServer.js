@@ -1,10 +1,31 @@
 import { createAdminSupabase } from '../lib/supabase-server';
-import { createSongResourceSignedUrls } from '../lib/storage-resource';
+import { listSongResourceFiles } from '../lib/storage-resource';
 
 const IMAGE_RE = /\.(png|jpe?g|webp|gif|avif)$/i;
 const PDF_RE = /\.pdf$/i;
 
+function resourceUrl({
+    slug,
+    kind,
+    index,
+    download = false
+}) {
+    const params = new URLSearchParams({
+        slug: String(slug || ''),
+        kind: String(kind || ''),
+        index: String(index || 0)
+    });
+
+    if (download) {
+        params.set('download', '1');
+    }
+
+    return `/api/resource-file?${params.toString()}`;
+}
+
 function ResourceSection({
+    slug,
+    kind,
     eyebrow,
     title,
     description,
@@ -34,7 +55,7 @@ function ResourceSection({
             <div
                 style={{
                     display: 'grid',
-                    gap: 14,
+                    gap: 16,
                     marginTop: 14
                 }}
             >
@@ -48,13 +69,31 @@ function ResourceSection({
                     const isImage = IMAGE_RE.test(name);
                     const isPdf = PDF_RE.test(name);
 
+                    const viewUrl = resourceUrl({
+                        slug,
+                        kind,
+                        index
+                    });
+
+                    const downloadUrl = resourceUrl({
+                        slug,
+                        kind,
+                        index,
+                        download: true
+                    });
+
+                    const numberedTitle =
+                        items.length > 1
+                            ? `${title} ${index + 1}`
+                            : title;
+
                     return (
                         <div
-                            key={`${item?.path || item?.url || index}-${index}`}
+                            key={`${item?.path || index}-${index}`}
                         >
                             {isImage ? (
                                 <a
-                                    href={item.url}
+                                    href={viewUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     style={{
@@ -62,8 +101,8 @@ function ResourceSection({
                                     }}
                                 >
                                     <img
-                                        src={item.url}
-                                        alt={`${title} ${index + 1}`}
+                                        src={viewUrl}
+                                        alt={numberedTitle}
                                         loading={
                                             eagerFirstImage && index === 0
                                                 ? 'eager'
@@ -86,14 +125,29 @@ function ResourceSection({
                                 </a>
                             ) : (
                                 <a
-                                    href={item.url}
+                                    href={viewUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="secondary-button wide"
                                 >
-                                    {isPdf ? 'PDF 보기' : '자료 보기'} · {index + 1}
+                                    {isPdf ? 'PDF 보기' : '자료 보기'}
+                                    {items.length > 1 ? ` · ${index + 1}` : ''}
                                 </a>
                             )}
+
+                            <a
+                                href={downloadUrl}
+                                className="secondary-button wide"
+                                style={{
+                                    marginTop: 10,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    textDecoration: 'none'
+                                }}
+                            >
+                                ↓ {numberedTitle} 다운로드
+                            </a>
                         </div>
                     );
                 })}
@@ -165,58 +219,54 @@ export default async function SongResourceBundleServer({
         'dear-sunshine-play-ideas';
 
     /*
-     * 세 Storage 버킷을 병렬로 조회합니다.
-     * 각 폴더의 여러 파일은 storage-resource.js에서
-     * createSignedUrls()로 묶어서 서명합니다.
+     * 여기서는 signed URL을 만들지 않습니다.
+     * 브라우저 HTML에는 Dear Sunshine의 /api/resource-file 주소만 들어갑니다.
      */
     const [
         lyrics,
         printables,
         playIdeas
     ] = await Promise.all([
-        createSongResourceSignedUrls({
+        listSongResourceFiles({
             db,
             bucket: 'dear-sunshine-lyrics',
             program: song.program,
             audioPath: song.audioPath || song.audio_path,
             title: song.title,
-            legacyPath: song.lyricsPath || song.lyrics_path,
-            expiresIn: 60 * 30
+            legacyPath: song.lyricsPath || song.lyrics_path
         }).catch((error) => {
             console.warn(
-                'lyrics resource load failed:',
+                'lyrics resource list failed:',
                 error?.message || error
             );
             return [];
         }),
 
-        createSongResourceSignedUrls({
+        listSongResourceFiles({
             db,
             bucket: 'dear-sunshine-printables',
             program: song.program,
             audioPath: song.audioPath || song.audio_path,
             title: song.title,
-            legacyPath: song.printablePath || song.printable_path,
-            expiresIn: 60 * 30
+            legacyPath: song.printablePath || song.printable_path
         }).catch((error) => {
             console.warn(
-                'printable resource load failed:',
+                'printable resource list failed:',
                 error?.message || error
             );
             return [];
         }),
 
-        createSongResourceSignedUrls({
+        listSongResourceFiles({
             db,
             bucket: playIdeasBucket,
             program: song.program,
             audioPath: song.audioPath || song.audio_path,
             title: song.title,
-            legacyPath: song.playIdeasPath || song.play_ideas_path,
-            expiresIn: 60 * 30
+            legacyPath: song.playIdeasPath || song.play_ideas_path
         }).catch((error) => {
             console.warn(
-                'play ideas resource load failed:',
+                'play ideas resource list failed:',
                 error?.message || error
             );
             return [];
@@ -225,6 +275,8 @@ export default async function SongResourceBundleServer({
 
     const lyricSection = (
         <ResourceSection
+            slug={song.slug}
+            kind="lyrics"
             eyebrow="LYRIC SHEET"
             title="가사지"
             description="노래를 들으며 가사를 함께 확인해보세요."
@@ -235,6 +287,8 @@ export default async function SongResourceBundleServer({
 
     const printableSection = (
         <ResourceSection
+            slug={song.slug}
+            kind="printables"
             eyebrow="PRINTABLE"
             title={
                 scope === 'home-package'
@@ -252,6 +306,8 @@ export default async function SongResourceBundleServer({
 
     const playIdeaSection = (
         <ResourceSection
+            slug={song.slug}
+            kind="play-ideas"
             eyebrow="PLAY IDEAS"
             title="이렇게 놀아요"
             description={
