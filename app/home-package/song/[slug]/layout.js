@@ -1,4 +1,4 @@
-export default function SongPerformanceLayout({ children }) {
+export default function HomePackageSongLayout({ children }) {
     const supabaseUrl =
         process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 

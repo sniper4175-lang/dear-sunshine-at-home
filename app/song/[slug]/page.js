@@ -1,260 +1,303 @@
-import ResourceGallery from "../../../components/ResourceGallery";
+import { Suspense } from 'react';
 
-import { notFound } from "next/navigation";
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
 
-import Link from "next/link";
+import { getSongBySlug } from '../../../lib/content';
+import { getCurrentMembership } from '../../../lib/membership';
+import { canAccessSong } from '../../../lib/content-access';
+import { createAdminSupabase } from '../../../lib/supabase-server';
+import { getUserPrograms } from '../../../lib/program-access';
 
-import { getSongBySlug } from "../../../lib/content";
+import AudioPlayer from '../../../components/AudioPlayer';
+import SongResourceBundleServer, {
+    SongResourceFallback
+} from '../../../components/SongResourceBundleServer';
 
-import { getCurrentMembership } from "../../../lib/membership";
-
-import { canAccessSong } from "../../../lib/content-access";
-
-import { createAdminSupabase } from "../../../lib/supabase-server";
-
-import { getUserPrograms } from "../../../lib/program-access";
-
-import AudioPlayer from "../../../components/AudioPlayer";
-
-import LyricsSheet from "../../../components/LyricsSheet";
-
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function SongPage({ params }) {
-  const { slug } = await params;
+    const { slug } = await params;
 
-  const song = await getSongBySlug(slug);
+    /*
+     * 곡 조회와 회원권 조회는 서로 독립적이므로 동시에 시작합니다.
+     * 결제수단 정보는 노래 상세에서 필요하지 않아 조회하지 않습니다.
+     */
+    const [
+        song,
+        membershipState
+    ] = await Promise.all([
+        getSongBySlug(slug),
+        getCurrentMembership({
+            includeBillingProfile: false
+        })
+    ]);
 
-  if (!song) {
-    notFound();
-  }
-
-  const { user, membership } = await getCurrentMembership();
-
-  const loggedIn = Boolean(user);
-
-  const db = createAdminSupabase();
-
-  let userPrograms = [];
-
-  if (user) {
-    try {
-      userPrograms = await getUserPrograms(db, user.id);
-    } catch (error) {
-      console.error("Song program access error:", error);
+    if (!song) {
+        notFound();
     }
-  }
 
-  const accessible = canAccessSong(
-    song,
-    membership,
-    userPrograms
-  );
+    const {
+        user,
+        membership
+    } = membershipState;
 
-  let lockedTitle = "";
-  let lockedDescription = "";
-  let lockedButton = "";
-  let lockedHref = "";
+    const loggedIn = Boolean(user);
 
-  if (!loggedIn) {
-    lockedTitle = "로그인 후 들을 수 있어요";
+    let userPrograms = [];
 
-    lockedDescription =
-      "DEAR SUNSHINE MONTHLY SONG CLUB에 로그인하면 이용 가능한 음원을 확인할 수 있어요.";
+    /*
+     * Home Package 전용 계정은 개별 song_id로 접근을 판단하므로
+     * 프로그램 권한 조회 자체를 생략합니다.
+     */
+    const needsProgramLookup =
+        Boolean(user) &&
+        Boolean(membership) &&
+        membership?.product_type !== 'home_package' &&
+        membership?.song_club_active !== false;
 
-    lockedButton = "로그인하기";
+    if (needsProgramLookup) {
+        const db = createAdminSupabase();
 
-    lockedHref = "/login";
-  } else if (!membership) {
-    lockedTitle = "Song Club 멤버십이 필요해요";
-
-    lockedDescription =
-      "Dear Sunshine Monthly Song Club 회원은 수업에서 만난 노래와 자료를 집에서도 이용할 수 있어요.";
-
-    lockedButton = "Song Club 보기";
-
-    lockedHref = "/membership";
-  } else if (membership?.product_type === "home_package") {
-    lockedTitle = "아직 열리지 않은 노래예요";
-
-    lockedDescription =
-      "Home Package에서는 시작일을 기준으로 매주 한 곡씩 자동으로 열려요.";
-
-    lockedButton = "Home Package 보기";
-
-    lockedHref = "/home-package";
-  } else {
-    lockedTitle = "현재 이용할 수 없는 콘텐츠예요";
-
-    lockedDescription =
-      `${song.program} 수강 회원만 이용할 수 있는 콘텐츠예요.`;
-
-    lockedButton = "멤버십 보기";
-
-    lockedHref = "/membership";
-  }
-
-  return (
-    <section className="song-page">
-      <Link
-        className="back-link"
-        href={
-          membership?.product_type === "home_package"
-            ? "/home-package"
-            : "/library"
+        try {
+            userPrograms = await getUserPrograms(
+                db,
+                user.id
+            );
+        } catch (error) {
+            console.error(
+                'Song program access error:',
+                error
+            );
         }
-      >
-        ← {membership?.product_type === "home_package" ? "Home Package" : "노래 목록"}
-      </Link>
+    }
 
-      <div className="song-cover large">
-        <span>{song.emoji || "🎵"}</span>
-      </div>
+    const accessible = canAccessSong(
+        song,
+        membership,
+        userPrograms
+    );
 
-      {song.program && (
-        <p className="eyebrow">{song.program}</p>
-      )}
+    let lockedTitle = '';
+    let lockedDescription = '';
+    let lockedButton = '';
+    let lockedHref = '';
 
-      {song.category && (
-        <p
-          className="eyebrow"
-          style={{
-            marginTop: 4,
-          }}
-        >
-          {song.category}
-        </p>
-      )}
+    if (!loggedIn) {
+        lockedTitle = '로그인 후 들을 수 있어요';
+        lockedDescription =
+            'DEAR SUNSHINE MONTHLY SONG CLUB에 로그인하면 이용 가능한 음원을 확인할 수 있어요.';
+        lockedButton = '로그인하기';
+        lockedHref = '/login';
+    } else if (!membership) {
+        lockedTitle = 'Song Club 멤버십이 필요해요';
+        lockedDescription =
+            'Dear Sunshine Monthly Song Club 회원은 수업에서 만난 노래와 자료를 집에서도 이용할 수 있어요.';
+        lockedButton = 'Song Club 보기';
+        lockedHref = '/membership';
+    } else if (membership?.product_type === 'home_package') {
+        lockedTitle = '아직 열리지 않은 노래예요';
+        lockedDescription =
+            'Home Package에서는 시작일을 기준으로 주차에 맞춰 노래가 자동으로 열려요.';
+        lockedButton = 'Home Package 보기';
+        lockedHref = '/home-package';
+    } else {
+        lockedTitle = '현재 이용할 수 없는 콘텐츠예요';
+        lockedDescription =
+            `${song.program} 수강 회원만 이용할 수 있는 콘텐츠예요.`;
+        lockedButton = '멤버십 보기';
+        lockedHref = '/membership';
+    }
 
-      <h1>{song.title}</h1>
+    const backToHomePackage =
+        membership?.product_type === 'home_package';
 
-      {song.subtitle && (
-        <p className="page-copy">{song.subtitle}</p>
-      )}
+    return (
+        <section className="song-page">
+            <Link
+                className="back-link"
+                href={
+                    backToHomePackage
+                        ? '/home-package'
+                        : '/library'
+                }
+            >
+                ← {backToHomePackage ? 'Home Package' : '노래 목록'}
+            </Link>
 
-      {accessible ? (
-        <>
-          <AudioPlayer
-            title={song.title}
-            slug={song.slug}
-          />
+            <div className="song-cover large">
+                <span>{song.emoji || '🎵'}</span>
+            </div>
 
-          <LyricsSheet
-            slug={song.slug}
-            title={song.title}
-          />
-
-          <ResourceGallery
-            slug={song.slug}
-            apiPath="/api/play-ideas-url"
-            eyebrow="PLAY IDEAS"
-            title="이렇게 놀아요"
-            description="집에서 바로 따라 할 수 있는 활동자료를 확인해보세요."
-            emptyMessage="등록된 활동자료가 없습니다."
-          />
-
-          <ResourceGallery
-            slug={song.slug}
-            apiPath="/api/printable-url"
-            eyebrow="PRINTABLE"
-            title="플래시 카드"
-            description="노래와 함께 활용할 수 있는 플래시 카드예요."
-            emptyMessage="등록된 플래시 카드가 없습니다."
-          />
-
-          {song.lyrics && song.lyrics.length > 0 && (
-            <section className="content-card">
-              <p className="eyebrow">LYRICS</p>
-
-              <h2>가사</h2>
-
-              <div className="lyrics">
-                {song.lyrics.map((line, index) => (
-                  <p key={index}>{line}</p>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {song.activities &&
-            song.activities.length > 0 && (
-              <section className="content-card">
+            {song.program && (
                 <p className="eyebrow">
-                  {membership?.product_type === "home_package"
-                    ? "HOME PACKAGE"
-                    : "MONTHLY SONG CLUB"}
+                    {song.program}
                 </p>
-
-                <h2>이렇게 놀아요</h2>
-
-                <div className="steps">
-                  {song.activities.map(
-                    (activity, index) => (
-                      <div
-                        className="step"
-                        key={`${song.slug}-${index}`}
-                      >
-                        <span>{index + 1}</span>
-
-                        <div>
-                          <strong>{activity.title}</strong>
-
-                          <p>{activity.description}</p>
-                        </div>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </section>
             )}
-        </>
-      ) : (
-        <section
-          className="content-card"
-          style={{
-            marginTop: 20,
-            textAlign: "center",
-            padding: "34px 22px",
-          }}
-        >
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              margin: "0 auto 16px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#fff1c9",
-              fontSize: 28,
-            }}
-          >
-            🔒
-          </div>
 
-          <p className="eyebrow">MEMBERSHIP</p>
+            {song.category && (
+                <p
+                    className="eyebrow"
+                    style={{
+                        marginTop: 4
+                    }}
+                >
+                    {song.category}
+                </p>
+            )}
 
-          <h2>{lockedTitle}</h2>
+            <h1>{song.title}</h1>
 
-          <p
-            className="page-copy"
-            style={{
-              maxWidth: 440,
-              margin: "0 auto 22px",
-            }}
-          >
-            {lockedDescription}
-          </p>
+            {song.subtitle && (
+                <p className="page-copy">
+                    {song.subtitle}
+                </p>
+            )}
 
-          <Link
-            href={lockedHref}
-            className="primary-button"
-          >
-            {lockedButton}
-          </Link>
+            {accessible ? (
+                <>
+                    {/*
+                     * 음원 signed URL은 재생 버튼을 눌렀을 때만 요청합니다.
+                     * 상세페이지 최초 표시를 음원 요청이 막지 않습니다.
+                     */}
+                    <AudioPlayer
+                        title={song.title}
+                        slug={song.slug}
+                    />
+
+                    {/*
+                     * 가사지/놀이아이디어/플래시카드는 서버 Suspense로 스트리밍합니다.
+                     * 기존처럼 브라우저에서 3개의 API 인증 요청을 다시 하지 않습니다.
+                     */}
+                    <Suspense
+                        fallback={
+                            <SongResourceFallback scope="song-club" />
+                        }
+                    >
+                        <SongResourceBundleServer
+                            song={song}
+                            scope="song-club"
+                        />
+                    </Suspense>
+
+                    {Array.isArray(song.lyrics) &&
+                        song.lyrics.length > 0 && (
+                            <section
+                                className="content-card"
+                                style={{
+                                    marginTop: 20
+                                }}
+                            >
+                                <p className="eyebrow">
+                                    LYRICS
+                                </p>
+
+                                <h2>가사</h2>
+
+                                <div className="lyrics">
+                                    {song.lyrics.map(
+                                        (line, index) => (
+                                            <p key={index}>
+                                                {line}
+                                            </p>
+                                        )
+                                    )}
+                                </div>
+                            </section>
+                        )}
+
+                    {Array.isArray(song.activities) &&
+                        song.activities.length > 0 && (
+                            <section
+                                className="content-card"
+                                style={{
+                                    marginTop: 20
+                                }}
+                            >
+                                <p className="eyebrow">
+                                    {membership?.product_type === 'home_package'
+                                        ? 'HOME PACKAGE'
+                                        : 'MONTHLY SONG CLUB'}
+                                </p>
+
+                                <h2>이렇게 놀아요</h2>
+
+                                <div className="steps">
+                                    {song.activities.map(
+                                        (activity, index) => (
+                                            <div
+                                                className="step"
+                                                key={`${song.slug}-${index}`}
+                                            >
+                                                <span>
+                                                    {index + 1}
+                                                </span>
+
+                                                <div>
+                                                    <strong>
+                                                        {activity.title}
+                                                    </strong>
+
+                                                    <p>
+                                                        {activity.description}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            </section>
+                        )}
+                </>
+            ) : (
+                <section
+                    className="content-card"
+                    style={{
+                        marginTop: 20,
+                        textAlign: 'center',
+                        padding: '34px 22px'
+                    }}
+                >
+                    <div
+                        style={{
+                            width: 64,
+                            height: 64,
+                            margin: '0 auto 16px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: '#fff1c9',
+                            fontSize: 28
+                        }}
+                    >
+                        🔒
+                    </div>
+
+                    <p className="eyebrow">
+                        MEMBERSHIP
+                    </p>
+
+                    <h2>{lockedTitle}</h2>
+
+                    <p
+                        className="page-copy"
+                        style={{
+                            maxWidth: 440,
+                            margin: '0 auto 22px'
+                        }}
+                    >
+                        {lockedDescription}
+                    </p>
+
+                    <Link
+                        href={lockedHref}
+                        className="primary-button"
+                    >
+                        {lockedButton}
+                    </Link>
+                </section>
+            )}
         </section>
-      )}
-    </section>
-  );
+    );
 }
