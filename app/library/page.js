@@ -67,6 +67,9 @@ function mapSong(
         printablePath:
             row.printable_path,
 
+        playIdeasPath:
+            row.play_ideas_path,
+
         lyrics:
             row.lyrics ||
             [],
@@ -91,8 +94,81 @@ function mapSong(
         isPublished:
             Boolean(
                 row.is_published
+            ),
+
+        published:
+            Boolean(
+                row.is_published
             )
     };
+
+}
+
+
+function unique(
+    values
+) {
+
+    return [
+        ...new Set(
+            (
+                values ||
+                []
+            ).filter(
+                Boolean
+            )
+        )
+    ];
+
+}
+
+
+function sortSongs(
+    songs
+) {
+
+    return [
+        ...songs
+    ].sort(
+        (
+            a,
+            b
+        ) => {
+
+            const dateA =
+                a.releaseDate ||
+                '';
+
+            const dateB =
+                b.releaseDate ||
+                '';
+
+
+            if (
+                dateA !==
+                dateB
+            ) {
+
+                return dateB.localeCompare(
+                    dateA
+                );
+
+            }
+
+
+            return String(
+                a.title ||
+                ''
+            ).localeCompare(
+                String(
+                    b.title ||
+                    ''
+                ),
+                'ko'
+            );
+
+        }
+    );
 
 }
 
@@ -101,7 +177,7 @@ export default async function LibraryPage() {
 
     /*
      * ==========================================
-     * 로그인 사용자 + 유효 멤버십
+     * 로그인 사용자 + 현재 이용 상품
      * ==========================================
      */
 
@@ -118,23 +194,23 @@ export default async function LibraryPage() {
         );
 
 
-    /*
-     * ==========================================
-     * 관리자 DB
-     * ==========================================
-     */
-
     const db =
         createAdminSupabase();
 
 
     /*
      * ==========================================
-     * 현재 수강 프로그램
+     * Song Club 프로그램 권한 +
+     * Home Package 이용 클래스
+     *
+     * LibraryClient / PlaylistPlayer가 기존
+     * userPrograms 기준으로 재생 가능곡을 계산하는
+     * 경우에도 Home Package 클래스가 빠지지 않도록
+     * 합쳐서 전달합니다.
      * ==========================================
      */
 
-    let userPrograms =
+    let songClubPrograms =
         [];
 
 
@@ -149,7 +225,7 @@ export default async function LibraryPage() {
                 );
 
 
-            userPrograms =
+            songClubPrograms =
                 (
                     savedPrograms ||
                     []
@@ -172,92 +248,327 @@ export default async function LibraryPage() {
     }
 
 
+    const homePackagePrograms =
+        unique([
+            ...(
+                Array.isArray(
+                    membership?.home_package_programs
+                )
+                    ? membership.home_package_programs
+                    : []
+            ),
+            membership?.home_package_program
+        ]).filter(
+            program =>
+                PROGRAM_OPTIONS.includes(
+                    program
+                )
+        );
+
+
+    const userPrograms =
+        unique([
+            ...songClubPrograms,
+            ...homePackagePrograms
+        ]);
+
+
     /*
      * ==========================================
-     * 공개된 노래
+     * Home Package에서 현재까지 열린 곡
+     *
+     * 중요:
+     * 이 ID 목록은 Home Package의 기본곡 / 옵션 기본곡 /
+     * 현재 주차 신곡 / 현재 주차 추가곡까지 포함합니다.
+     * Song Club의 is_published 여부와는 독립적입니다.
      * ==========================================
      */
 
-    const {
-        data: songRows,
-        error: songsError
-    } =
-        await db
-            .from(
-                'ds_content_songs'
+    const homePackageUnlockedSongIds =
+        unique(
+            Array.isArray(
+                membership?.home_package_unlocked_song_ids
             )
-            .select(
-                '*'
+                ? membership.home_package_unlocked_song_ids
+                : []
+        );
+
+
+    const hasSongClub =
+        Boolean(
+            membership?.song_club_active ||
+            (
+                membership &&
+                membership.product_type !==
+                    'home_package' &&
+                membership.provider !==
+                    'home_package'
             )
-            .eq(
-                'is_published',
-                true
-            )
-            .lte(
-                'release_date',
-                todayKST()
-            )
-            .order(
-                'release_date',
-                {
-                    ascending:
-                        false
-                }
-            );
+        );
+
+
+    /*
+     * ==========================================
+     * 1) Song Club에서 공개된 곡
+     * ==========================================
+     */
+
+    let songClubRows =
+        [];
 
 
     if (
-        songsError
+        !loggedIn ||
+        hasSongClub
     ) {
 
-        console.error(
-            'Library songs error:',
-            {
-                message:
-                    songsError?.message,
+        const {
+            data,
+            error
+        } =
+            await db
+                .from(
+                    'ds_content_songs'
+                )
+                .select(
+                    '*'
+                )
+                .eq(
+                    'is_published',
+                    true
+                )
+                .lte(
+                    'release_date',
+                    todayKST()
+                )
+                .order(
+                    'release_date',
+                    {
+                        ascending:
+                            false
+                    }
+                );
 
-                code:
-                    songsError?.code,
 
-                details:
-                    songsError?.details,
+        if (error) {
 
-                hint:
-                    songsError?.hint
-            }
-        );
+            console.error(
+                'Library Song Club songs error:',
+                {
+                    message:
+                        error?.message,
+                    code:
+                        error?.code,
+                    details:
+                        error?.details,
+                    hint:
+                        error?.hint
+                }
+            );
+
+        } else {
+
+            songClubRows =
+                data ||
+                [];
+
+        }
 
     }
 
 
-    const allSongs =
-        (
-            songRows ||
-            []
-        ).map(
-            mapSong
-        );
+    /*
+     * ==========================================
+     * 2) Home Package에서 현재 열린 곡
+     *
+     * Song Club 비공개 곡도 ID가 Home Package에서
+     * 열려 있으면 반드시 가져옵니다.
+     * ==========================================
+     */
+
+    let homePackageRows =
+        [];
+
+
+    if (
+        loggedIn &&
+        homePackageUnlockedSongIds.length >
+            0
+    ) {
+
+        const {
+            data,
+            error
+        } =
+            await db
+                .from(
+                    'ds_content_songs'
+                )
+                .select(
+                    '*'
+                )
+                .in(
+                    'id',
+                    homePackageUnlockedSongIds
+                );
+
+
+        if (error) {
+
+            console.error(
+                'Library Home Package songs error:',
+                {
+                    message:
+                        error?.message,
+                    code:
+                        error?.code,
+                    details:
+                        error?.details,
+                    hint:
+                        error?.hint
+                }
+            );
+
+        } else {
+
+            homePackageRows =
+                data ||
+                [];
+
+        }
+
+    }
 
 
     /*
      * ==========================================
-     * 활성 멤버십 회원에게는
-     * 허용된 프로그램의 곡만 브라우저로 전달
+     * 중복 제거 후 상품별 접근권한 적용
      * ==========================================
      */
 
-    const songs =
+    const mergedById =
+        new Map();
+
+
+    for (
+        const row of [
+            ...songClubRows,
+            ...homePackageRows
+        ]
+    ) {
+
+        if (
+            row?.id
+        ) {
+
+            mergedById.set(
+                row.id,
+                row
+            );
+
+        }
+
+    }
+
+
+    const homePackageIdSet =
+        new Set(
+            homePackageUnlockedSongIds
+        );
+
+
+    const mergedSongs =
+        Array.from(
+            mergedById.values()
+        ).map(
+            row => {
+
+                const song =
+                    mapSong(
+                        row
+                    );
+
+
+                return {
+                    ...song,
+
+                    /*
+                     * 클라이언트가 필요하면 이 값을 이용해
+                     * Home Package 전용곡을 구분할 수 있습니다.
+                     */
+                    homePackageUnlocked:
+                        homePackageIdSet.has(
+                            row.id
+                        ),
+
+                    songClubPublished:
+                        Boolean(
+                            row.is_published
+                        )
+                };
+
+            }
+        );
+
+
+    let songs;
+
+
+    if (
         loggedIn &&
         membership
-            ? allSongs.filter(
+    ) {
+
+        songs =
+            mergedSongs.filter(
+                song => {
+
+                    /*
+                     * Home Package에서 현재 열린 곡은
+                     * Song Club 공개 여부와 상관없이 허용합니다.
+                     */
+                    if (
+                        homePackageIdSet.has(
+                            song.id
+                        )
+                    ) {
+                        return true;
+                    }
+
+
+                    /*
+                     * 나머지는 기존 Song Club 권한을 적용합니다.
+                     */
+                    return (
+                        hasSongClub &&
+                        canAccessSong(
+                            song,
+                            membership,
+                            songClubPrograms
+                        )
+                    );
+
+                }
+            );
+
+    } else {
+
+        /*
+         * 로그인 전에는 기존과 동일하게 Song Club 공개곡만 표시합니다.
+         */
+        songs =
+            mergedSongs.filter(
                 song =>
-                    canAccessSong(
-                        song,
-                        membership,
-                        userPrograms
-                    )
-            )
-            : allSongs;
+                    song.isPublished
+            );
+
+    }
+
+
+    songs =
+        sortSongs(
+            songs
+        );
 
 
     /*
