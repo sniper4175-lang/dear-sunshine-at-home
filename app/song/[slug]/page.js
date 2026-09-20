@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 
 import { getSongBySlug } from '../../../lib/content';
@@ -20,27 +20,68 @@ export default async function SongPage({ params }) {
     const { slug } = await params;
 
     /*
-     * 곡 조회와 회원권 조회는 서로 독립적이므로 동시에 시작합니다.
-     * 결제수단 정보는 노래 상세에서 필요하지 않아 조회하지 않습니다.
+     * 중요: /song/[slug]는 원래 Song Club 공개곡용 주소입니다.
+     * 하지만 Home Package 카드/오래된 링크가 이 주소로 들어오는 경우에도
+     * Song Club 비공개곡이 404가 되지 않도록 먼저 원본 곡 ID를 확인합니다.
+     *
+     * 현재 Home Package에서 이미 열린 song_id라면 is_published와 관계없이
+     * 전용 상세페이지로 즉시 이동합니다.
      */
+    const db = createAdminSupabase();
+
     const [
         song,
-        membershipState
+        membershipState,
+        rawSongResult
     ] = await Promise.all([
         getSongBySlug(slug),
         getCurrentMembership({
             includeBillingProfile: false
-        })
+        }),
+        db
+            .from('ds_content_songs')
+            .select('id,slug')
+            .eq('slug', slug)
+            .maybeSingle()
     ]);
-
-    if (!song) {
-        notFound();
-    }
 
     const {
         user,
         membership
     } = membershipState;
+
+    const homePackageUnlockedSongIds =
+        Array.isArray(
+            membership?.home_package_unlocked_song_ids
+        )
+            ? membership.home_package_unlocked_song_ids
+            : [];
+
+    const rawSong =
+        rawSongResult?.data ||
+        null;
+
+    if (
+        user &&
+        rawSong?.id &&
+        homePackageUnlockedSongIds.includes(
+            rawSong.id
+        )
+    ) {
+        redirect(
+            `/home-package/song/${encodeURIComponent(
+                rawSong.slug || slug
+            )}`
+        );
+    }
+
+    /*
+     * Home Package 곡이 아니라면 기존 Song Club 규칙을 그대로 사용합니다.
+     * 따라서 Song Club 비공개곡은 일반 /song 주소에서는 계속 숨겨집니다.
+     */
+    if (!song) {
+        notFound();
+    }
 
     const loggedIn = Boolean(user);
 
@@ -57,8 +98,6 @@ export default async function SongPage({ params }) {
         membership?.song_club_active !== false;
 
     if (needsProgramLookup) {
-        const db = createAdminSupabase();
-
         try {
             userPrograms = await getUserPrograms(
                 db,
