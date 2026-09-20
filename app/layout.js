@@ -1,5 +1,7 @@
 import "./globals.css";
 import "./mobile-redesign.css";
+import "./web-redesign.css";
+import Link from "next/link";
 import BottomNav from "../components/BottomNav";
 import SiteFooter from "../components/SiteFooter";
 
@@ -31,6 +33,25 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ko">
       <body>
+        <header className="ds-desktop-header">
+          <div className="ds-desktop-header-inner">
+            <Link href="/" className="ds-desktop-brand" aria-label="Dear Sunshine Home">
+              <span className="ds-desktop-brand-mark">☀️</span>
+              <span className="ds-desktop-brand-copy">
+                <strong>Dear Sunshine</strong>
+                <small>Sing · Play · Grow</small>
+              </span>
+            </Link>
+
+            <nav className="ds-desktop-nav" aria-label="메인 메뉴">
+              <Link href="/">홈</Link>
+              <Link href="/library">노래</Link>
+              <Link href="/membership">Song Club</Link>
+              <Link href="/my" className="ds-desktop-my">MY</Link>
+            </nav>
+          </div>
+        </header>
+
         <main className="app-shell">
           {children}
           <SiteFooter />
@@ -40,4 +61,3 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-
