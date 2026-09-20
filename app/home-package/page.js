@@ -189,7 +189,7 @@ export default async function HomePackagePage() {
             <section className="home-welcome-card">
                 <div className="home-welcome-copy">
                     <p className="eyebrow">DEAR SUNSHINE HOME</p>
-                    <h1>Hello<br />Little Learner!</h1>
+                    <h1>Hello<br />SunShine!</h1>
                     <p>
                         오늘도 신나게 노래하며<br />
                         함께 자라요! 🌈
