@@ -32,22 +32,10 @@ export default async function HomePackageSongPage({ params }) {
 
         db
             .from('ds_content_songs')
-            .select(`
-                id,
-                slug,
-                title,
-                subtitle,
-                program,
-                category,
-                emoji,
-                audio_path,
-                lyrics_path,
-                printable_path,
-                play_ideas_path,
-                lyrics,
-                activities,
-                is_published
-            `)
+            // 스키마에 없는 선택 컬럼 때문에 전체 조회가 실패하지 않도록
+            // 실제 행 전체를 조회합니다. 놀이 아이디어 파일은 DB 컬럼이 아니라
+            // Storage 폴더 자동 연결 로직에서 읽습니다.
+            .select('*')
             .eq('slug', slug)
             .maybeSingle()
     ]);
@@ -72,7 +60,19 @@ export default async function HomePackageSongPage({ params }) {
         error
     } = songResult;
 
-    if (error || !row) {
+    if (error) {
+        console.error('Home Package song lookup error:', {
+            slug,
+            message: error?.message,
+            code: error?.code,
+            details: error?.details,
+            hint: error?.hint
+        });
+        notFound();
+    }
+
+    if (!row) {
+        console.error('Home Package song not found:', slug);
         notFound();
     }
 
