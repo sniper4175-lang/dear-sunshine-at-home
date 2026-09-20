@@ -4,6 +4,7 @@ import "./web-redesign.css";
 import Link from "next/link";
 import BottomNav from "../components/BottomNav";
 import SiteFooter from "../components/SiteFooter";
+import DesktopNav from "../components/DesktopNav";
 
 export const metadata = {
   title: "Dear Sunshine Home",
@@ -43,12 +44,7 @@ export default function RootLayout({ children }) {
               </span>
             </Link>
 
-            <nav className="ds-desktop-nav" aria-label="메인 메뉴">
-              <Link href="/">홈</Link>
-              <Link href="/library">노래</Link>
-              <Link href="/membership">Song Club</Link>
-              <Link href="/my" className="ds-desktop-my">MY</Link>
-            </nav>
+            <DesktopNav />
           </div>
         </header>
 

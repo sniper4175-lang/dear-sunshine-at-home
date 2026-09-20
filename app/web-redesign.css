@@ -116,7 +116,13 @@
     transform: translateY(-1px);
   }
 
-  .ds-desktop-nav .ds-desktop-my {
+  .ds-desktop-nav a.is-active {
+    background: #f8b63d;
+    color: #3a2b22;
+    box-shadow: 0 5px 14px rgba(224, 150, 31, .15);
+  }
+
+  .ds-desktop-nav a.is-active:hover {
     background: #f8b63d;
     color: #3a2b22;
   }
