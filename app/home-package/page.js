@@ -196,7 +196,7 @@ export default async function HomePackagePage() {
                     집에서도 자연스럽게 이어가요.
                 </h1>
                 <p className="hero-copy">
-                    기본곡은 최대 3곡까지 바로 듣고, 이후 각 주차에 지정된 노래가 최대 3곡까지 열려요.
+                    기본곡(3곡)은 바로 듣고, 이후 각 주차에 지정된 노래가 열려요.
                 </p>
 
                 <div className="plan-pill">
