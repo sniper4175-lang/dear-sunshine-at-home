@@ -12,9 +12,7 @@ import { todayKST } from '../../lib/release-date';
 export const dynamic = 'force-dynamic';
 
 function formatDate(value) {
-    if (!value) {
-        return '-';
-    }
+    if (!value) return '-';
 
     return new Intl.DateTimeFormat('ko-KR', {
         timeZone: 'Asia/Seoul',
@@ -25,9 +23,7 @@ function formatDate(value) {
 }
 
 function daysUntil(value) {
-    if (!value) {
-        return null;
-    }
+    if (!value) return null;
 
     const toUtc = (dateValue) => {
         const [year, month, day] = String(dateValue)
@@ -47,86 +43,63 @@ function daysUntil(value) {
     );
 }
 
+function sectionIcon(eyebrow) {
+    if (eyebrow === 'WELCOME SONGS') return '🎵';
+    if (eyebrow === 'YOUR NEW SONGS') return '🌱';
+    if (eyebrow === 'BONUS SONGS') return '🎁';
+    return '🎶';
+}
+
 function HomePackageSongCard({ song }) {
     return (
         <Link
             href={`/home-package/song/${encodeURIComponent(song.slug)}`}
-            className="content-card"
-            style={{
-                display: 'grid',
-                gridTemplateColumns: '76px minmax(0, 1fr)',
-                gap: 14,
-                alignItems: 'center',
-                padding: 14,
-                textDecoration: 'none',
-                color: 'inherit'
-            }}
+            className="content-card home-package-song-card"
         >
-            <div
-                style={{
-                    width: 76,
-                    height: 76,
-                    borderRadius: 20,
-                    display: 'grid',
-                    placeItems: 'center',
-                    background: 'linear-gradient(145deg,#fff6db,#fff0ee)',
-                    fontSize: 36
-                }}
-            >
+            <div className="home-song-art">
                 {song.emoji || '🎵'}
             </div>
 
-            <div style={{ minWidth: 0 }}>
-                <p className="eyebrow" style={{ marginBottom: 5 }}>
+            <div className="home-song-copy">
+                <p className="eyebrow">
                     {song.program || 'HOME PACKAGE'}
                 </p>
-                <strong
-                    style={{
-                        display: 'block',
-                        fontSize: 17,
-                        lineHeight: 1.4
-                    }}
-                >
-                    {song.title}
-                </strong>
-                {song.subtitle && (
-                    <span
-                        className="muted"
-                        style={{
-                            display: 'block',
-                            marginTop: 5,
-                            fontSize: 12,
-                            lineHeight: 1.5
-                        }}
-                    >
-                        {song.subtitle}
-                    </span>
-                )}
+                <strong>{song.title}</strong>
+                <span className="muted">
+                    {song.category || song.subtitle || 'Dear Sunshine Song'}
+                </span>
             </div>
+
+            <span className="home-song-play" aria-hidden="true">
+                ▶
+            </span>
         </Link>
     );
 }
 
 function SongSection({ eyebrow, title, description, songs }) {
-    if (!songs?.length) {
-        return null;
-    }
+    if (!songs?.length) return null;
 
     return (
-        <section className="section">
-            <div className="section-head">
+        <section className="section home-song-section">
+            <div className="section-head home-section-head">
                 <div>
                     <p className="eyebrow">{eyebrow}</p>
-                    <h2>{title}</h2>
+                    <h2>
+                        <span className="home-section-icon" aria-hidden="true">
+                            {sectionIcon(eyebrow)}
+                        </span>
+                        {title}
+                    </h2>
                     {description && (
-                        <p className="muted" style={{ margin: '6px 0 0' }}>
+                        <p className="muted home-section-description">
                             {description}
                         </p>
                     )}
                 </div>
             </div>
 
-            <div className="card-grid">
+            <div className="card-grid home-song-grid">
                 {songs.map((song) => (
                     <HomePackageSongCard
                         key={song.id || song.slug}
@@ -139,10 +112,7 @@ function SongSection({ eyebrow, title, description, songs }) {
 }
 
 export default async function HomePackagePage() {
-    const {
-        user,
-        homePackage
-    } = await getCurrentMembership();
+    const { user, homePackage } = await getCurrentMembership();
 
     if (!user) {
         redirect('/login?next=/home-package');
@@ -150,87 +120,117 @@ export default async function HomePackagePage() {
 
     if (!homePackage) {
         return (
-            <section className="section top-section">
-                <p className="eyebrow">DEAR SUNSHINE HOME PACKAGE</p>
-                <h1>Home Package</h1>
-                <div className="content-card" style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 42, marginBottom: 10 }}>🏠</div>
-                    <h2>등록된 Home Package가 없어요</h2>
-                    <p className="page-copy">
-                        Home Package를 구매한 계정이라면 센터에서 이용권 연결 후 바로 사용할 수 있어요.
-                    </p>
-                    <Link href="/my" className="primary-button">
-                        MY 확인하기
-                    </Link>
-                </div>
-            </section>
+            <div className="ds-home-package-mobile">
+                <header className="ds-mobile-brand">
+                    <span className="ds-mobile-brand-sun">☀️</span>
+                    <span>
+                        <strong>Dear Sunshine</strong>
+                        <small>Sing · Play · Grow</small>
+                    </span>
+                </header>
+
+                <section className="section top-section">
+                    <p className="eyebrow">DEAR SUNSHINE HOME PACKAGE</p>
+                    <h1>Home Package</h1>
+                    <div className="content-card" style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 42, marginBottom: 10 }}>🏠</div>
+                        <h2>등록된 Home Package가 없어요</h2>
+                        <p className="page-copy">
+                            Home Package를 구매한 계정이라면 센터에서 이용권 연결 후 바로 사용할 수 있어요.
+                        </p>
+                        <Link href="/my" className="primary-button">
+                            MY 확인하기
+                        </Link>
+                    </div>
+                </section>
+            </div>
         );
     }
 
     const db = createAdminSupabase();
     const dashboard = await getHomePackageDashboard(db, homePackage);
 
-    const storedReleaseWeeks = Number(homePackage.release_weeks_effective || homePackage.release_weeks || 0);
+    const storedReleaseWeeks = Number(
+        homePackage.release_weeks_effective ||
+        homePackage.release_weeks ||
+        0
+    );
+
     const releaseWeeks =
         homePackage.plan_code === 'home_20'
             ? Math.max(21, storedReleaseWeeks)
             : storedReleaseWeeks;
+
     const currentWeek = Math.min(
         Number(homePackage.current_week || 0),
         releaseWeeks
     );
+
     const unlockedCount =
         dashboard.baseSongs.length +
         dashboard.weeklySongs.length +
         dashboard.bonusSongs.length;
+
     const nextDays = daysUntil(dashboard.nextUnlockAt);
+    const programs = (homePackage.programs || [homePackage.program])
+        .filter(Boolean)
+        .join(' + ');
 
     return (
-        <>
-            <section className="hero">
-                <div className="sun">🏠</div>
-                <p className="eyebrow">DEAR SUNSHINE HOME PACKAGE</p>
-                <h1>
-                    수업에서 만난 영어를,
-                    <br />
-                    집에서도 자연스럽게 이어가요.
-                </h1>
-                <p className="hero-copy">
-                    기본곡은 바로 듣고, 이후 각 주차에 지정된 노래가 열려요.
-                </p>
+        <div className="ds-home-package-mobile">
+            <header className="ds-mobile-brand">
+                <span className="ds-mobile-brand-sun">☀️</span>
+                <span>
+                    <strong>Dear Sunshine</strong>
+                    <small>Sing · Play · Grow</small>
+                </span>
+            </header>
 
-                <div className="plan-pill">
-                    🏠 {homePackagePlanLabel(homePackage.plan_code)} · {(homePackage.programs || [homePackage.program]).filter(Boolean).join(' + ')}
+            <section className="home-welcome-card">
+                <div className="home-welcome-copy">
+                    <p className="eyebrow">DEAR SUNSHINE HOME</p>
+                    <h1>Hello<br />Little Learner!</h1>
+                    <p>
+                        오늘도 신나게 노래하며<br />
+                        함께 자라요! 🌈
+                    </p>
+                </div>
+
+                <div className="home-welcome-sun" aria-hidden="true">
+                    <span>☀️</span>
+                    <i>♡</i>
                 </div>
             </section>
 
-            <section className="section">
-                <div className="content-card">
-                    <p className="eyebrow">MY HOME PACKAGE</p>
-                    <h2 style={{ marginBottom: 8 }}>
-                        {currentWeek === 0
-                            ? 'Home Package 시작'
-                            : `Week ${currentWeek} of ${releaseWeeks}`}
-                    </h2>
-                    <p className="page-copy" style={{ marginTop: 0 }}>
-                        시작일 {formatDate(homePackage.starts_at)} · 현재 {unlockedCount}곡 이용 가능
-                    </p>
+            <section className="section home-package-status-wrap">
+                <div className="content-card home-package-status-card">
+                    <div>
+                        <p className="eyebrow">MY HOME PACKAGE</p>
+                        <h2>
+                            {homePackagePlanLabel(homePackage.plan_code)}
+                        </h2>
+                        <p className="muted">
+                            {programs} · 현재 {unlockedCount}곡 이용 가능
+                        </p>
+                    </div>
 
-                    <div
-                        style={{
-                            height: 10,
-                            borderRadius: 999,
-                            background: '#f1e8dd',
-                            overflow: 'hidden',
-                            marginTop: 16
-                        }}
-                    >
-                        <div
+                    <div className="home-package-status-meta">
+                        <span>
+                            {currentWeek === 0
+                                ? 'START'
+                                : `WEEK ${currentWeek}`}
+                        </span>
+                        <small>
+                            {formatDate(homePackage.starts_at)} 시작
+                        </small>
+                    </div>
+
+                    <div className="home-package-progress" aria-label="Home Package progress">
+                        <span
                             style={{
-                                width: `${releaseWeeks > 0 ? Math.min(100, (currentWeek / releaseWeeks) * 100) : 0}%`,
-                                height: '100%',
-                                borderRadius: 999,
-                                background: 'linear-gradient(90deg,#f7bd4d,#f29a73)'
+                                width: `${releaseWeeks > 0
+                                    ? Math.min(100, (currentWeek / releaseWeeks) * 100)
+                                    : 0}%`
                             }}
                         />
                     </div>
@@ -259,12 +259,12 @@ export default async function HomePackagePage() {
             />
 
             {dashboard.nextSongs?.length ? (
-                <section className="section">
-                    <div className="section-head">
+                <section className="section home-next-section">
+                    <div className="section-head home-section-head">
                         <div>
                             <p className="eyebrow">COMING NEXT</p>
-                            <h2>다음에 열릴 노래</h2>
-                            <p className="muted" style={{ margin: '6px 0 0' }}>
+                            <h2><span className="home-section-icon">✨</span>다음에 열릴 노래</h2>
+                            <p className="muted home-section-description">
                                 {dashboard.nextUnlockAt
                                     ? `${formatDate(dashboard.nextUnlockAt)}에 자동으로 열려요.`
                                     : '다음 공개를 준비하고 있어요.'}
@@ -272,76 +272,43 @@ export default async function HomePackagePage() {
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gap: 10 }}>
+                    <div className="home-next-list">
                         {dashboard.nextSongs.map((song) => (
                             <article
                                 key={song.id || `${song.unlockWeek}-${song.position}`}
-                                className="content-card"
-                                style={{ padding: 16 }}
+                                className="content-card home-next-card"
                             >
-                                <div
-                                    style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '64px minmax(0,1fr)',
-                                        gap: 14,
-                                        alignItems: 'center'
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            width: 64,
-                                            height: 64,
-                                            borderRadius: 18,
-                                            display: 'grid',
-                                            placeItems: 'center',
-                                            background: 'linear-gradient(145deg,#fff6db,#fff0ee)',
-                                            fontSize: 32,
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        {song.emoji || '🎵'}
-                                        <span
-                                            style={{
-                                                position: 'absolute',
-                                                right: -4,
-                                                bottom: -4,
-                                                fontSize: 18
-                                            }}
-                                        >
-                                            🔒
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <strong style={{ display: 'block', fontSize: 16 }}>
-                                            {song.title}
-                                        </strong>
-                                        <span className="muted" style={{ fontSize: 12 }}>
-                                            Week {song.unlockWeek}
-                                            {nextDays !== null ? ` · ${nextDays}일 후 오픈` : ''}
-                                        </span>
-                                    </div>
+                                <div className="home-song-art muted-art">
+                                    {song.emoji || '🎵'}
+                                    <span className="home-lock">🔒</span>
+                                </div>
+                                <div className="home-song-copy">
+                                    <strong>{song.title}</strong>
+                                    <span className="muted">
+                                        Week {song.unlockWeek}
+                                        {nextDays !== null ? ` · ${nextDays}일 후 오픈` : ''}
+                                    </span>
                                 </div>
                             </article>
                         ))}
                     </div>
                 </section>
-            ) : (
-                <section className="section">
-                    <div className="content-card" style={{ textAlign: 'center' }}>
-                        <p className="eyebrow">HOME PACKAGE</p>
-                        <h2>현재 예정된 곡을 모두 받았어요 🎉</h2>
-                        <p className="page-copy">
-                            지금까지 열린 노래는 계속 다시 들을 수 있어요.
-                        </p>
-                    </div>
-                </section>
-            )}
+            ) : null}
 
-            <div style={{ padding: '0 18px 36px' }}>
+            <section className="home-cheer-banner" aria-label="Dear Sunshine message">
+                <div>
+                    <strong>노래는 놀이가 되고,</strong>
+                    <strong>놀이는 영어가 돼요!</strong>
+                </div>
+                <span className="home-cheer-heart">♡</span>
+                <span className="home-cheer-bear">🧸</span>
+            </section>
+
+            <div className="home-my-link-wrap">
                 <Link href="/my" className="secondary-button wide">
                     MY로 돌아가기
                 </Link>
             </div>
-        </>
+        </div>
     );
 }

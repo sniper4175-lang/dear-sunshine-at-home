@@ -579,20 +579,22 @@ export default async function LibraryPage() {
 
     return (
 
-        <LibraryClient
-            songs={
-                songs
-            }
-            loggedIn={
-                loggedIn
-            }
-            membership={
-                membership
-            }
-            userPrograms={
-                userPrograms
-            }
-        />
+        <div className="ds-library-mobile-skin">
+            <LibraryClient
+                songs={
+                    songs
+                }
+                loggedIn={
+                    loggedIn
+                }
+                membership={
+                    membership
+                }
+                userPrograms={
+                    userPrograms
+                }
+            />
+        </div>
 
     );
 
