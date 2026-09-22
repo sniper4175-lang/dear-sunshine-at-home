@@ -16,6 +16,34 @@ import SongResourceBundleServer, {
 
 export const dynamic = 'force-dynamic';
 
+
+function mapRawSong(row) {
+    if (!row) {
+        return null;
+    }
+
+    return {
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        subtitle: row.subtitle || '',
+        program: row.program || '',
+        category: row.category || '',
+        emoji: row.emoji || '🎵',
+        audioPath: row.audio_path || '',
+        lyricsPath: row.lyrics_path || '',
+        printablePath: row.printable_path || '',
+        playIdeasPath: row.play_ideas_path || '',
+        lyrics: Array.isArray(row.lyrics) ? row.lyrics : [],
+        activities: Array.isArray(row.activities) ? row.activities : [],
+        popular: Boolean(row.is_popular),
+        premiumOnly: Boolean(row.premium_only),
+        published: Boolean(row.is_published),
+        isPublished: Boolean(row.is_published),
+        releaseDate: row.release_date || ''
+    };
+}
+
 export default async function SongPage({ params }) {
     const { slug } = await params;
 
@@ -40,7 +68,7 @@ export default async function SongPage({ params }) {
         }),
         db
             .from('ds_content_songs')
-            .select('id,slug')
+            .select('*')
             .eq('slug', slug)
             .maybeSingle()
     ]);
@@ -55,6 +83,13 @@ export default async function SongPage({ params }) {
             membership?.home_package_unlocked_song_ids
         )
             ? membership.home_package_unlocked_song_ids
+            : [];
+
+    const accountBonusSongIds =
+        Array.isArray(
+            membership?.account_bonus_song_ids
+        )
+            ? membership.account_bonus_song_ids
             : [];
 
     const rawSong =
@@ -75,11 +110,26 @@ export default async function SongPage({ params }) {
         );
     }
 
+    const allowedByAccountBonus =
+        Boolean(
+            user &&
+            rawSong?.id &&
+            accountBonusSongIds.includes(rawSong.id)
+        );
+
     /*
-     * Home Package 곡이 아니라면 기존 Song Club 규칙을 그대로 사용합니다.
-     * 따라서 Song Club 비공개곡은 일반 /song 주소에서는 계속 숨겨집니다.
+     * Song Club 비공개곡이라도 관리자가 이 이메일 계정에 직접 지급한
+     * 추가곡이면 원본 row로 상세페이지를 열 수 있습니다.
      */
-    if (!song) {
+    const effectiveSong =
+        song ||
+        (
+            allowedByAccountBonus
+                ? mapRawSong(rawSong)
+                : null
+        );
+
+    if (!effectiveSong) {
         notFound();
     }
 
@@ -112,7 +162,7 @@ export default async function SongPage({ params }) {
     }
 
     const accessible = canAccessSong(
-        song,
+        effectiveSong,
         membership,
         userPrograms
     );
@@ -143,7 +193,7 @@ export default async function SongPage({ params }) {
     } else {
         lockedTitle = '현재 이용할 수 없는 콘텐츠예요';
         lockedDescription =
-            `${song.program} 수강 회원만 이용할 수 있는 콘텐츠예요.`;
+            `${effectiveSong.program} 수강 회원만 이용할 수 있는 콘텐츠예요.`;
         lockedButton = '멤버십 보기';
         lockedHref = '/membership';
     }
@@ -165,31 +215,31 @@ export default async function SongPage({ params }) {
             </Link>
 
             <div className="song-cover large">
-                <span>{song.emoji || '🎵'}</span>
+                <span>{effectiveSong.emoji || '🎵'}</span>
             </div>
 
-            {song.program && (
+            {effectiveSong.program && (
                 <p className="eyebrow">
-                    {song.program}
+                    {effectiveSong.program}
                 </p>
             )}
 
-            {song.category && (
+            {effectiveSong.category && (
                 <p
                     className="eyebrow"
                     style={{
                         marginTop: 4
                     }}
                 >
-                    {song.category}
+                    {effectiveSong.category}
                 </p>
             )}
 
-            <h1>{song.title}</h1>
+            <h1>{effectiveSong.title}</h1>
 
-            {song.subtitle && (
+            {effectiveSong.subtitle && (
                 <p className="page-copy">
-                    {song.subtitle}
+                    {effectiveSong.subtitle}
                 </p>
             )}
 
@@ -200,8 +250,8 @@ export default async function SongPage({ params }) {
                      * 상세페이지 최초 표시를 음원 요청이 막지 않습니다.
                      */}
                     <AudioPlayer
-                        title={song.title}
-                        slug={song.slug}
+                        title={effectiveSong.title}
+                        slug={effectiveSong.slug}
                     />
 
                     {/*
@@ -214,13 +264,13 @@ export default async function SongPage({ params }) {
                         }
                     >
                         <SongResourceBundleServer
-                            song={song}
+                            song={effectiveSong}
                             scope="song-club"
                         />
                     </Suspense>
 
-                    {Array.isArray(song.lyrics) &&
-                        song.lyrics.length > 0 && (
+                    {Array.isArray(effectiveSong.lyrics) &&
+                        effectiveSong.lyrics.length > 0 && (
                             <section
                                 className="content-card"
                                 style={{
@@ -234,7 +284,7 @@ export default async function SongPage({ params }) {
                                 <h2>가사</h2>
 
                                 <div className="lyrics">
-                                    {song.lyrics.map(
+                                    {effectiveSong.lyrics.map(
                                         (line, index) => (
                                             <p key={index}>
                                                 {line}
@@ -245,8 +295,8 @@ export default async function SongPage({ params }) {
                             </section>
                         )}
 
-                    {Array.isArray(song.activities) &&
-                        song.activities.length > 0 && (
+                    {Array.isArray(effectiveSong.activities) &&
+                        effectiveSong.activities.length > 0 && (
                             <section
                                 className="content-card"
                                 style={{
@@ -262,11 +312,11 @@ export default async function SongPage({ params }) {
                                 <h2>이렇게 놀아요</h2>
 
                                 <div className="steps">
-                                    {song.activities.map(
+                                    {effectiveSong.activities.map(
                                         (activity, index) => (
                                             <div
                                                 className="step"
-                                                key={`${song.slug}-${index}`}
+                                                key={`${effectiveSong.slug}-${index}`}
                                             >
                                                 <span>
                                                     {index + 1}

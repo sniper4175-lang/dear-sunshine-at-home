@@ -108,8 +108,17 @@ export async function GET(request) {
             ? homePackage.unlocked_song_ids
             : [];
 
+        const accountBonusSongIds = Array.isArray(
+            membership?.account_bonus_song_ids
+        )
+            ? membership.account_bonus_song_ids
+            : [];
+
         const allowedByHomePackage =
             homeUnlockedIds.includes(song.id);
+
+        const allowedByAccountBonus =
+            accountBonusSongIds.includes(song.id);
 
         const publishedForSongClub =
             Boolean(song.is_published) &&
@@ -156,6 +165,7 @@ export async function GET(request) {
         }
 
         if (
+            !allowedByAccountBonus &&
             !allowedByHomePackage &&
             !allowedBySongClub
         ) {

@@ -208,9 +208,20 @@ async function userCanAccessSong({
     db,
     song,
     user,
+    membership,
     songClubMembership,
     homePackage
 }) {
+    const accountBonusSongIds = Array.isArray(
+        membership?.account_bonus_song_ids
+    )
+        ? membership.account_bonus_song_ids
+        : [];
+
+    if (accountBonusSongIds.includes(song.id)) {
+        return true;
+    }
+
     const unlockedHomeSongIds = Array.isArray(
         homePackage?.unlocked_song_ids
     )
@@ -248,7 +259,7 @@ async function userCanAccessSong({
             id: song.id,
             program: song.program
         },
-        songClubMembership,
+        membership || songClubMembership,
         userPrograms
     );
 }
@@ -294,24 +305,14 @@ async function handleDirectResource(request, searchParams) {
         }),
         db
             .from('ds_content_songs')
-            .select(`
-                id,
-                slug,
-                title,
-                program,
-                audio_path,
-                lyrics_path,
-                printable_path,
-                play_ideas_path,
-                release_date,
-                is_published
-            `)
+            .select('*')
             .eq('slug', slug)
             .maybeSingle()
     ]);
 
     const {
         user,
+        membership,
         songClubMembership,
         homePackage
     } = membershipState;
@@ -351,6 +352,7 @@ async function handleDirectResource(request, searchParams) {
         db,
         song,
         user,
+        membership,
         songClubMembership,
         homePackage
     });
