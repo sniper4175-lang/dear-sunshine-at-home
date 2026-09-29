@@ -22,7 +22,7 @@ export async function GET(request) {
 
         if (!membership) {
             return NextResponse.json(
-                { error: '이용 가능한 Song Club 멤버십이 없습니다.' },
+                { error: '이용 가능한 이용권이 없습니다.' },
                 { status: 403 }
             );
         }

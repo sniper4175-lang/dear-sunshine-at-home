@@ -33,7 +33,7 @@ export default function DesktopNav() {
   const items = [
     { href: '/', label: '홈', key: 'home' },
     { href: '/library', label: '노래', key: 'library' },
-    { href: '/membership', label: 'Song Club', key: 'membership' },
+    { href: '/membership', label: '이용권', key: 'membership' },
     { href: '/my', label: 'MY', key: 'my' },
   ];
 

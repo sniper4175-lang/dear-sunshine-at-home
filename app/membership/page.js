@@ -2,6 +2,8 @@ import {
     getCurrentMembership
 } from '../../lib/membership';
 
+import { redirect } from 'next/navigation';
+
 import MembershipClient
     from '../../components/MembershipClient';
 
@@ -18,6 +20,13 @@ export default async function MembershipPage() {
         billingProfile
     } =
         await getCurrentMembership();
+
+
+    if (
+        membership?.product_type === 'home_package'
+    ) {
+        redirect('/my');
+    }
 
 
     return (

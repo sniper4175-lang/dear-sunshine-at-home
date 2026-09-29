@@ -460,9 +460,11 @@ export default async function HomePage() {
                     className="plan-pill"
                 >
                     {
-                        membership
-                            ? '☀️ Song Club 이용 중'
-                            : loggedIn
+                        membership?.product_type === 'combined'
+                            ? '☀️ Song Club + 🏠 Home Package 이용 중'
+                            : membership
+                                ? '☀️ Song Club 이용 중'
+                                : loggedIn
                                 ? 'MY에서 이용권 확인'
                                 : '로그인하기'
                     }

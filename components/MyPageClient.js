@@ -407,9 +407,9 @@ export default function MyPageClient({
                     }}
                 >
                     {membership?.product_type === 'home_package'
-                        ? 'Dear Sunshine Song Club 계정'
+                        ? 'Dear Sunshine Home Package 계정'
                         : membership?.product_type === 'combined'
-                            ? 'Dear Sunshine Song Club 계정'
+                            ? 'Dear Sunshine Song Club + Home Package 계정'
                             : 'Dear Sunshine Song Club 계정'}
                 </p>
 
@@ -460,9 +460,9 @@ export default function MyPageClient({
                                     }}
                                 >
                                     {membership?.product_type === 'home_package'
-                                        ? '☀️ Song Club 이용 중'
+                                        ? '🏠 Home Package 이용 중'
                                         : membership?.product_type === 'combined'
-                                            ? '☀️ Song Club 이용 중'
+                                            ? '☀️ Song Club + 🏠 Home Package 이용 중'
                                             : '☀️ Song Club 이용 중'}
                                 </h2>
 
@@ -579,7 +579,7 @@ export default function MyPageClient({
                             }}
                         >
                             {membership?.product_type === 'home_package'
-                                ? 'Song Club 열기'
+                                ? 'Home Package 열기'
                                 : '이용권 자세히 보기'}
                         </Link>
 
@@ -589,7 +589,7 @@ export default function MyPageClient({
                                 className="secondary-button wide"
                                 style={{ marginTop: 10 }}
                             >
-                                ☀️ Song Club 콘텐츠 열기
+                                🏠 Home Package 열기
                             </Link>
                         )}
 
@@ -670,7 +670,7 @@ export default function MyPageClient({
                     href="/terms"
                     icon="📄"
                     title="이용약관"
-                    description="Song Club 서비스 이용약관이에요."
+                    description="Dear Sunshine Home 서비스 이용약관이에요."
                 />
 
                 <MenuLink

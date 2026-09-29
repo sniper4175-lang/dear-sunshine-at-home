@@ -38,14 +38,14 @@ export default function PrivacyPage() {
                 </h2>
 
                 <p>
-                    Dear Sunshine Monthly Song Club 이용을 위해
+                    Dear Sunshine Home 이용을 위해
                     다음과 같은 개인정보를 수집할 수 있습니다.
                 </p>
 
                 <ul>
                     <li>이메일 주소</li>
                     <li>회원 식별정보</li>
-                    <li>Song Club 이용권 상태 및 이용기간</li>
+                    <li>이용권 유형, 상태 및 이용기간</li>
                     <li>이용 프로그램 정보 (Sunshine Toddler / Melody Book Club)</li>
                     <li>서비스 이용기록 및 로그인 기록</li>
                 </ul>
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
 
                 <ul>
                     <li>회원가입 및 본인 계정 확인</li>
-                    <li>Song Club 이용권 활성화 및 이용기간 관리</li>
+                    <li>이용권 활성화 및 이용기간 관리</li>
                     <li>회원별 이용 가능한 콘텐츠 제공</li>
                     <li>서비스 관련 안내 및 고객문의 응대</li>
                     <li>서비스 안정성 및 오류 확인</li>

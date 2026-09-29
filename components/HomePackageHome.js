@@ -58,7 +58,7 @@ function HomePackageSongCard({ song }) {
 
             <div className="home-song-copy">
                 <p className="eyebrow">
-                    {song.program || 'SONG CLUB'}
+                    {song.program || 'HOME PACKAGE'}
                 </p>
                 <strong>{song.title}</strong>
                 <span className="muted">
@@ -166,7 +166,7 @@ export default async function HomePackageHome({ homePackage }) {
             <section className="section home-package-status-wrap">
                 <div className="content-card home-package-status-card">
                     <div>
-                        <p className="eyebrow">MY SONG CLUB</p>
+                        <p className="eyebrow">MY HOME PACKAGE</p>
                         <h2>
                             {homePackagePlanLabel(homePackage.plan_code)}
                         </h2>
@@ -186,7 +186,7 @@ export default async function HomePackageHome({ homePackage }) {
                         </small>
                     </div>
 
-                    <div className="home-package-progress" aria-label="Song Club progress">
+                    <div className="home-package-progress" aria-label="Home Package progress">
                         <span
                             style={{
                                 width: `${releaseWeeks > 0
@@ -201,7 +201,7 @@ export default async function HomePackageHome({ homePackage }) {
             <SongSection
                 eyebrow="WELCOME SONGS"
                 title="처음부터 함께하는 기본곡"
-                description="Song Club을 시작하면 바로 열리는 노래예요."
+                description="Home Package를 시작하면 바로 열리는 노래예요."
                 songs={dashboard.baseSongs}
             />
 
