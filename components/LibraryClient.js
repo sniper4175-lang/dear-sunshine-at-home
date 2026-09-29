@@ -9,8 +9,30 @@ import {
     useRouter
 } from 'next/navigation';
 
-import PlaylistPlayer
-    from './PlaylistPlayer';
+import dynamic from 'next/dynamic';
+
+
+const PlaylistPlayer = dynamic(
+    () => import('./PlaylistPlayer'),
+    {
+        loading: () => (
+            <div
+                className="content-card"
+                style={{
+                    textAlign: 'center',
+                    padding: '28px 18px'
+                }}
+            >
+                <p
+                    className="muted"
+                    style={{ margin: 0 }}
+                >
+                    플레이리스트를 불러오는 중이에요…
+                </p>
+            </div>
+        )
+    }
+);
 
 
 const PROGRAM_OPTIONS = [

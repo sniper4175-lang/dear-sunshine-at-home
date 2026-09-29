@@ -700,7 +700,7 @@ export default function MyPageClient({
                 </h2>
 
                 <p className="page-copy">
-                    Dear Sunshine at Home을 홈 화면에 추가하면 앱처럼 빠르게 열 수 있어요.
+                    Dear Sunshine Home을 홈 화면에 추가하면 앱처럼 빠르게 열 수 있어요.
                 </p>
 
                 <details
@@ -737,7 +737,7 @@ export default function MyPageClient({
                                 13
                         }}
                     >
-                        Safari에서 Dear Sunshine at Home을 연 뒤 공유 버튼을 누르고
+                        Safari에서 Dear Sunshine Home을 연 뒤 공유 버튼을 누르고
                         ‘홈 화면에 추가’를 선택해 주세요.
                     </p>
                 </details>
@@ -776,7 +776,7 @@ export default function MyPageClient({
                                 13
                         }}
                     >
-                        Chrome에서 Dear Sunshine at Home을 연 뒤 오른쪽 상단 메뉴를 누르고
+                        Chrome에서 Dear Sunshine Home을 연 뒤 오른쪽 상단 메뉴를 누르고
                         ‘홈 화면에 추가’ 또는 ‘앱 설치’를 선택해 주세요.
                     </p>
                 </details>

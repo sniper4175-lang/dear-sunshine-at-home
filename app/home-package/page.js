@@ -112,7 +112,9 @@ function SongSection({ eyebrow, title, description, songs }) {
 }
 
 export default async function HomePackagePage() {
-    const { user, homePackage } = await getCurrentMembership();
+    const { user, homePackage } = await getCurrentMembership({
+        includeBillingProfile: false
+    });
 
     if (!user) {
         redirect('/login?next=/home-package');

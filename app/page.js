@@ -170,8 +170,13 @@ function EmptyMonth({
 
 export default async function HomePage() {
 
-    const songs =
-        await getSongs();
+    /*
+     * 공개곡 조회와 인증/회원권 조회는 서로 독립적이므로
+     * 동시에 시작합니다. Home Package 전용 계정은 회원권 확인이
+     * 끝나는 즉시 redirect할 수 있어 불필요한 대기를 줄입니다.
+     */
+    const songsPromise =
+        getSongs();
 
 
     const {
@@ -180,7 +185,9 @@ export default async function HomePage() {
         songClubMembership,
         homePackage
     } =
-        await getCurrentMembership();
+        await getCurrentMembership({
+            includeBillingProfile: false
+        });
 
 
     const loggedIn =
@@ -198,6 +205,10 @@ export default async function HomePage() {
             '/home-package'
         );
     }
+
+
+    const songs =
+        await songsPromise;
 
 
     const db =

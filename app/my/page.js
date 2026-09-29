@@ -16,7 +16,9 @@ export default async function MyPage() {
         user,
         membership
     } =
-        await getCurrentMembership();
+        await getCurrentMembership({
+            includeBillingProfile: false
+        });
 
 
     return (
