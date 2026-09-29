@@ -37,7 +37,7 @@ export default function TermsPage() {
                         Dear Sunshine Home은 디어 선샤인의 영어 음원과 가사지, 활동자료, 놀이 아이디어 등을 온라인으로 제공하는 디지털 서비스입니다.
                     </p>
                     <p style={pStyle}>
-                        서비스 상품은 <strong>Monthly Song Club</strong>과 <strong>Home Package</strong>로 구분되며, 회원에게 활성화된 상품과 클래스에 따라 이용 가능한 콘텐츠가 달라질 수 있습니다.
+                        서비스는 <strong>Song Club</strong>으로 제공되며, 회원에게 활성화된 이용권 유형과 클래스에 따라 이용 가능한 콘텐츠가 달라질 수 있습니다.
                     </p>
                 </section>
 
@@ -49,12 +49,12 @@ export default function TermsPage() {
                 </section>
 
                 <section style={sectionStyle}>
-                    <h2 style={h2Style}>3. Home Package</h2>
-                    <p style={pStyle}>Home Package는 수강권과 연계하여 가정에서도 Dear Sunshine 콘텐츠를 이어서 이용할 수 있도록 제공되는 디지털 콘텐츠 이용권입니다.</p>
-                    <p style={pStyle}><strong>8회 Home Package</strong>: 기본 이용기간 10주</p>
-                    <p style={pStyle}><strong>12회 Home Package</strong>: 기본 이용기간 15주</p>
-                    <p style={pStyle}><strong>20회 Home Package</strong>: 기본 이용기간 25주</p>
-                    <p style={pStyle}>Home Package에서는 상품에 따라 기본곡과 주차별 공개곡, 추가곡 또는 보너스곡이 제공될 수 있습니다.</p>
+                    <h2 style={h2Style}>3. 수강 연계 Song Club</h2>
+                    <p style={pStyle}>수강 연계 Song Club은 수강권과 연계하여 가정에서도 Dear Sunshine 콘텐츠를 이어서 이용할 수 있도록 제공되는 디지털 콘텐츠 이용권입니다.</p>
+                    <p style={pStyle}><strong>8회 Song Club</strong>: 기본 이용기간 10주</p>
+                    <p style={pStyle}><strong>12회 Song Club</strong>: 기본 이용기간 15주</p>
+                    <p style={pStyle}><strong>20회 Song Club</strong>: 기본 이용기간 25주</p>
+                    <p style={pStyle}>수강 연계 Song Club에서는 상품에 따라 기본곡과 주차별 공개곡, 추가곡 또는 보너스곡이 제공될 수 있습니다.</p>
                     <p style={pStyle}>콘텐츠 공개 구성과 공개 시점은 센터의 운영 계획에 따라 달라질 수 있으며, 회원별 시작일과 종료일은 관리자 화면에 등록된 정보를 기준으로 합니다.</p>
                 </section>
 
@@ -80,7 +80,7 @@ export default function TermsPage() {
                 </section>
 
                 <footer style={{ marginTop: 42, paddingTop: 22, borderTop: '1px solid #eadfd3', ...pStyle, fontSize: 12 }}>
-                    Dear Sunshine Home · Monthly Song Club · Home Package
+                    Dear Sunshine Home · Song Club
                 </footer>
             </article>
         </main>

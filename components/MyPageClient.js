@@ -407,9 +407,9 @@ export default function MyPageClient({
                     }}
                 >
                     {membership?.product_type === 'home_package'
-                        ? 'Dear Sunshine Home Package 계정'
+                        ? 'Dear Sunshine Song Club 계정'
                         : membership?.product_type === 'combined'
-                            ? 'Dear Sunshine Song Club + Home Package 계정'
+                            ? 'Dear Sunshine Song Club 계정'
                             : 'Dear Sunshine Song Club 계정'}
                 </p>
 
@@ -460,9 +460,9 @@ export default function MyPageClient({
                                     }}
                                 >
                                     {membership?.product_type === 'home_package'
-                                        ? '🏠 Home Package 이용 중'
+                                        ? '☀️ Song Club 이용 중'
                                         : membership?.product_type === 'combined'
-                                            ? '☀️ Song Club + 🏠 Home Package 이용 중'
+                                            ? '☀️ Song Club 이용 중'
                                             : '☀️ Song Club 이용 중'}
                                 </h2>
 
@@ -579,7 +579,7 @@ export default function MyPageClient({
                             }}
                         >
                             {membership?.product_type === 'home_package'
-                                ? 'Home Package 열기'
+                                ? 'Song Club 열기'
                                 : '이용권 자세히 보기'}
                         </Link>
 
@@ -589,7 +589,7 @@ export default function MyPageClient({
                                 className="secondary-button wide"
                                 style={{ marginTop: 10 }}
                             >
-                                🏠 Home Package 열기
+                                ☀️ Song Club 콘텐츠 열기
                             </Link>
                         )}
 

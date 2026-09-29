@@ -33,7 +33,7 @@ export default function RefundPage() {
 
                 <h1 style={{ margin: '24px 0 8px', fontSize: 30 }}>이용권·환불 안내</h1>
                 <p style={{ ...pStyle, marginTop: 0 }}>
-                    Dear Sunshine Home의 Monthly Song Club 및 Home Package 이용권 운영 기준입니다.
+                    Dear Sunshine Home의 Song Club 이용권 운영 기준입니다.
                 </p>
 
                 <section style={cardStyle}>
@@ -45,18 +45,18 @@ export default function RefundPage() {
                 </section>
 
                 <section style={cardStyle}>
-                    <h2 style={h2Style}>Home Package 이용권</h2>
-                    <p style={pStyle}><strong>8회 Home Package</strong> · 기본 이용기간 10주</p>
-                    <p style={pStyle}><strong>12회 Home Package</strong> · 기본 이용기간 15주</p>
-                    <p style={pStyle}><strong>20회 Home Package</strong> · 기본 이용기간 25주</p>
+                    <h2 style={h2Style}>수강 연계 Song Club 이용권</h2>
+                    <p style={pStyle}><strong>8회 Song Club</strong> · 기본 이용기간 10주</p>
+                    <p style={pStyle}><strong>12회 Song Club</strong> · 기본 이용기간 15주</p>
+                    <p style={pStyle}><strong>20회 Song Club</strong> · 기본 이용기간 25주</p>
                     <p style={pStyle}>시작일 당일 기본곡과 1주차 콘텐츠가 공개되며, 이후 주차별 콘텐츠는 7일 단위로 순차 공개됩니다.</p>
                     <p style={pStyle}>상품에 따라 추가 기본곡, 주차별 추가곡 또는 보너스곡이 함께 제공될 수 있습니다.</p>
                     <p style={pStyle}>센터와 협의된 경우 관리자에 등록된 종료일을 조정할 수 있으며, 실제 이용 권한은 등록된 시작일·종료일을 기준으로 적용됩니다.</p>
                 </section>
 
                 <section style={cardStyle}>
-                    <h2 style={h2Style}>Home Package 변경·환불 기준</h2>
-                    <p style={pStyle}>Home Package는 음원, 가사지, 활동자료, 놀이 아이디어 등이 순차 제공되는 디지털 콘텐츠 이용권입니다.</p>
+                    <h2 style={h2Style}>수강 연계 Song Club 변경·환불 기준</h2>
+                    <p style={pStyle}>수강 연계 Song Club은 음원, 가사지, 활동자료, 놀이 아이디어 등이 순차 제공되는 디지털 콘텐츠 이용권입니다.</p>
                     <p style={pStyle}><strong>이용 시작 전</strong>: 콘텐츠 이용이 시작되지 않은 상태에서 취소를 요청하는 경우 결제 내역을 확인하여 환불을 안내합니다.</p>
                     <p style={pStyle}><strong>이용 시작 후</strong>: 이미 공개·제공된 콘텐츠와 이용기간 경과분이 있는 경우, 해당 이용분을 반영하여 환불 가능 금액을 안내할 수 있습니다.</p>
                     <p style={pStyle}><strong>이용기간 종료 후</strong>: 이용기간이 종료된 이용권은 환불이 제한될 수 있습니다.</p>
@@ -66,7 +66,7 @@ export default function RefundPage() {
 
                 <section style={cardStyle}>
                     <h2 style={h2Style}>일시중지·이용기간 변경</h2>
-                    <p style={pStyle}>Home Package의 일시중지 또는 이용기간 변경은 자동으로 적용되지 않으며, 필요한 경우 센터로 문의해주세요.</p>
+                    <p style={pStyle}>수강 연계 Song Club의 일시중지 또는 이용기간 변경은 자동으로 적용되지 않으며, 필요한 경우 센터로 문의해주세요.</p>
                     <p style={pStyle}>센터와 협의하여 변경이 확정되면 관리자에 등록된 시작일·종료일을 수정하고, 수정된 기간을 기준으로 이용 권한이 적용됩니다.</p>
                 </section>
 
@@ -78,7 +78,7 @@ export default function RefundPage() {
                 </section>
 
                 <footer style={{ marginTop: 42, paddingTop: 22, borderTop: '1px solid #eadfd3', ...pStyle, fontSize: 12 }}>
-                    Dear Sunshine Home · Monthly Song Club · Home Package
+                    Dear Sunshine Home · Song Club
                 </footer>
             </article>
         </main>

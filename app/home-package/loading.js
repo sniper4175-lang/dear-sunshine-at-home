@@ -2,9 +2,9 @@ export default function HomePackageLoading() {
     return (
         <section className="section top-section">
             <p className="eyebrow">
-                DEAR SUNSHINE HOME PACKAGE
+                DEAR SUNSHINE SONG CLUB
             </p>
-            <h1>Home Package</h1>
+            <h1>Song Club</h1>
 
             <div
                 className="content-card"
@@ -20,13 +20,13 @@ export default function HomePackageLoading() {
                         marginBottom: 10
                     }}
                 >
-                    🏠
+                    ☀️
                 </div>
                 <p
                     className="muted"
                     style={{ margin: 0 }}
                 >
-                    Home Package를 불러오는 중이에요…
+                    Song Club을 불러오는 중이에요…
                 </p>
             </div>
         </section>

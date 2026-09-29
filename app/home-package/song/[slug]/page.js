@@ -93,7 +93,7 @@ export default async function HomePackageSongPage({ params }) {
                     className="back-link"
                     href="/home-package"
                 >
-                    ← Home Package
+                    ← Song Club
                 </Link>
 
                 <div
@@ -117,7 +117,7 @@ export default async function HomePackageSongPage({ params }) {
                     </h2>
 
                     <p className="page-copy">
-                        Home Package 시작일과 주차에 맞춰 자동으로 공개됩니다.
+                        Song Club 시작일과 주차에 맞춰 자동으로 공개됩니다.
                     </p>
                 </div>
             </section>
@@ -130,7 +130,7 @@ export default async function HomePackageSongPage({ params }) {
                 className="back-link"
                 href="/home-package"
             >
-                ← Home Package
+                ← Song Club
             </Link>
 
             <div className="song-cover large">
@@ -225,7 +225,7 @@ export default async function HomePackageSongPage({ params }) {
                         }}
                     >
                         <p className="eyebrow">
-                            HOME PACKAGE
+                            SONG CLUB
                         </p>
 
                         <h2>

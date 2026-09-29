@@ -62,7 +62,7 @@ function HomePackageSongCard({ song }) {
 
             <div className="home-song-copy">
                 <p className="eyebrow">
-                    {song.program || 'HOME PACKAGE'}
+                    {song.program || 'SONG CLUB'}
                 </p>
                 <strong>{song.title}</strong>
                 <span className="muted">
@@ -112,12 +112,16 @@ function SongSection({ eyebrow, title, description, songs }) {
 }
 
 export default async function HomePackagePage() {
-    const { user, homePackage } = await getCurrentMembership({
+    const { user, homePackage, songClubMembership } = await getCurrentMembership({
         includeBillingProfile: false
     });
 
     if (!user) {
         redirect('/login?next=/home-package');
+    }
+
+    if (!homePackage && songClubMembership) {
+        redirect('/library');
     }
 
     if (!homePackage) {
@@ -132,13 +136,13 @@ export default async function HomePackagePage() {
                 </header>
 
                 <section className="section top-section">
-                    <p className="eyebrow">DEAR SUNSHINE HOME PACKAGE</p>
-                    <h1>Home Package</h1>
+                    <p className="eyebrow">DEAR SUNSHINE SONG CLUB</p>
+                    <h1>Song Club</h1>
                     <div className="content-card" style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 42, marginBottom: 10 }}>🏠</div>
-                        <h2>등록된 Home Package가 없어요</h2>
+                        <div style={{ fontSize: 42, marginBottom: 10 }}>☀️</div>
+                        <h2>등록된 Song Club이 없어요</h2>
                         <p className="page-copy">
-                            Home Package를 구매한 계정이라면 센터에서 이용권 연결 후 바로 사용할 수 있어요.
+                            Song Club 이용권이 등록된 계정이라면 센터에서 이용권 연결 후 바로 사용할 수 있어요.
                         </p>
                         <Link href="/my" className="primary-button">
                             MY 확인하기
@@ -207,7 +211,7 @@ export default async function HomePackagePage() {
             <section className="section home-package-status-wrap">
                 <div className="content-card home-package-status-card">
                     <div>
-                        <p className="eyebrow">MY HOME PACKAGE</p>
+                        <p className="eyebrow">MY SONG CLUB</p>
                         <h2>
                             {homePackagePlanLabel(homePackage.plan_code)}
                         </h2>
@@ -227,7 +231,7 @@ export default async function HomePackagePage() {
                         </small>
                     </div>
 
-                    <div className="home-package-progress" aria-label="Home Package progress">
+                    <div className="home-package-progress" aria-label="Song Club progress">
                         <span
                             style={{
                                 width: `${releaseWeeks > 0
@@ -242,7 +246,7 @@ export default async function HomePackagePage() {
             <SongSection
                 eyebrow="WELCOME SONGS"
                 title="처음부터 함께하는 기본곡"
-                description="Home Package를 시작하면 바로 열리는 노래예요."
+                description="Song Club을 시작하면 바로 열리는 노래예요."
                 songs={dashboard.baseSongs}
             />
 

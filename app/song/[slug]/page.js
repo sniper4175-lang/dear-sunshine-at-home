@@ -187,8 +187,8 @@ export default async function SongPage({ params }) {
     } else if (membership?.product_type === 'home_package') {
         lockedTitle = '아직 열리지 않은 노래예요';
         lockedDescription =
-            'Home Package에서는 시작일을 기준으로 주차에 맞춰 노래가 자동으로 열려요.';
-        lockedButton = 'Home Package 보기';
+            'Song Club에서는 시작일을 기준으로 주차에 맞춰 노래가 자동으로 열려요.';
+        lockedButton = 'Song Club 보기';
         lockedHref = '/home-package';
     } else {
         lockedTitle = '현재 이용할 수 없는 콘텐츠예요';
@@ -211,7 +211,7 @@ export default async function SongPage({ params }) {
                         : '/library'
                 }
             >
-                ← {backToHomePackage ? 'Home Package' : '노래 목록'}
+                ← {backToHomePackage ? 'Song Club' : '노래 목록'}
             </Link>
 
             <div className="song-cover large">
@@ -305,7 +305,7 @@ export default async function SongPage({ params }) {
                             >
                                 <p className="eyebrow">
                                     {membership?.product_type === 'home_package'
-                                        ? 'HOME PACKAGE'
+                                        ? 'SONG CLUB'
                                         : 'MONTHLY SONG CLUB'}
                                 </p>
 

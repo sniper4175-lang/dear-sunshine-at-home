@@ -56,7 +56,7 @@ export default function SiteFooter() {
                         color: '#8a664f'
                     }}
                 >
-                    Monthly Song Club · Home Package
+                    Dear Sunshine Song Club
                 </div>
 
                 <div
