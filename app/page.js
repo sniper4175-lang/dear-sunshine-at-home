@@ -1,6 +1,4 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
-
 import {
     getSongs
 } from '../lib/content';
@@ -23,6 +21,9 @@ import {
 
 import SongCard
     from '../components/SongCard';
+
+import HomePackageHome
+    from '../components/HomePackageHome';
 
 
 export const dynamic =
@@ -201,8 +202,16 @@ export default async function HomePage() {
         homePackage &&
         !songClubMembership
     ) {
-        redirect(
-            '/home-package'
+        /*
+         * Home Package 전용 회원은 /home-package로 다시 이동시키지 않고
+         * 홈 주소(/)에서 바로 같은 홈 화면을 렌더링합니다.
+         * 이렇게 하면 / 로딩 -> /home-package 로딩처럼
+         * 로딩 화면이 두 번 연속 바뀌지 않습니다.
+         */
+        return (
+            <HomePackageHome
+                homePackage={homePackage}
+            />
         );
     }
 
