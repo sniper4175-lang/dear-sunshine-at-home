@@ -187,6 +187,58 @@ function SongSection({ eyebrow, title, description, songs, emptyText }) {
     );
 }
 
+function upcomingDateLabel(value) {
+    const raw = dateOnly(value);
+    if (!raw) return '공개 예정';
+
+    const [, month, day] = raw.split('-').map(Number);
+    if (!month || !day) return '공개 예정';
+
+    return `${month}월 ${day}일 공개 예정`;
+}
+
+function UpcomingSection({ songs = [] }) {
+    if (!songs.length) return null;
+
+    return (
+        <section className="section home-next-section song-club-home-section">
+            <div className="section-head home-section-head">
+                <div>
+                    <p className="eyebrow">COMING UP NEXT</p>
+                    <h2><span className="home-section-icon">✨</span>다음에 만나요</h2>
+                    <p className="muted home-section-description">
+                        곧 공개될 노래를 미리 만나보세요.
+                    </p>
+                </div>
+            </div>
+
+            <div className="home-next-list">
+                {songs.map((song) => (
+                    <article
+                        key={song.id || song.slug}
+                        className="content-card home-next-card"
+                    >
+                        <div className="home-song-art muted-art">
+                            {song.emoji || '🎵'}
+                            <span className="home-lock">✨</span>
+                        </div>
+                        <div className="home-song-copy">
+                            <p className="eyebrow">
+                                {song.program || 'SONG CLUB'}
+                            </p>
+                            <strong>{song.title}</strong>
+                            <span className="muted">
+                                {upcomingDateLabel(song.releaseDate)}
+                                {song.category ? ` · ${song.category}` : ''}
+                            </span>
+                        </div>
+                    </article>
+                ))}
+            </div>
+        </section>
+    );
+}
+
 const CATEGORY_TILES = [
     {
         icon: '🍎',
@@ -228,7 +280,8 @@ const CATEGORY_TILES = [
 export default function SongClubHome({
     membership,
     songs = [],
-    userPrograms = []
+    userPrograms = [],
+    upcomingSongs = []
 }) {
     const currentMonthKey = monthKeyKST();
 
@@ -241,6 +294,15 @@ export default function SongClubHome({
         .slice(0, 3);
 
     const welcomeSongs = pickWelcomeSongs(songs);
+
+    /*
+     * 관리자 콘텐츠 관리에서 '인기곡'으로 체크한 공개곡만
+     * 현재 회원이 이용할 수 있는 클래스 범위 안에서 표시합니다.
+     */
+    const popularSongs = songs
+        .filter((song) => song?.popular)
+        .slice(0, 3);
+
     const endLabel = formatDate(accessEnd(membership));
     const progress = progressPercent(membership);
 
@@ -325,6 +387,18 @@ export default function SongClubHome({
                 songs={currentMonthSongs}
                 emptyText="이번 달 신규곡을 준비하고 있어요."
             />
+
+            <UpcomingSection songs={upcomingSongs} />
+
+            {popularSongs.length > 0 ? (
+                <SongSection
+                    eyebrow="KIDS' FAVORITES"
+                    title="💛 아이들이 좋아해요"
+                    description="아이들이 특히 좋아하는 노래를 모았어요."
+                    songs={popularSongs}
+                    emptyText=""
+                />
+            ) : null}
 
             <section className="section song-club-all-songs-section">
                 <div className="section-head home-section-head">

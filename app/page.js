@@ -277,11 +277,85 @@ export default async function HomePage() {
         loggedIn &&
         songClubMembership
     ) {
+        /*
+         * 관리자에서 COMING UP NEXT로 체크한 곡은
+         * 아직 공개 전이어도 Song Club 홈의 예고 영역에 표시합니다.
+         * 실제 음원 경로나 자료는 조회하지 않습니다.
+         */
+        const {
+            data: songClubUpcomingRows,
+            error: songClubUpcomingError
+        } =
+            await db
+                .from(
+                    'ds_content_songs'
+                )
+                .select(
+                    'id,slug,title,subtitle,program,category,emoji,release_date,is_upcoming'
+                )
+                .eq(
+                    'is_upcoming',
+                    true
+                )
+                .order(
+                    'release_date',
+                    {
+                        ascending: true
+                    }
+                )
+                .order(
+                    'title',
+                    {
+                        ascending: true
+                    }
+                )
+                .limit(
+                    12
+                );
+
+        if (songClubUpcomingError) {
+            console.error(
+                'Song Club upcoming songs load error:',
+                songClubUpcomingError
+            );
+        }
+
+        let songClubUpcomingSongs =
+            (songClubUpcomingRows || [])
+                .map(
+                    row => ({
+                        id: row.id,
+                        slug: row.slug,
+                        title: row.title,
+                        subtitle: row.subtitle,
+                        program: row.program,
+                        category: row.category,
+                        emoji: row.emoji,
+                        releaseDate: row.release_date
+                    })
+                );
+
+        /*
+         * 회원에게 연결된 클래스의 예고곡만 보여줍니다.
+         */
+        songClubUpcomingSongs =
+            userPrograms.length > 0
+                ? songClubUpcomingSongs
+                    .filter(
+                        song =>
+                            userPrograms.includes(
+                                song.program
+                            )
+                    )
+                    .slice(0, 4)
+                : [];
+
         return (
             <SongClubHome
                 membership={songClubMembership}
                 songs={visibleSongs}
                 userPrograms={userPrograms}
+                upcomingSongs={songClubUpcomingSongs}
             />
         );
     }
