@@ -85,7 +85,12 @@ function sortSongs(songs) {
 }
 
 
-export default async function LibraryPage() {
+export default async function LibraryPage({ searchParams }) {
+    const params = searchParams ? await searchParams : {};
+    const initialCategory =
+        typeof params?.category === 'string'
+            ? params.category
+            : 'all';
     const {
         user,
         membership
@@ -331,6 +336,7 @@ export default async function LibraryPage() {
             loggedIn={loggedIn}
             membership={clientMembership}
             userPrograms={userPrograms}
+            initialCategory={initialCategory}
         />
     );
 }

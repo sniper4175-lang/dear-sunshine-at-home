@@ -25,6 +25,9 @@ import SongCard
 import HomePackageHome
     from '../components/HomePackageHome';
 
+import SongClubHome
+    from '../components/SongClubHome';
+
 
 export const dynamic =
     'force-dynamic';
@@ -263,6 +266,25 @@ export default async function HomePage() {
                     )
             )
             : songs;
+
+
+    /*
+     * Song Club 회원은 Home Package 홈과 동일한 디자인 언어를 사용한
+     * 전용 홈을 바로 렌더링합니다. 비회원 홈과 Home Package 홈의
+     * 기존 동작은 그대로 유지합니다.
+     */
+    if (
+        loggedIn &&
+        songClubMembership
+    ) {
+        return (
+            <SongClubHome
+                membership={songClubMembership}
+                songs={visibleSongs}
+                userPrograms={userPrograms}
+            />
+        );
+    }
 
 
     const currentMonth =
