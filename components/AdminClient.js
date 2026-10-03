@@ -582,6 +582,8 @@ export default function AdminClient({ initial }) {
 
     memberships: initial.memberships || [],
 
+    extraRevenue: initial.extraRevenue || [],
+
     authUsers: initial.authUsers || [],
   });
 
@@ -929,6 +931,10 @@ export default function AdminClient({ initial }) {
       if (!r.ok) {
         setMsg(x.error || "처리 중 오류가 발생했습니다.");
         return false;
+      }
+
+      if (x.warning) {
+        alert(x.warning);
       }
 
       if (body.action !== "logout") {
@@ -1926,7 +1932,10 @@ export default function AdminClient({ initial }) {
           <button
             key={k}
             className={tab === k ? "active" : ""}
-            onClick={() => setTab(k)}
+            onClick={() => {
+              saveAdminViewState(k);
+              setTab(k);
+            }}
           >
             {label}
           </button>
@@ -2469,6 +2478,10 @@ export default function AdminClient({ initial }) {
           students={d.students}
           attendance={d.attendance}
           trials={d.trials}
+          extraRevenue={d.extraRevenue}
+          authUsers={d.authUsers}
+          action={action}
+          loading={loading}
           mode={revenueMode}
           setMode={setRevenueMode}
           weekStart={revenueWeekStart}
@@ -3451,8 +3464,11 @@ function Renewal({
   const [loadingId, setLoadingId] = useState(null);
   const [message, setMessage] = useState("");
 
-  function initialForm() {
+  function initialForm(s = null) {
     return {
+      className: s?.class_name || "Sunshine Toddler",
+      regularDay: s?.regular_day || "",
+      regularTime: formatRegularTime(s?.regular_time),
       baseCount: 12,
       bonusCount: 0,
       paidAmount: String(PASS_PRICES[12]),
@@ -3461,7 +3477,7 @@ function Renewal({
   }
 
   function getForm(s) {
-    return forms[s.student_id] || initialForm();
+    return forms[s.student_id] || initialForm(s);
   }
 
   function change(studentId, patch) {
@@ -3485,7 +3501,7 @@ function Renewal({
       ...prev,
 
       [s.student_id]:
-        prev[s.student_id] || initialForm(),
+        prev[s.student_id] || initialForm(s),
     }));
 
     setOpenStudentId(s.student_id);
@@ -3509,6 +3525,11 @@ function Renewal({
         f.startDate,
         baseCount,
       );
+
+    if (!f.className) {
+      setMessage("클래스를 선택해주세요.");
+      return;
+    }
 
     if (!f.startDate) {
       setMessage("시작일을 선택해주세요.");
@@ -3536,6 +3557,14 @@ function Renewal({
     if (
       !confirm(
         `${s.student_name} 학생을 재등록할까요?\n\n` +
+          `클래스: ${f.className}\n` +
+          `정규 일정: ${
+            f.regularDay || "미지정"
+          }${
+            f.regularTime
+              ? ` ${f.regularTime}`
+              : ""
+          }\n` +
           `기본 수강권: ${baseCount}회\n` +
           `이벤트 추가: +${bonusCount}회\n` +
           `총 이용횟수: ${totalCount}회\n` +
@@ -3566,6 +3595,10 @@ function Renewal({
             action: "renewEnrollment",
 
             studentId: s.student_id,
+
+            className: f.className,
+            regularDay: f.regularDay,
+            regularTime: f.regularTime,
 
             baseCount,
             bonusCount,
@@ -3873,38 +3906,105 @@ function Renewal({
 
                   <label>
                     클래스
-                    <input
+                    <select
                       className="normal"
-                      readOnly
-                      value={
-                        s.class_name || ""
+                      value={f.className}
+                      onChange={(e) =>
+                        change(
+                          s.student_id,
+                          {
+                            className:
+                              e.target.value,
+                          },
+                        )
                       }
-                    />
+                    >
+                      {s.class_name &&
+                        !CLASS_OPTIONS.includes(
+                          s.class_name,
+                        ) && (
+                          <option
+                            value={s.class_name}
+                          >
+                            {s.class_name}
+                          </option>
+                        )}
+
+                      {CLASS_OPTIONS.map(
+                        (className) => (
+                          <option
+                            key={className}
+                            value={className}
+                          >
+                            {className}
+                          </option>
+                        ),
+                      )}
+                    </select>
                   </label>
 
                   <label>
                     정규 출석 요일
-                    <input
+                    <select
                       className="normal"
-                      readOnly
-                      value={
-                        s.regular_day ||
-                        "미지정"
+                      value={f.regularDay}
+                      onChange={(e) =>
+                        change(
+                          s.student_id,
+                          {
+                            regularDay:
+                              e.target.value,
+                          },
+                        )
                       }
-                    />
+                    >
+                      <option value="">
+                        미지정
+                      </option>
+
+                      {DAY_OPTIONS.map(
+                        (day) => (
+                          <option
+                            key={day}
+                            value={day}
+                          >
+                            {day}
+                          </option>
+                        ),
+                      )}
+                    </select>
                   </label>
 
                   <label>
                     정규 수업 시간
-                    <input
+                    <select
                       className="normal"
-                      readOnly
-                      value={
-                        formatRegularTime(
-                          s.regular_time,
-                        ) || "미지정"
+                      value={f.regularTime}
+                      onChange={(e) =>
+                        change(
+                          s.student_id,
+                          {
+                            regularTime:
+                              e.target.value,
+                          },
+                        )
                       }
-                    />
+                    >
+                      <option value="">
+                        미지정
+                      </option>
+
+                      {TIME_OPTIONS.map(
+                        (time) => (
+                          <option
+                            key={time}
+                            value={time}
+                          >
+                            {time}
+                          </option>
+                        ),
+                      )}
+                    </select>
                   </label>
 
                   <label>
@@ -4070,6 +4170,21 @@ function Renewal({
                       </b>
 
                       <p>
+                        클래스{" "}
+                        <b>
+                          {f.className}
+                        </b>
+                        <br />
+
+                        정규 일정{" "}
+                        <b>
+                          {f.regularDay || "미지정"}
+                          {f.regularTime
+                            ? ` ${f.regularTime}`
+                            : ""}
+                        </b>
+                        <br />
+
                         기본{" "}
                         {f.baseCount}회
                         {" + "}
@@ -5662,6 +5777,10 @@ function RevenueManagement({
   students,
   attendance,
   trials,
+  extraRevenue = [],
+  authUsers = [],
+  action,
+  loading = false,
   mode,
   setMode,
   weekStart,
@@ -5689,6 +5808,12 @@ function RevenueManagement({
       t.trial_date <= weekEnd,
   );
 
+  const weeklyExtraRevenue = extraRevenue.filter(
+    (row) =>
+      row.revenue_date >= weekStart &&
+      row.revenue_date <= weekEnd,
+  );
+
   const weeklyRegularRevenue = weeklyAttendance.reduce(
     (sum, a) => sum + revenueForAttendance(a),
     0,
@@ -5699,8 +5824,15 @@ function RevenueManagement({
     0,
   );
 
+  const weeklyProductRevenue = weeklyExtraRevenue.reduce(
+    (sum, row) => sum + Number(row.amount || 0),
+    0,
+  );
+
   const weeklyRevenue =
-    weeklyRegularRevenue + weeklyTrialRevenue;
+    weeklyRegularRevenue +
+    weeklyTrialRevenue +
+    weeklyProductRevenue;
 
   const weekDays = Array.from(
     {
@@ -5719,6 +5851,10 @@ function RevenueManagement({
         (t) => t.trial_date === key,
       );
 
+      const productRows = weeklyExtraRevenue.filter(
+        (row) => row.revenue_date === key,
+      );
+
       return {
         key,
 
@@ -5728,6 +5864,8 @@ function RevenueManagement({
 
         trialCount: trialRows.length,
 
+        productCount: productRows.length,
+
         regularRevenue: regularRows.reduce(
           (sum, a) => sum + revenueForAttendance(a),
           0,
@@ -5735,6 +5873,11 @@ function RevenueManagement({
 
         trialRevenue: trialRows.reduce(
           (sum, t) => sum + Number(t.paid_amount || 0),
+          0,
+        ),
+
+        productRevenue: productRows.reduce(
+          (sum, row) => sum + Number(row.amount || 0),
           0,
         ),
       };
@@ -5755,6 +5898,11 @@ function RevenueManagement({
       t.trial_date.slice(0, 7) === monthKey,
   );
 
+  const monthlyExtraRevenue = extraRevenue.filter(
+    (row) =>
+      String(row.revenue_date || "").slice(0, 7) === monthKey,
+  );
+
   const monthlyRegularRevenue = monthlyAttendance.reduce(
     (sum, a) => sum + revenueForAttendance(a),
     0,
@@ -5765,14 +5913,26 @@ function RevenueManagement({
     0,
   );
 
+  const monthlyProductRevenue = monthlyExtraRevenue.reduce(
+    (sum, row) => sum + Number(row.amount || 0),
+    0,
+  );
+
   const monthlyRevenue =
-    monthlyRegularRevenue + monthlyTrialRevenue;
+    monthlyRegularRevenue +
+    monthlyTrialRevenue +
+    monthlyProductRevenue;
 
   const detailAttendance =
     mode === "week" ? weeklyAttendance : monthlyAttendance;
 
   const detailTrials =
     mode === "week" ? weeklyTrials : monthlyTrials;
+
+  const detailExtraRevenue =
+    mode === "week"
+      ? weeklyExtraRevenue
+      : monthlyExtraRevenue;
 
   const missingRevenueCount = detailAttendance.filter(
     (a) =>
@@ -5784,6 +5944,18 @@ function RevenueManagement({
     return (
       students.find((s) => s.student_id === id)
         ?.student_name || "학생"
+    );
+  }
+
+  function productCustomerName(userId) {
+    const user = authUsers.find(
+      (item) => item.id === userId,
+    );
+
+    return (
+      authUserStudentName(user) ||
+      user?.email ||
+      "Song Club / Home Package"
     );
   }
 
@@ -5813,6 +5985,33 @@ function RevenueManagement({
     setYear(d.getFullYear());
 
     setMonth(d.getMonth() + 1);
+  }
+
+  function normalizeProductRevenueCategory(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
+  }
+
+  function isCancellableProductRevenueCategory(value) {
+    return ["song_club", "home_package"].includes(
+      normalizeProductRevenueCategory(value),
+    );
+  }
+
+  function productRevenueTypeLabel(value) {
+    const normalized = normalizeProductRevenueCategory(value);
+
+    if (normalized === "song_club") {
+      return "Song Club";
+    }
+
+    if (normalized === "home_package") {
+      return "Home Package";
+    }
+
+    return value || "상품";
   }
 
   const detailRows = [
@@ -5846,7 +6045,49 @@ function RevenueManagement({
 
       amount: Number(t.paid_amount || 0),
     })),
+
+    ...detailExtraRevenue.map((row) => ({
+      key: `extra-${row.id}`,
+
+      date: row.revenue_date,
+
+      type: productRevenueTypeLabel(row.category),
+
+      name: productCustomerName(row.user_id),
+
+      className:
+        row.description || row.category || "센터 상품",
+
+      amount: Number(row.amount || 0),
+
+      extraRevenueId: row.id,
+
+      canCancelRevenue: isCancellableProductRevenueCategory(
+        row.category,
+      ),
+    })),
   ].sort((a, b) => b.date.localeCompare(a.date));
+
+  async function cancelProductRevenue(row) {
+    if (!row?.extraRevenueId || !row.canCancelRevenue) {
+      return;
+    }
+
+    const confirmed = confirm(
+      `${row.name}의 ${row.type} 수익 ${money(row.amount)}을 취소할까요?\n\n` +
+        `취소하면 수익 관리 합계에서 삭제됩니다.\n` +
+        `Song Club/Home Package 이용 권한은 그대로 유지됩니다.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await action({
+      action: "deleteExtraRevenue",
+      revenueId: row.extraRevenueId,
+    });
+  }
 
   return (
     <section className="panel">
@@ -5865,6 +6106,8 @@ function RevenueManagement({
           <p className="hint">
             정규수업은 출석 당시 확정된 회당 수익,
             체험수업은 실제 입력한 체험 수업료를 합산합니다.
+            Song Club과 Home Package 등록 금액도 자동으로
+            포함됩니다.
           </p>
         </div>
 
@@ -5953,8 +6196,10 @@ function RevenueManagement({
             total={weeklyRevenue}
             regular={weeklyRegularRevenue}
             trial={weeklyTrialRevenue}
+            product={weeklyProductRevenue}
             regularCount={weeklyAttendance.length}
             trialCount={weeklyTrials.length}
+            productCount={weeklyExtraRevenue.length}
           />
 
           <h3>일별 수익</h3>
@@ -5968,19 +6213,26 @@ function RevenueManagement({
                   {formatShortDate(x.key)}
                   {" · "}
                   정규 {x.regularCount}건{" · "}
-                  체험 {x.trialCount}건
+                  체험 {x.trialCount}건{" · "}
+                  상품 {x.productCount}건
                 </span>
               </div>
 
               <div className="right">
                 <b>
-                  {money(x.regularRevenue + x.trialRevenue)}
+                  {money(
+                    x.regularRevenue +
+                      x.trialRevenue +
+                      x.productRevenue,
+                  )}
                 </b>
 
                 <span>
                   정규 {money(x.regularRevenue)}
                   {" · "}
                   체험 {money(x.trialRevenue)}
+                  {" · "}
+                  상품 {money(x.productRevenue)}
                 </span>
               </div>
             </div>
@@ -6028,8 +6280,10 @@ function RevenueManagement({
             total={monthlyRevenue}
             regular={monthlyRegularRevenue}
             trial={monthlyTrialRevenue}
+            product={monthlyProductRevenue}
             regularCount={monthlyAttendance.length}
             trialCount={monthlyTrials.length}
+            productCount={monthlyExtraRevenue.length}
           />
         </>
       )}
@@ -6095,6 +6349,17 @@ function RevenueManagement({
                 ? "수익 미설정"
                 : money(row.amount)}
             </b>
+
+            {row.canCancelRevenue && (
+              <button
+                className="mini ghost"
+                disabled={loading}
+                onClick={() => cancelProductRevenue(row)}
+                style={{ marginTop: 6 }}
+              >
+                수익 취소
+              </button>
+            )}
           </div>
         </div>
       ))}
@@ -6107,8 +6372,10 @@ function RevenueSummary({
   total,
   regular,
   trial,
+  product = 0,
   regularCount,
   trialCount,
+  productCount = 0,
 }) {
   return (
     <div
@@ -6139,6 +6406,8 @@ function RevenueSummary({
         정규수업 {money(regular)}
         {" · "}
         체험수업 {money(trial)}
+        {" · "}
+        Song Club·Home Package {money(product)}
       </p>
 
       <p
@@ -6148,7 +6417,8 @@ function RevenueSummary({
         }}
       >
         정규 출석 {regularCount}건{" · "}
-        체험 {trialCount}건
+        체험 {trialCount}건{" · "}
+        상품 등록 {productCount}건
       </p>
     </div>
   );
@@ -6519,6 +6789,72 @@ function AddForm({ onSubmit }) {
  */
 
 function ContentManagement({ contents, loading, action }) {
+  const [contentProgramTab, setContentProgramTab] = useState("all");
+
+  const [contentStatusFilter, setContentStatusFilter] = useState("all");
+
+  const [contentSearch, setContentSearch] = useState("");
+
+  const normalizedContentSearch = contentSearch.trim().toLowerCase();
+
+  const filteredContents = (contents || []).filter((content) => {
+    if (
+      contentProgramTab !== "all" &&
+      content.program !== contentProgramTab
+    ) {
+      return false;
+    }
+
+    if (contentStatusFilter === "published" && !content.is_published) {
+      return false;
+    }
+
+    if (contentStatusFilter === "unpublished" && content.is_published) {
+      return false;
+    }
+
+    if (contentStatusFilter === "basic" && !content.is_basic) {
+      return false;
+    }
+
+    if (contentStatusFilter === "popular" && !content.is_popular) {
+      return false;
+    }
+
+    if (contentStatusFilter === "upcoming" && !content.is_upcoming) {
+      return false;
+    }
+
+    if (normalizedContentSearch) {
+      const haystack = [
+        content.title,
+        content.slug,
+        content.subtitle,
+        content.category,
+        content.program,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      if (!haystack.includes(normalizedContentSearch)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  const contentTabCounts = {
+    all: (contents || []).length,
+    "Sunshine Toddler": (contents || []).filter(
+      (content) => content.program === "Sunshine Toddler",
+    ).length,
+    "Melody Book Club": (contents || []).filter(
+      (content) => content.program === "Melody Book Club",
+    ).length,
+  };
+
   const EMPTY_FORM = {
     id: "",
     slug: "",
@@ -6535,6 +6871,7 @@ function ContentManagement({ contents, loading, action }) {
     activitiesText: "",
 
     releaseDate: todayKST(),
+    isBasic: false,
     isPopular: false,
     isUpcoming: false,
     isPublished: false,
@@ -6740,7 +7077,12 @@ function ContentManagement({ contents, loading, action }) {
   }
 
   function openNew() {
-    const defaultProgram = "Sunshine Toddler";
+    const defaultProgram = [
+      "Sunshine Toddler",
+      "Melody Book Club",
+    ].includes(contentProgramTab)
+      ? contentProgramTab
+      : "Sunshine Toddler";
 
     setForm({
       ...EMPTY_FORM,
@@ -6795,6 +7137,8 @@ function ContentManagement({ contents, loading, action }) {
         : "",
 
       releaseDate: content.release_date || todayKST(),
+
+      isBasic: Boolean(content.is_basic),
 
       isPopular: Boolean(content.is_popular),
 
@@ -6882,6 +7226,8 @@ function ContentManagement({ contents, loading, action }) {
       activities,
 
       releaseDate: form.releaseDate,
+
+      isBasic: form.isBasic,
 
       isPopular: form.isPopular,
 
@@ -6987,6 +7333,132 @@ function ContentManagement({ contents, loading, action }) {
           + 새 콘텐츠 등록
         </button>
       </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+          marginBottom: 14,
+        }}
+      >
+        {[
+          ["all", "전체"],
+          ["Sunshine Toddler", "Sunshine Toddler"],
+          ["Melody Book Club", "Melody Book Club"],
+        ].map(([value, label]) => {
+          const active = contentProgramTab === value;
+
+          return (
+            <button
+              key={value}
+              type="button"
+              className={active ? "mini" : "mini ghost"}
+              onClick={() => setContentProgramTab(value)}
+              style={{
+                borderRadius: 999,
+                padding: "10px 14px",
+                whiteSpace: "nowrap",
+                fontWeight: 800,
+              }}
+            >
+              {label} ({contentTabCounts[value] || 0})
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+          gap: 10,
+          marginBottom: 18,
+          padding: 14,
+          borderRadius: 16,
+          background: "#fff9ef",
+          border: "1px solid #f3dfbd",
+        }}
+      >
+        <label
+          style={{
+            display: "grid",
+            gap: 6,
+            minWidth: 0,
+          }}
+        >
+          <b>검색</b>
+          <input
+            className="normal"
+            value={contentSearch}
+            onChange={(e) => setContentSearch(e.target.value)}
+            placeholder="곡 제목, 카테고리, Slug 검색"
+            style={{
+              width: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+            }}
+          />
+        </label>
+
+        <label
+          style={{
+            display: "grid",
+            gap: 6,
+            minWidth: 0,
+          }}
+        >
+          <b>필터</b>
+          <select
+            className="normal"
+            value={contentStatusFilter}
+            onChange={(e) => setContentStatusFilter(e.target.value)}
+            style={{
+              width: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+            }}
+          >
+            <option value="all">전체 상태</option>
+            <option value="published">Song Club 공개</option>
+            <option value="unpublished">Song Club 비공개</option>
+            <option value="basic">기본곡만</option>
+            <option value="popular">인기곡만</option>
+            <option value="upcoming">COMING UP NEXT만</option>
+          </select>
+        </label>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "end",
+            minWidth: 0,
+          }}
+        >
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              setContentSearch("");
+              setContentStatusFilter("all");
+            }}
+            style={{
+              width: "100%",
+            }}
+          >
+            검색·필터 초기화
+          </button>
+        </div>
+      </div>
+
+      <p
+        className="hint"
+        style={{
+          margin: "-6px 0 16px",
+        }}
+      >
+        현재 {filteredContents.length}개 콘텐츠 표시 중
+      </p>
 
       {formOpen && (
         <div ref={formRef} className="admin-content-form">
@@ -7365,6 +7837,25 @@ Is it rainy?`}
             >
               <input
                 type="checkbox"
+                checked={form.isBasic}
+                onChange={(e) =>
+                  updateField("isBasic", e.target.checked)
+                }
+              />
+              기본곡
+            </label>
+
+            <label
+              style={{
+                display: "flex",
+
+                alignItems: "center",
+
+                gap: 8,
+              }}
+            >
+              <input
+                type="checkbox"
                 checked={form.isPopular}
                 onChange={(e) =>
                   updateField("isPopular", e.target.checked)
@@ -7425,7 +7916,7 @@ Is it rainy?`}
                   )
                 }
               />
-              앱에 공개
+              Song Club에 공개
             </label>
 
             <button
@@ -7453,7 +7944,24 @@ Is it rainy?`}
         </p>
       )}
 
-      {contents.map((content) => (
+      {contents.length > 0 && filteredContents.length === 0 && (
+        <div
+          style={{
+            padding: "28px 18px",
+            borderRadius: 16,
+            background: "#fff9ef",
+            textAlign: "center",
+            marginTop: 8,
+          }}
+        >
+          <b>조건에 맞는 콘텐츠가 없어요.</b>
+          <p className="hint" style={{ marginBottom: 0 }}>
+            다른 탭을 선택하거나 검색어·필터를 초기화해주세요.
+          </p>
+        </div>
+      )}
+
+      {filteredContents.map((content) => (
         <div
           key={content.id}
           style={{
@@ -7491,9 +7999,11 @@ Is it rainy?`}
             <div className="right">
               <b>
                 {content.is_published
-                  ? "🟢 공개"
-                  : "⚪ 비공개"}
+                  ? "🟢 Song Club 공개"
+                  : "⚪ Song Club 비공개"}
               </b>
+
+              {content.is_basic && <span>🎵 기본곡</span>}
 
               {content.is_popular && <span>⭐ 인기곡</span>}
 
@@ -7602,7 +8112,7 @@ function AtHomeMemberManagement({
   ];
 
   /*
-   * 회원 한 명당 Song Club 음원 클래스는 1개만 선택합니다.
+   * 회원 한 명당 Song Club 음원 클래스는 최대 2개까지 선택할 수 있습니다.
    * 선택된 값은 ds_user_program_access에 저장됩니다.
    */
   const PROGRAM_OPTIONS = [
@@ -8149,6 +8659,12 @@ function AtHomeMemberManagement({
         startsAt,
 
         endsAt,
+
+        revenueAmount:
+          option.price,
+
+        revenueDescription:
+          `Song Club ${option.label} 등록`,
       });
     } catch (error) {
       console.error(error);
@@ -8261,6 +8777,12 @@ function AtHomeMemberManagement({
       startsAt,
 
       endsAt,
+
+      revenueAmount:
+        option.price,
+
+      revenueDescription:
+        `Song Club ${option.label} ${verb}`,
     });
   }
 
@@ -9264,11 +9786,13 @@ function AtHomeMemberManagement({
  * 별도 회원가입은 필요하지 않습니다.
  *
  * Home Package 규칙
- * - 기본곡: unlock_week = 0, 최대 3곡
- * - 이후 각 주차: unlock_week = 1 ~ 21, 주차별 최대 3곡
+ * - 공통 기본곡: unlock_week = 0, position 1~3, 최대 3곡
+ * - 12회 전용 기본 보너스곡: unlock_week = 0, position 4~8, 최대 5곡
+ * - 20회 전용 기본 보너스곡: unlock_week = 0, position 9~13, 최대 5곡
+ * - 이후 각 주차: unlock_week = 1 ~ 21, position 1~3, 주차별 최대 3곡
  * - 8회: 8주차까지
- * - 12회: 12주차까지
- * - 20회: 21주차까지
+ * - 12회: 12주차까지 + 12회 전용 기본 보너스곡
+ * - 20회: 21주차까지 + 20회 전용 기본 보너스곡
  */
 function HomePackageMemberManagement({
   authUsers,
@@ -9289,6 +9813,9 @@ function HomePackageMemberManagement({
   const [adminData, setAdminData] = useState({
     products: [],
     tracks: [],
+    programsByProduct: {},
+    accountBonusRows: [],
+    accountBonusReady: true,
   });
 
   const [dataLoading, setDataLoading] = useState(true);
@@ -9298,7 +9825,7 @@ function HomePackageMemberManagement({
   const [newForm, setNewForm] = useState({
     userId: "",
     planCode: "home_8",
-    program: "Sunshine Toddler",
+    programs: ["Sunshine Toddler"],
     startsAt: todayKST(),
     endsAt: (() => {
       const date = parseDate(todayKST());
@@ -9311,7 +9838,7 @@ function HomePackageMemberManagement({
   const [editingProduct, setEditingProduct] = useState(null);
   const [editForm, setEditForm] = useState({
     planCode: "home_8",
-    program: "Sunshine Toddler",
+    programs: ["Sunshine Toddler"],
     status: "active",
     startsAt: "",
     endsAt: "",
@@ -9319,6 +9846,11 @@ function HomePackageMemberManagement({
 
   const [scheduleProgram, setScheduleProgram] = useState("Sunshine Toddler");
   const [schedule, setSchedule] = useState(() => emptySchedule());
+
+  const [bonusUserId, setBonusUserId] = useState("");
+  const [bonusSongIds, setBonusSongIds] = useState([]);
+  const [bonusProgramFilter, setBonusProgramFilter] = useState("all");
+  const [bonusSongSearch, setBonusSongSearch] = useState("");
 
   function emptySchedule() {
     const weeks = {};
@@ -9333,6 +9865,8 @@ function HomePackageMemberManagement({
       base1: "",
       base2: "",
       base3: "",
+      plan12BaseBonus: ["", "", "", "", ""],
+      plan20BaseBonus: ["", "", "", "", ""],
       weeks,
     };
   }
@@ -9378,6 +9912,21 @@ function HomePackageMemberManagement({
     );
   }
 
+  function getProductPrograms(product) {
+    const linked = adminData.programsByProduct?.[product?.id];
+    if (Array.isArray(linked) && linked.length > 0) {
+      return linked;
+    }
+    return product?.program ? [product.program] : [];
+  }
+
+  function toggleProgramSelection(currentPrograms, program) {
+    const current = Array.isArray(currentPrograms) ? currentPrograms : [];
+    return current.includes(program)
+      ? current.filter((item) => item !== program)
+      : [...current, program];
+  }
+
   async function post(body) {
     const response = await fetch("/api/admin/manage", {
       method: "POST",
@@ -9413,6 +9962,9 @@ function HomePackageMemberManagement({
       setAdminData({
         products: result.products || [],
         tracks: result.tracks || [],
+        programsByProduct: result.programsByProduct || {},
+        accountBonusRows: result.accountBonusRows || [],
+        accountBonusReady: result.accountBonusReady !== false,
       });
     } catch (error) {
       console.error(error);
@@ -9439,6 +9991,15 @@ function HomePackageMemberManagement({
           if (position === 1) next.base1 = row.song_id;
           if (position === 2) next.base2 = row.song_id;
           if (position === 3) next.base3 = row.song_id;
+
+          if (position >= 4 && position <= 8) {
+            next.plan12BaseBonus[position - 4] = row.song_id;
+          }
+
+          if (position >= 9 && position <= 13) {
+            next.plan20BaseBonus[position - 9] = row.song_id;
+          }
+
           return;
         }
 
@@ -9455,9 +10016,56 @@ function HomePackageMemberManagement({
     setSchedule(next);
   }, [adminData.tracks, scheduleProgram]);
 
+
+  useEffect(() => {
+    if (!bonusUserId) {
+      setBonusSongIds([]);
+      return;
+    }
+
+    const ids = (adminData.accountBonusRows || [])
+      .filter((row) => row.user_id === bonusUserId)
+      .map((row) => row.song_id)
+      .filter(Boolean);
+
+    setBonusSongIds([...new Set(ids)]);
+  }, [bonusUserId, adminData.accountBonusRows]);
+
   const songsForSchedule = (contents || [])
     .filter((song) => song.program === scheduleProgram)
     .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "ko"));
+
+
+  const filteredBonusSongs = (contents || [])
+    .filter((song) =>
+      bonusProgramFilter === "all"
+        ? true
+        : song.program === bonusProgramFilter,
+    )
+    .filter((song) => {
+      const q = bonusSongSearch.trim().toLowerCase();
+      if (!q) return true;
+
+      return [
+        song.title,
+        song.program,
+        song.category,
+        song.slug,
+      ]
+        .map((value) => String(value || "").toLowerCase())
+        .some((value) => value.includes(q));
+    })
+    .sort((a, b) =>
+      String(a.title || "").localeCompare(String(b.title || ""), "ko"),
+    );
+
+  function toggleBonusSong(songId) {
+    setBonusSongIds((current) =>
+      current.includes(songId)
+        ? current.filter((id) => id !== songId)
+        : [...current, songId],
+    );
+  }
 
   const latestProducts = (() => {
     const rows = [...(adminData.products || [])].sort((a, b) =>
@@ -9500,13 +10108,18 @@ function HomePackageMemberManagement({
       return;
     }
 
+    if (!Array.isArray(newForm.programs) || newForm.programs.length === 0) {
+      alert("이용 클래스를 1개 이상 선택해주세요.");
+      return;
+    }
+
     const option = PLAN_OPTIONS.find((item) => item.code === newForm.planCode);
     const email = getUserEmail(newForm.userId);
 
     if (!confirm(
       `${email} 회원에게 Home Package를 활성화할까요?\n\n` +
       `상품: ${option?.label || newForm.planCode}\n` +
-      `프로그램: ${newForm.program}\n` +
+      `프로그램: ${newForm.programs.join(" + ")}\n` +
       `센터 결제금액: ${money(option?.price || 0)}\n` +
       `시작일: ${newForm.startsAt}\n` +
       `${newForm.endsAt ? `종료일: ${newForm.endsAt}\n` : "종료일: 별도 지정 없음\n"}` +
@@ -9521,7 +10134,7 @@ function HomePackageMemberManagement({
         action: "createHomePackageProduct",
         userId: newForm.userId,
         planCode: newForm.planCode,
-        program: newForm.program,
+        programs: newForm.programs,
         startsAt: newForm.startsAt,
         endsAt: newForm.endsAt || null,
       });
@@ -9529,13 +10142,15 @@ function HomePackageMemberManagement({
       setNewForm({
         userId: "",
         planCode: "home_8",
-        program: "Sunshine Toddler",
+        programs: ["Sunshine Toddler"],
         startsAt: todayKST(),
         endsAt: calculateEndDate(todayKST(), "home_8"),
       });
 
       await loadAdminData();
       alert("Home Package가 활성화되었습니다.");
+
+      location.reload();
     } catch (error) {
       console.error(error);
       alert(error?.message || "Home Package 활성화에 실패했습니다.");
@@ -9548,7 +10163,7 @@ function HomePackageMemberManagement({
     setEditingProduct(product);
     setEditForm({
       planCode: product.plan_code || "home_8",
-      program: product.program || "Sunshine Toddler",
+      programs: getProductPrograms(product),
       status: product.status || "active",
       startsAt: String(product.starts_at || "").slice(0, 10),
       endsAt:
@@ -9568,6 +10183,11 @@ function HomePackageMemberManagement({
       return;
     }
 
+    if (!Array.isArray(editForm.programs) || editForm.programs.length === 0) {
+      alert("이용 클래스를 1개 이상 선택해주세요.");
+      return;
+    }
+
     if (editForm.endsAt && editForm.endsAt < editForm.startsAt) {
       alert("종료일은 시작일보다 빠를 수 없습니다.");
       return;
@@ -9579,7 +10199,7 @@ function HomePackageMemberManagement({
         action: "updateHomePackageProduct",
         id: editingProduct.id,
         planCode: editForm.planCode,
-        program: editForm.program,
+        programs: editForm.programs,
         status: editForm.status,
         startsAt: editForm.startsAt,
         endsAt: editForm.endsAt || null,
@@ -9609,7 +10229,7 @@ function HomePackageMemberManagement({
         action: "updateHomePackageProduct",
         id: product.id,
         planCode: product.plan_code,
-        program: product.program,
+        programs: getProductPrograms(product),
         status,
         startsAt: String(product.starts_at || "").slice(0, 10),
         endsAt: product.ends_at ? String(product.ends_at).slice(0, 10) : null,
@@ -9642,28 +10262,67 @@ function HomePackageMemberManagement({
       return;
     }
 
-    const selectedSongIds = [
+    const sharedSongIds = [
       schedule.base1,
       schedule.base2,
       schedule.base3,
       ...Array.from(
         { length: 21 },
         (_, index) => {
-          const week =
-            index + 1;
-          const songs =
-            schedule.weeks[week] || {};
-          return [
-            songs[1],
-            songs[2],
-            songs[3],
-          ];
+          const week = index + 1;
+          const songs = schedule.weeks[week] || {};
+          return [songs[1], songs[2], songs[3]];
         },
       ).flat(),
     ].filter(Boolean);
 
-    if (new Set(selectedSongIds).size !== selectedSongIds.length) {
-      alert("같은 노래를 기본곡 또는 여러 주차에 중복 지정할 수 없습니다.");
+    if (new Set(sharedSongIds).size !== sharedSongIds.length) {
+      alert("공통 기본곡 또는 주차별 곡에 같은 노래를 중복 지정할 수 없습니다.");
+      return;
+    }
+
+    const plan12BonusIds = (schedule.plan12BaseBonus || []).filter(Boolean);
+    const plan20BonusIds = (schedule.plan20BaseBonus || []).filter(Boolean);
+
+    if (new Set(plan12BonusIds).size !== plan12BonusIds.length) {
+      alert("12회 전용 기본 보너스곡에 같은 노래를 중복 지정할 수 없습니다.");
+      return;
+    }
+
+    if (new Set(plan20BonusIds).size !== plan20BonusIds.length) {
+      alert("20회 전용 기본 보너스곡에 같은 노래를 중복 지정할 수 없습니다.");
+      return;
+    }
+
+    const home12VisibleIds = [
+      schedule.base1,
+      schedule.base2,
+      schedule.base3,
+      ...plan12BonusIds,
+      ...Array.from({ length: 12 }, (_, index) => {
+        const songs = schedule.weeks[index + 1] || {};
+        return [songs[1], songs[2], songs[3]];
+      }).flat(),
+    ].filter(Boolean);
+
+    if (new Set(home12VisibleIds).size !== home12VisibleIds.length) {
+      alert("12회 상품에서 같은 노래가 기본곡/보너스곡/주차곡에 중복됩니다.");
+      return;
+    }
+
+    const home20VisibleIds = [
+      schedule.base1,
+      schedule.base2,
+      schedule.base3,
+      ...plan20BonusIds,
+      ...Array.from({ length: 21 }, (_, index) => {
+        const songs = schedule.weeks[index + 1] || {};
+        return [songs[1], songs[2], songs[3]];
+      }).flat(),
+    ].filter(Boolean);
+
+    if (new Set(home20VisibleIds).size !== home20VisibleIds.length) {
+      alert("20회 상품에서 같은 노래가 기본곡/보너스곡/주차곡에 중복됩니다.");
       return;
     }
 
@@ -9673,48 +10332,63 @@ function HomePackageMemberManagement({
       schedule.base3
         ? { songId: schedule.base3, unlockWeek: 0, position: 3 }
         : null,
+
+      ...(schedule.plan12BaseBonus || []).map((songId, index) =>
+        songId
+          ? {
+              songId,
+              unlockWeek: 0,
+              position: 4 + index,
+            }
+          : null,
+      ),
+
+      ...(schedule.plan20BaseBonus || []).map((songId, index) =>
+        songId
+          ? {
+              songId,
+              unlockWeek: 0,
+              position: 9 + index,
+            }
+          : null,
+      ),
+
       ...Array.from(
         { length: 21 },
         (_, index) => {
-          const week =
-            index + 1;
-          const songs =
-            schedule.weeks[week] || {};
+          const week = index + 1;
+          const songs = schedule.weeks[week] || {};
 
-          return [
-            1,
-            2,
-            3,
-          ].map(
-            (position) =>
-              songs[position]
-                ? {
-                    songId:
-                      songs[position],
-                    unlockWeek:
-                      week,
-                    position,
-                  }
-                : null,
+          return [1, 2, 3].map((position) =>
+            songs[position]
+              ? {
+                  songId: songs[position],
+                  unlockWeek: week,
+                  position,
+                }
+              : null,
           );
         },
       ).flat(),
     ].filter(Boolean);
 
-    const baseCount =
-      tracks.filter(
-        (row) =>
-          row.unlockWeek === 0,
-      ).length;
+    const commonBaseCount = [
+      schedule.base1,
+      schedule.base2,
+      schedule.base3,
+    ].filter(Boolean).length;
 
-    const weeklyCount =
-      tracks.length - baseCount;
+    const weeklyCount = tracks.filter(
+      (row) => row.unlockWeek > 0,
+    ).length;
 
     if (!confirm(
       `${scheduleProgram} Home Package 곡 구성을 저장할까요?\n\n` +
-      `기본곡 ${baseCount}곡 + 주차별 등록곡 ${weeklyCount}곡\n` +
-      `각 주차에는 최대 3곡까지 지정할 수 있습니다.\n` +
-      `8회 상품은 8주차까지, 12회는 12주차까지, 20회는 21주차까지 자동 적용됩니다.`,
+      `공통 기본곡 ${commonBaseCount}곡\n` +
+      `12회 전용 기본 보너스곡 ${plan12BonusIds.length}곡\n` +
+      `20회 전용 기본 보너스곡 ${plan20BonusIds.length}곡\n` +
+      `주차별 등록곡 ${weeklyCount}곡\n\n` +
+      `12회/20회 전용 기본 보너스곡은 가입 즉시 공개됩니다.`,
     )) {
       return;
     }
@@ -9731,6 +10405,43 @@ function HomePackageMemberManagement({
     } catch (error) {
       console.error(error);
       alert(error?.message || "곡 구성을 저장하지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveAccountBonusSongs() {
+    if (!bonusUserId) {
+      alert("학생 이름 / 회원 이메일을 선택해주세요.");
+      return;
+    }
+
+    const display =
+      authUserDisplay(
+        (authUsers || []).find((user) => user.id === bonusUserId),
+      ) || getUserEmail(bonusUserId);
+
+    if (!confirm(
+      `${display} 계정에 추가곡 ${bonusSongIds.length}곡을 저장할까요?\n\n` +
+      `선택한 곡은 Song Club 공개 여부와 관계없이 이 계정에서 즉시 이용할 수 있습니다.`,
+    )) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await post({
+        action: "saveAccountBonusSongs",
+        userId: bonusUserId,
+        songIds: bonusSongIds,
+      });
+
+      await loadAdminData();
+      alert("계정별 추가곡이 저장되었습니다.");
+    } catch (error) {
+      console.error(error);
+      alert(error?.message || "계정별 추가곡을 저장하지 못했습니다.");
     } finally {
       setSaving(false);
     }
@@ -9827,18 +10538,41 @@ function HomePackageMemberManagement({
           </select>
         </label>
 
-        <label>
-          이용 클래스
-          <select
-            className="normal"
-            value={newForm.program}
-            onChange={(event) => setNewForm({ ...newForm, program: event.target.value })}
+        <div>
+          <b style={{ display: "block", marginBottom: 8 }}>이용 클래스</b>
+          <div
+            style={{
+              display: "grid",
+              gap: 8,
+              padding: 12,
+              border: "1px solid #ead8be",
+              borderRadius: 12,
+              background: "#fffaf2",
+            }}
           >
             {PROGRAM_OPTIONS.map((program) => (
-              <option key={program} value={program}>{program}</option>
+              <label
+                key={program}
+                style={{ display: "flex", alignItems: "center", gap: 8 }}
+              >
+                <input
+                  type="checkbox"
+                  checked={newForm.programs.includes(program)}
+                  onChange={() =>
+                    setNewForm((current) => ({
+                      ...current,
+                      programs: toggleProgramSelection(current.programs, program),
+                    }))
+                  }
+                />
+                <span>{program}</span>
+              </label>
             ))}
-          </select>
-        </label>
+          </div>
+          <span className="hint" style={{ display: "block", marginTop: 5 }}>
+            한 가정이 두 클래스를 함께 이용하면 둘 다 선택할 수 있어요.
+          </span>
+        </div>
 
         <label>
           시작일
@@ -9892,7 +10626,7 @@ function HomePackageMemberManagement({
       <EditBox title="🎵 Home Package 곡 구성">
         <div style={{ gridColumn: "1 / -1" }}>
           <p className="hint" style={{ marginTop: 0 }}>
-            한 번만 구성해두면 회원별로 곡을 직접 넣을 필요가 없습니다. 기본곡과 각 주차는 최대 3곡까지 지정할 수 있고, 8회는 8주차까지, 12회는 12주차까지, 20회는 21주차까지 자동으로 열립니다.
+            한 번만 구성해두면 회원별로 곡을 직접 넣을 필요가 없습니다. 공통 기본곡과 각 주차는 최대 3곡까지 지정할 수 있고, 12회와 20회 상품은 각각 가입 즉시 공개되는 전용 기본 보너스곡을 최대 5곡까지 추가할 수 있습니다. 여기서 선택한 곡은 Song Club 공개 여부와 별개로 Home Package 회원에게 자동 공개됩니다.
           </p>
         </div>
 
@@ -9952,7 +10686,7 @@ function HomePackageMemberManagement({
               fontWeight: 800,
             }}
           >
-            ➕ 추가곡 옵션 · 기본곡/주차별 최대 3곡
+            ➕ 추가곡 옵션 · 기본곡/주차별 혜택 설정
           </summary>
 
           <p
@@ -9962,8 +10696,9 @@ function HomePackageMemberManagement({
               marginBottom: 14,
             }}
           >
-            기본곡은 기존 2곡에 1곡을 더 추가할 수 있고,
+            공통 기본곡은 기존 2곡에 1곡을 더 추가할 수 있고,
             각 주차는 기존 신곡에 추가곡 2곡을 더 지정할 수 있어요.
+            12회·20회 상품에는 상품별 전용 기본 보너스곡을 최대 5곡까지 추가할 수 있습니다.
             비워둔 칸은 공개되지 않습니다.
           </p>
 
@@ -9993,6 +10728,92 @@ function HomePackageMemberManagement({
                 )
               }
             />
+
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                background: "#fff4df",
+                border: "1px solid #efcf9f",
+                minWidth: 0,
+                maxWidth: "100%",
+                boxSizing: "border-box",
+              }}
+            >
+              <b style={{ display: "block", marginBottom: 6 }}>
+                🎁 12회 전용 기본곡 추가 · 최대 5곡
+              </b>
+              <p className="hint" style={{ margin: "0 0 12px" }}>
+                12회 Home Package 회원에게만 가입 즉시 공개됩니다.
+              </p>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                {Array.from({ length: 5 }, (_, index) => (
+                  <SongSelect
+                    key={`plan12-base-${index}`}
+                    label={`추가 기본곡 ${index + 1}`}
+                    value={schedule.plan12BaseBonus?.[index] || ""}
+                    songs={songsForSchedule}
+                    allowEmpty
+                    onChange={(value) =>
+                      setSchedule((current) => {
+                        const next = [
+                          ...(current.plan12BaseBonus || ["", "", "", "", ""]),
+                        ];
+                        next[index] = value;
+                        return {
+                          ...current,
+                          plan12BaseBonus: next,
+                        };
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                background: "#fff4df",
+                border: "1px solid #efcf9f",
+                minWidth: 0,
+                maxWidth: "100%",
+                boxSizing: "border-box",
+              }}
+            >
+              <b style={{ display: "block", marginBottom: 6 }}>
+                🎁 20회 전용 기본곡 추가 · 최대 5곡
+              </b>
+              <p className="hint" style={{ margin: "0 0 12px" }}>
+                20회 Home Package 회원에게만 가입 즉시 공개됩니다.
+              </p>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                {Array.from({ length: 5 }, (_, index) => (
+                  <SongSelect
+                    key={`plan20-base-${index}`}
+                    label={`추가 기본곡 ${index + 1}`}
+                    value={schedule.plan20BaseBonus?.[index] || ""}
+                    songs={songsForSchedule}
+                    allowEmpty
+                    onChange={(value) =>
+                      setSchedule((current) => {
+                        const next = [
+                          ...(current.plan20BaseBonus || ["", "", "", "", ""]),
+                        ];
+                        next[index] = value;
+                        return {
+                          ...current,
+                          plan20BaseBonus: next,
+                        };
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            </div>
 
             {Array.from(
               { length: 21 },
@@ -10073,6 +10894,148 @@ function HomePackageMemberManagement({
 
       <div style={{ height: 22 }} />
 
+      <EditBox title="🎁 이메일 계정별 추가곡">
+        <div style={{ gridColumn: "1 / -1" }}>
+          <p className="hint" style={{ marginTop: 0 }}>
+            Song Club / Home Package 공통 기능입니다. 회원 이메일을 선택한 뒤 원하는 곡을 체크하면
+            해당 계정에서 바로 이용할 수 있어요. Song Club 비공개곡도 계정별 추가곡으로 지급할 수 있습니다.
+          </p>
+
+          {!adminData.accountBonusReady && (
+            <div
+              style={{
+                padding: 12,
+                marginBottom: 12,
+                borderRadius: 12,
+                background: "#fff4e8",
+                border: "1px solid #efcf9f",
+              }}
+            >
+              계정별 추가곡 테이블이 아직 없습니다. 제공한 SQL을 Supabase SQL Editor에서 먼저 실행해주세요.
+            </div>
+          )}
+        </div>
+
+        <label>
+          학생 이름 / 회원 이메일
+          <select
+            className="normal"
+            value={bonusUserId}
+            onChange={(event) => setBonusUserId(event.target.value)}
+          >
+            <option value="">회원 선택</option>
+            {[...(authUsers || [])]
+              .sort((a, b) => authUserDisplay(a).localeCompare(authUserDisplay(b), "ko"))
+              .map((user) => (
+                <option key={user.id} value={user.id}>
+                  {authUserDisplay(user)}
+                </option>
+              ))}
+          </select>
+        </label>
+
+        <label>
+          프로그램 필터
+          <select
+            className="normal"
+            value={bonusProgramFilter}
+            onChange={(event) => setBonusProgramFilter(event.target.value)}
+          >
+            <option value="all">전체 프로그램</option>
+            {PROGRAM_OPTIONS.map((program) => (
+              <option key={program} value={program}>{program}</option>
+            ))}
+          </select>
+        </label>
+
+        <div style={{ gridColumn: "1 / -1" }}>
+          <input
+            className="normal"
+            value={bonusSongSearch}
+            onChange={(event) => setBonusSongSearch(event.target.value)}
+            placeholder="곡 제목 · 카테고리 · Slug 검색"
+            style={{ width: "100%", boxSizing: "border-box" }}
+          />
+        </div>
+
+        <div
+          style={{
+            gridColumn: "1 / -1",
+            border: "1px solid #eadfd6",
+            borderRadius: 14,
+            padding: 12,
+            background: "#fffdfb",
+            maxHeight: 360,
+            overflowY: "auto",
+          }}
+        >
+          {!bonusUserId ? (
+            <p className="hint" style={{ margin: 0 }}>
+              먼저 회원 이메일을 선택해주세요.
+            </p>
+          ) : filteredBonusSongs.length === 0 ? (
+            <p className="hint" style={{ margin: 0 }}>
+              조건에 맞는 곡이 없습니다.
+            </p>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {filteredBonusSongs.map((song) => (
+                <label
+                  key={song.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 10,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    background: bonusSongIds.includes(song.id) ? "#fff4d8" : "#fff",
+                    border: "1px solid #f0e4d5",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={bonusSongIds.includes(song.id)}
+                    onChange={() => toggleBonusSong(song.id)}
+                    style={{ marginTop: 3 }}
+                  />
+                  <span style={{ minWidth: 0 }}>
+                    <b>{song.emoji || "🎵"} {song.title}</b>
+                    <span className="hint" style={{ display: "block", marginTop: 3 }}>
+                      {song.program || "프로그램 없음"}
+                      {song.category ? ` · ${song.category}` : ""}
+                      {song.is_published === false ? " · Song Club 비공개" : " · Song Club 공개"}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            gridColumn: "1 / -1",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <b>현재 선택 {bonusSongIds.length}곡</b>
+          <button
+            type="button"
+            onClick={saveAccountBonusSongs}
+            disabled={saving || dataLoading || !bonusUserId || !adminData.accountBonusReady}
+          >
+            계정별 추가곡 저장
+          </button>
+        </div>
+      </EditBox>
+
+      <div style={{ height: 22 }} />
+
       <div
         style={{
           display: "flex",
@@ -10134,7 +11097,7 @@ function HomePackageMemberManagement({
                   <div className="hint" style={{ marginTop: 6 }}>
                     이메일: {getUserEmail(product.user_id)}
                     <br />
-                    {planLabel(product.plan_code)} · {product.program}
+                    {planLabel(product.plan_code)} · {getProductPrograms(product).join(" + ")}
                     <br />
                     {String(product.starts_at || "").slice(0, 10)} 시작
                     {product.ends_at ? ` · ${String(product.ends_at).slice(0, 10)} 종료` : " · 종료일 없음"}
@@ -10205,18 +11168,38 @@ function HomePackageMemberManagement({
                     </select>
                   </label>
 
-                  <label>
-                    프로그램
-                    <select
-                      className="normal"
-                      value={editForm.program}
-                      onChange={(event) => setEditForm({ ...editForm, program: event.target.value })}
+                  <div>
+                    <b style={{ display: "block", marginBottom: 8 }}>이용 클래스</b>
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: 8,
+                        padding: 12,
+                        border: "1px solid #ead8be",
+                        borderRadius: 12,
+                        background: "#fffaf2",
+                      }}
                     >
                       {PROGRAM_OPTIONS.map((program) => (
-                        <option key={program} value={program}>{program}</option>
+                        <label
+                          key={program}
+                          style={{ display: "flex", alignItems: "center", gap: 8 }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={editForm.programs.includes(program)}
+                            onChange={() =>
+                              setEditForm((current) => ({
+                                ...current,
+                                programs: toggleProgramSelection(current.programs, program),
+                              }))
+                            }
+                          />
+                          <span>{program}</span>
+                        </label>
                       ))}
-                    </select>
-                  </label>
+                    </div>
+                  </div>
 
                   <label>
                     상태
@@ -10321,7 +11304,7 @@ function SongSelect({ label, value, songs, onChange, allowEmpty = false }) {
         {(songs || []).map((song) => (
           <option key={song.id} value={song.id}>
             {song.title || song.slug}
-            {song.is_published === false ? " · 비공개" : ""}
+            {song.is_published === false ? " · Song Club 비공개" : ""}
           </option>
         ))}
       </select>
