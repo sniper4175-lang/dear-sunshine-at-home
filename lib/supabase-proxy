@@ -103,12 +103,14 @@ export async function updateSession(
      * 중요:
      * 세션 토큰 검증 및 필요 시 갱신
      *
-     * createServerClient와 getUser 사이에는
-     * 다른 코드를 넣지 않는 것이 좋음
+     * getClaims()는 새 Supabase 프로젝트의 비대칭 JWT에서
+     * 서명을 로컬/캐시된 JWKS로 검증할 수 있어 getUser()처럼
+     * 매 요청마다 Auth 서버 왕복을 만들지 않습니다.
+     * 세션 만료가 가까우면 필요한 refresh도 처리합니다.
      */
     await supabase
         .auth
-        .getUser();
+        .getClaims();
 
 
     return supabaseResponse;
