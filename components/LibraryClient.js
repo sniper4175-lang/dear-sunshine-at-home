@@ -114,6 +114,10 @@ function monthLabel(
     key
 ) {
 
+    if (key === 'basic') {
+        return '기본곡';
+    }
+
     if (
         !key ||
         key === 'unknown'
@@ -144,8 +148,7 @@ export default function LibraryClient({
     songs,
     loggedIn,
     membership,
-    userPrograms = [],
-    initialCategory = 'all'
+    userPrograms = []
 }) {
 
     const router =
@@ -186,13 +189,6 @@ export default function LibraryClient({
                     : 'all'
         );
 
-    const [
-        selectedCategory,
-        setSelectedCategory
-    ] = useState(
-        initialCategory || 'all'
-    );
-
     const visibleSongs =
         useMemo(
             () => {
@@ -231,53 +227,26 @@ export default function LibraryClient({
             ? availablePrograms[0]
             : selectedProgram;
 
-    const availableCategories =
-        useMemo(
-            () =>
-                [
-                    ...new Set(
-                        visibleSongs
-                            .map(song => song.category)
-                            .filter(Boolean)
-                    )
-                ].sort((a, b) =>
-                    String(a).localeCompare(String(b), 'ko')
-                ),
-            [visibleSongs]
-        );
-
     const filteredSongs =
         useMemo(
             () => {
-                let result = visibleSongs;
 
                 if (
-                    effectiveSelectedProgram !==
+                    effectiveSelectedProgram ===
                     'all'
                 ) {
-                    result = result.filter(
-                        song =>
-                            song.program ===
-                            effectiveSelectedProgram
-                    );
+                    return visibleSongs;
                 }
 
-                if (
-                    selectedCategory &&
-                    selectedCategory !== 'all'
-                ) {
-                    result = result.filter(
-                        song =>
-                            song.category === selectedCategory
-                    );
-                }
-
-                return result;
+                return visibleSongs.filter(
+                    song =>
+                        song.program ===
+                        effectiveSelectedProgram
+                );
             },
             [
                 visibleSongs,
-                effectiveSelectedProgram,
-                selectedCategory
+                effectiveSelectedProgram
             ]
         );
 
@@ -292,9 +261,11 @@ export default function LibraryClient({
                     song => {
 
                         const key =
-                            monthKey(
-                                song.releaseDate
-                            );
+                            song.basic
+                                ? 'basic'
+                                : monthKey(
+                                    song.releaseDate
+                                );
 
                         if (
                             !groups.has(
@@ -318,10 +289,19 @@ export default function LibraryClient({
                 return Array.from(
                     groups.entries()
                 ).sort(
-                    ([keyA], [keyB]) =>
-                        keyB.localeCompare(
+                    ([keyA], [keyB]) => {
+                        if (keyA === 'basic') {
+                            return -1;
+                        }
+
+                        if (keyB === 'basic') {
+                            return 1;
+                        }
+
+                        return keyB.localeCompare(
                             keyA
-                        )
+                        );
+                    }
                 );
             },
             [
@@ -532,33 +512,6 @@ export default function LibraryClient({
                                     </ProgramButton>
                                 )
                             )}
-                        </div>
-                    )}
-
-                    {availableCategories.length > 0 && (
-                        <div
-                            className="filter-row"
-                            style={{
-                                marginTop: -6,
-                                paddingBottom: 18
-                            }}
-                        >
-                            <ProgramButton
-                                active={selectedCategory === 'all'}
-                                onClick={() => setSelectedCategory('all')}
-                            >
-                                주제 전체
-                            </ProgramButton>
-
-                            {availableCategories.map((category) => (
-                                <ProgramButton
-                                    key={category}
-                                    active={selectedCategory === category}
-                                    onClick={() => setSelectedCategory(category)}
-                                >
-                                    {category}
-                                </ProgramButton>
-                            ))}
                         </div>
                     )}
 

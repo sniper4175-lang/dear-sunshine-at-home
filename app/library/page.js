@@ -39,6 +39,7 @@ const LIBRARY_SONG_FIELDS = `
     program,
     category,
     emoji,
+    is_basic,
     release_date,
     is_published
 `;
@@ -52,6 +53,7 @@ function mapSong(row) {
         program: row.program,
         category: row.category,
         emoji: row.emoji,
+        basic: Boolean(row.is_basic),
         releaseDate: row.release_date,
         isPublished: Boolean(row.is_published)
     };
@@ -85,12 +87,7 @@ function sortSongs(songs) {
 }
 
 
-export default async function LibraryPage({ searchParams }) {
-    const params = searchParams ? await searchParams : {};
-    const initialCategory =
-        typeof params?.category === 'string'
-            ? params.category
-            : 'all';
+export default async function LibraryPage() {
     const {
         user,
         membership
@@ -336,7 +333,6 @@ export default async function LibraryPage({ searchParams }) {
             loggedIn={loggedIn}
             membership={clientMembership}
             userPrograms={userPrograms}
-            initialCategory={initialCategory}
         />
     );
 }
