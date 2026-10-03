@@ -25,15 +25,15 @@ export default function SiteFooter() {
                         fontSize: 13
                     }}
                 >
-                    <Link href="/privacy">
+                    <Link href="/privacy" prefetch={false}>
                         개인정보처리방침
                     </Link>
 
-                    <Link href="/terms">
+                    <Link href="/terms" prefetch={false}>
                         이용약관
                     </Link>
 
-                    <Link href="/refund">
+                    <Link href="/refund" prefetch={false}>
                         이용권·환불 안내
                     </Link>
                 </nav>

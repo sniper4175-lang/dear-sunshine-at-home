@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import IntentLink from './IntentLink';
 
 function monthKeyKST() {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -81,7 +82,7 @@ function progressPercent(membership) {
 
 function SongClubSongCard({ song }) {
     return (
-        <Link
+        <IntentLink
             href={`/song/${encodeURIComponent(song.slug)}`}
             className="content-card home-package-song-card song-club-home-song-card"
             style={{ position: 'relative' }}
@@ -125,7 +126,7 @@ function SongClubSongCard({ song }) {
             <span className="home-song-play" aria-hidden="true">
                 ▶
             </span>
-        </Link>
+        </IntentLink>
     );
 }
 

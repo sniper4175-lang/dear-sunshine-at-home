@@ -14,12 +14,13 @@ import {
 } from '../../lib/program-access';
 
 import {
-    todayKST
-} from '../../lib/release-date';
-
-import {
     canAccessSong
 } from '../../lib/content-access';
+
+import {
+    getSongs,
+    getSongRowsByIds
+} from '../../lib/content';
 
 
 export const dynamic =
@@ -31,18 +32,6 @@ const PROGRAM_OPTIONS = [
     'Melody Book Club'
 ];
 
-
-const LIBRARY_SONG_FIELDS = `
-    id,
-    slug,
-    title,
-    program,
-    category,
-    emoji,
-    is_basic,
-    release_date,
-    is_published
-`;
 
 
 function mapSong(
@@ -101,7 +90,6 @@ export default async function LibraryPage() {
 
     const loggedIn = Boolean(user);
     const db = createAdminSupabase();
-    const today = todayKST();
 
     const homePackagePrograms = unique([
         ...(
@@ -145,9 +133,9 @@ export default async function LibraryPage() {
     );
 
     /*
-     * 회원 프로그램 / Song Club 곡 / Home Package 곡 / 추가곡은
-     * 현재 회원권 정보만 있으면 서로 독립적으로 조회할 수 있습니다.
-     * 순차 조회 대신 동시에 시작해 모바일 화면 전환 대기를 줄입니다.
+     * 공개곡은 공용 Data Cache를 재사용하고, Home Package/추가곡은
+     * song id를 합쳐 단 한 번만 조회합니다. 페이지를 오갈 때 같은 곡을
+     * 여러 쿼리로 반복해서 읽지 않도록 한 단계 더 강하게 줄였습니다.
      */
     const programPromise = user
         ? getUserPrograms(db, user.id)
@@ -160,62 +148,29 @@ export default async function LibraryPage() {
             })
         : Promise.resolve([]);
 
-    const songClubPromise =
+    const publicSongsPromise =
         !loggedIn || hasSongClub
-            ? db
-                .from('ds_content_songs')
-                .select(LIBRARY_SONG_FIELDS)
-                .eq('is_published', true)
-                .lte('release_date', today)
-                .order(
-                    'release_date',
-                    { ascending: false }
-                )
-            : Promise.resolve({
-                data: [],
-                error: null
-            });
+            ? getSongs()
+            : Promise.resolve([]);
 
-    const homePackagePromise =
-        loggedIn &&
-        homePackageUnlockedSongIds.length > 0
-            ? db
-                .from('ds_content_songs')
-                .select(LIBRARY_SONG_FIELDS)
-                .in(
-                    'id',
-                    homePackageUnlockedSongIds
-                )
-            : Promise.resolve({
-                data: [],
-                error: null
-            });
+    const privateSongIds = unique([
+        ...homePackageUnlockedSongIds,
+        ...accountBonusSongIds
+    ]);
 
-    const accountBonusPromise =
-        loggedIn &&
-        accountBonusSongIds.length > 0
-            ? db
-                .from('ds_content_songs')
-                .select(LIBRARY_SONG_FIELDS)
-                .in(
-                    'id',
-                    accountBonusSongIds
-                )
-            : Promise.resolve({
-                data: [],
-                error: null
-            });
+    const privateSongsPromise =
+        loggedIn && privateSongIds.length > 0
+            ? getSongRowsByIds(privateSongIds)
+            : Promise.resolve([]);
 
     const [
         savedPrograms,
-        songClubResult,
-        homePackageResult,
-        accountBonusResult
+        publicSongs,
+        privateRows
     ] = await Promise.all([
         programPromise,
-        songClubPromise,
-        homePackagePromise,
-        accountBonusPromise
+        publicSongsPromise,
+        privateSongsPromise
     ]);
 
     const songClubPrograms = (savedPrograms || [])
@@ -229,43 +184,25 @@ export default async function LibraryPage() {
         ...homePackagePrograms
     ]);
 
-    if (songClubResult?.error) {
-        console.error(
-            'Library Song Club songs error:',
-            songClubResult.error
-        );
-    }
-
-    if (homePackageResult?.error) {
-        console.error(
-            'Library Home Package songs error:',
-            homePackageResult.error
-        );
-    }
-
-    if (accountBonusResult?.error) {
-        console.error(
-            'Library account bonus songs error:',
-            accountBonusResult.error
-        );
-    }
-
     const songClubRows =
-        songClubResult?.data || [];
-
-    const homePackageRows =
-        homePackageResult?.data || [];
-
-    const accountBonusRows =
-        accountBonusResult?.data || [];
+        (publicSongs || []).map((song) => ({
+            id: song.id,
+            slug: song.slug,
+            title: song.title,
+            program: song.program,
+            category: song.category,
+            emoji: song.emoji,
+            is_basic: song.basic,
+            release_date: song.releaseDate,
+            is_published: song.published
+        }));
 
     const mergedById = new Map();
 
     for (
         const row of [
             ...songClubRows,
-            ...homePackageRows,
-            ...accountBonusRows
+            ...(privateRows || [])
         ]
     ) {
         if (row?.id) {

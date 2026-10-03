@@ -3,11 +3,11 @@ import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 
-import { getSongBySlug } from '../../../lib/content';
+import { getRawSongBySlug } from '../../../lib/content';
 import { getCurrentMembership } from '../../../lib/membership';
 import { canAccessSong } from '../../../lib/content-access';
-import { createAdminSupabase } from '../../../lib/supabase-server';
 import { getUserPrograms } from '../../../lib/program-access';
+import { todayKST } from '../../../lib/release-date';
 
 import AudioPlayer from '../../../components/AudioPlayer';
 import SongResourceBundleServer, {
@@ -55,23 +55,30 @@ export default async function SongPage({ params }) {
      * 현재 Home Package에서 이미 열린 song_id라면 is_published와 관계없이
      * 전용 상세페이지로 즉시 이동합니다.
      */
-    const db = createAdminSupabase();
-
     const [
-        song,
-        membershipState,
-        rawSongResult
+        rawSong,
+        membershipState
     ] = await Promise.all([
-        getSongBySlug(slug),
+        getRawSongBySlug(slug),
         getCurrentMembership({
             includeBillingProfile: false
-        }),
-        db
-            .from('ds_content_songs')
-            .select('*')
-            .eq('slug', slug)
-            .maybeSingle()
+        })
     ]);
+
+    /*
+     * 기존에는 공개곡 조회 + 원본곡 조회를 같은 slug로 2번 수행했습니다.
+     * 이제 캐시된 원본 row 한 번으로 공개 여부와 특수 접근을 함께 판정합니다.
+     */
+    const releaseDate =
+        rawSong?.release_date
+            ? String(rawSong.release_date).slice(0, 10)
+            : '';
+
+    const song =
+        rawSong?.is_published &&
+        (!releaseDate || releaseDate <= todayKST())
+            ? mapRawSong(rawSong)
+            : null;
 
     const {
         user,
@@ -91,10 +98,6 @@ export default async function SongPage({ params }) {
         )
             ? membership.account_bonus_song_ids
             : [];
-
-    const rawSong =
-        rawSongResult?.data ||
-        null;
 
     if (
         user &&
@@ -150,7 +153,7 @@ export default async function SongPage({ params }) {
     if (needsProgramLookup) {
         try {
             userPrograms = await getUserPrograms(
-                db,
+                null,
                 user.id
             );
         } catch (error) {

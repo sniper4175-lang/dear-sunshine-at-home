@@ -30,6 +30,12 @@ export default function SongCard({
         ? `/home-package/song/${encodeURIComponent(song.slug)}`
         : `/song/${encodeURIComponent(song.slug)}`;
 
+    function warmSong() {
+        if (accessible || isHomePackageSong) {
+            router.prefetch(songHref);
+        }
+    }
+
     function openSong() {
         if (!song?.slug) {
             alert('이 노래의 연결 정보가 없습니다. 관리자에게 문의해주세요.');
@@ -83,6 +89,9 @@ export default function SongCard({
         <button
             type="button"
             onClick={openSong}
+            onMouseEnter={warmSong}
+            onFocus={warmSong}
+            onTouchStart={warmSong}
             className="song-card"
             style={{
                 textAlign: 'left',

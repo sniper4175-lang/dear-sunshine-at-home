@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import {
-    getSongs
+    getSongs,
+    getUpcomingSongs
 } from '../lib/content';
 
 import {
@@ -11,9 +12,6 @@ import {
     canAccessSong
 } from '../lib/content-access';
 
-import {
-    createAdminSupabase
-} from '../lib/supabase-server';
 
 import {
     getUserPrograms
@@ -219,10 +217,6 @@ export default async function HomePage() {
     }
 
 
-    const db =
-        createAdminSupabase();
-
-
     /*
      * 홈 화면에 필요한 공개곡 / 프로그램 권한 / COMING UP NEXT는
      * 서로 독립적인 조회이므로 한 번에 시작합니다.
@@ -232,7 +226,7 @@ export default async function HomePage() {
     const userProgramsPromise =
         user
             ? getUserPrograms(
-                db,
+                null,
                 user.id
             ).catch((error) => {
                 console.error(
@@ -246,54 +240,18 @@ export default async function HomePage() {
 
 
     const upcomingPromise =
-        db
-            .from(
-                'ds_content_songs'
-            )
-            .select(
-                'id,slug,title,subtitle,program,category,emoji,release_date,is_upcoming'
-            )
-            .eq(
-                'is_upcoming',
-                true
-            )
-            .order(
-                'release_date',
-                {
-                    ascending: true
-                }
-            )
-            .order(
-                'title',
-                {
-                    ascending: true
-                }
-            );
+        getUpcomingSongs();
 
 
     const [
         songs,
         userPrograms,
-        upcomingResult
+        allUpcomingRows
     ] = await Promise.all([
         songsPromise,
         userProgramsPromise,
         upcomingPromise
     ]);
-
-
-    const {
-        data: allUpcomingRows,
-        error: allUpcomingError
-    } = upcomingResult || {};
-
-
-    if (allUpcomingError) {
-        console.error(
-            'Upcoming songs load error:',
-            allUpcomingError
-        );
-    }
 
 
     /*

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import IntentLink from './IntentLink';
 
 import {
     getHomePackageDashboard,
@@ -48,7 +49,7 @@ function sectionIcon(eyebrow) {
 
 function HomePackageSongCard({ song }) {
     return (
-        <Link
+        <IntentLink
             href={`/home-package/song/${encodeURIComponent(song.slug)}`}
             className="content-card home-package-song-card"
         >
@@ -69,7 +70,7 @@ function HomePackageSongCard({ song }) {
             <span className="home-song-play" aria-hidden="true">
                 ▶
             </span>
-        </Link>
+        </IntentLink>
     );
 }
 

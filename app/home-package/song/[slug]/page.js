@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import { getCurrentMembership } from '../../../../lib/membership';
-import { createAdminSupabase } from '../../../../lib/supabase-server';
+import { getRawSongBySlug } from '../../../../lib/content';
 
 import AudioPlayer from '../../../../components/AudioPlayer';
 import SongResourceBundleServer, {
@@ -16,28 +16,18 @@ export const dynamic = 'force-dynamic';
 export default async function HomePackageSongPage({ params }) {
     const { slug } = await params;
 
-    const db = createAdminSupabase();
-
     /*
      * 회원권 확인과 곡 정보 조회를 동시에 시작합니다.
-     * 결제수단 정보는 필요하지 않으므로 조회하지 않습니다.
+     * 곡 row는 공용 Data Cache를 사용해 상세 페이지 재방문 시 DB 재조회를 줄입니다.
      */
     const [
         membershipState,
-        songResult
+        row
     ] = await Promise.all([
         getCurrentMembership({
             includeBillingProfile: false
         }),
-
-        db
-            .from('ds_content_songs')
-            // 스키마에 없는 선택 컬럼 때문에 전체 조회가 실패하지 않도록
-            // 실제 행 전체를 조회합니다. 놀이 아이디어 파일은 DB 컬럼이 아니라
-            // Storage 폴더 자동 연결 로직에서 읽습니다.
-            .select('*')
-            .eq('slug', slug)
-            .maybeSingle()
+        getRawSongBySlug(slug)
     ]);
 
     const {
@@ -53,22 +43,6 @@ export default async function HomePackageSongPage({ params }) {
 
     if (!homePackage) {
         redirect('/home-package');
-    }
-
-    const {
-        data: row,
-        error
-    } = songResult;
-
-    if (error) {
-        console.error('Home Package song lookup error:', {
-            slug,
-            message: error?.message,
-            code: error?.code,
-            details: error?.details,
-            hint: error?.hint
-        });
-        notFound();
     }
 
     if (!row) {
