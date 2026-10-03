@@ -79,60 +79,35 @@ function progressPercent(membership) {
     );
 }
 
-function pickWelcomeSongs(songs) {
-    const source = (songs || []).filter((song) => song?.slug);
-    const selected = [];
-    const used = new Set();
-
-    const priorities = [
-        /hello/i,
-        /weather/i,
-        /goodbye/i
-    ];
-
-    priorities.forEach((matcher) => {
-        const found = source.find(
-            (song) =>
-                !used.has(song.id || song.slug) &&
-                matcher.test(String(song.title || ''))
-        );
-
-        if (found) {
-            selected.push(found);
-            used.add(found.id || found.slug);
-        }
-    });
-
-    const oldest = [...source].sort((a, b) => {
-        const dateA = a.releaseDate || '9999-12-31';
-        const dateB = b.releaseDate || '9999-12-31';
-
-        if (dateA !== dateB) {
-            return dateA.localeCompare(dateB);
-        }
-
-        return String(a.title || '').localeCompare(String(b.title || ''), 'ko');
-    });
-
-    for (const song of oldest) {
-        if (selected.length >= 3) break;
-
-        const key = song.id || song.slug;
-        if (used.has(key)) continue;
-
-        selected.push(song);
-        used.add(key);
-    }
-
-    return selected.slice(0, 3);
-}
-
 function SongClubSongCard({ song }) {
     return (
         <Link
             href={`/song/${encodeURIComponent(song.slug)}`}
             className="content-card home-package-song-card song-club-home-song-card"
+            style={{ position: 'relative' }}
         >
+            {song.popular ? (
+                <span
+                    className="song-club-popular-badge"
+                    style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        zIndex: 2,
+                        padding: '4px 8px',
+                        borderRadius: 999,
+                        background: '#fff3c4',
+                        border: '1px solid #f4cd69',
+                        color: '#9a6500',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        lineHeight: 1.2
+                    }}
+                >
+                    인기곡
+                </span>
+            ) : null}
+
             <div className="home-song-art">
                 {song.emoji || '🎵'}
             </div>
@@ -198,7 +173,25 @@ function upcomingDateLabel(value) {
 }
 
 function UpcomingSection({ songs = [] }) {
-    if (!songs.length) return null;
+    if (!songs.length) {
+        return (
+            <section className="section home-next-section song-club-home-section">
+                <div className="section-head home-section-head">
+                    <div>
+                        <p className="eyebrow">COMING UP NEXT</p>
+                        <h2><span className="home-section-icon">✨</span>다음에 만나요</h2>
+                        <p className="muted home-section-description">
+                            곧 공개될 노래를 미리 만나보세요.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="content-card song-club-empty-card">
+                    <p className="muted">다음 공개곡을 준비하고 있어요.</p>
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="section home-next-section song-club-home-section">
@@ -213,7 +206,7 @@ function UpcomingSection({ songs = [] }) {
             </div>
 
             <div className="home-next-list">
-                {songs.map((song) => (
+                {songs.slice(0, 3).map((song) => (
                     <article
                         key={song.id || song.slug}
                         className="content-card home-next-card"
@@ -239,44 +232,6 @@ function UpcomingSection({ songs = [] }) {
     );
 }
 
-const CATEGORY_TILES = [
-    {
-        icon: '🍎',
-        title: 'Fruits',
-        subtitle: '과일',
-        category: '과일',
-        tone: 'pink'
-    },
-    {
-        icon: '☀️',
-        title: 'Weather',
-        subtitle: '날씨',
-        category: '날씨',
-        tone: 'yellow'
-    },
-    {
-        icon: '🐿️',
-        title: 'Animals',
-        subtitle: '동물',
-        category: '동물',
-        tone: 'peach'
-    },
-    {
-        icon: '🍂',
-        title: 'Seasons',
-        subtitle: '계절',
-        category: '계절',
-        tone: 'green'
-    },
-    {
-        icon: '⭐',
-        title: 'Daily Life',
-        subtitle: '생활영어',
-        category: '생활영어',
-        tone: 'purple'
-    }
-];
-
 export default function SongClubHome({
     membership,
     songs = [],
@@ -285,22 +240,39 @@ export default function SongClubHome({
 }) {
     const currentMonthKey = monthKeyKST();
 
+    /*
+     * 관리자 콘텐츠 관리에서 '기본곡'으로 체크한 공개곡만 표시합니다.
+     * DB의 is_basic 컬럼을 사용하므로 인기곡(is_popular)과 별개로 관리됩니다.
+     */
+    const basicSongs = songs
+        .filter((song) => Boolean(song?.basic))
+        .sort((a, b) => {
+            const dateA = a.releaseDate || '9999-12-31';
+            const dateB = b.releaseDate || '9999-12-31';
+
+            if (dateA !== dateB) {
+                return dateA.localeCompare(dateB);
+            }
+
+            return String(a.title || '').localeCompare(String(b.title || ''), 'ko');
+        })
+        .slice(0, 3);
+
+    const basicSongKeys = new Set(
+        basicSongs.map((song) => song.id || song.slug)
+    );
+
+    /*
+     * 기본곡으로 지정된 곡은 같은 달에 공개됐더라도
+     * 홈에서 중복 노출되지 않도록 '이번 달 곡'에서는 제외합니다.
+     */
     const currentMonthSongs = songs
         .filter(
             (song) =>
                 song.releaseDate &&
-                String(song.releaseDate).startsWith(currentMonthKey)
+                String(song.releaseDate).startsWith(currentMonthKey) &&
+                !basicSongKeys.has(song.id || song.slug)
         )
-        .slice(0, 3);
-
-    const welcomeSongs = pickWelcomeSongs(songs);
-
-    /*
-     * 관리자 콘텐츠 관리에서 '인기곡'으로 체크한 공개곡만
-     * 현재 회원이 이용할 수 있는 클래스 범위 안에서 표시합니다.
-     */
-    const popularSongs = songs
-        .filter((song) => song?.popular)
         .slice(0, 3);
 
     const endLabel = formatDate(accessEnd(membership));
@@ -373,73 +345,22 @@ export default function SongClubHome({
             </section>
 
             <SongSection
-                eyebrow="WELCOME SONGS"
+                eyebrow="BASIC SONGS"
                 title="🎵 처음부터 함께하는 기본곡"
-                description="Song Club에서 오래 사랑받은 노래들을 만나보세요."
-                songs={welcomeSongs}
-                emptyText="기본곡을 준비하고 있어요."
+                description="Song Club 이용을 시작하면 바로 들을 수 있는 기본곡이에요."
+                songs={basicSongs}
+                emptyText="관리자에서 기본곡을 지정해주세요."
             />
 
             <SongSection
                 eyebrow="THIS MONTH'S SONGS"
-                title="🗓️ 이번 달 신규곡"
-                description="이번 달에 새롭게 추가된 노래예요."
+                title="🗓️ 이번 달 곡"
+                description="이번 달에 새롭게 공개된 노래예요."
                 songs={currentMonthSongs}
-                emptyText="이번 달 신규곡을 준비하고 있어요."
+                emptyText="이번 달에 공개된 노래가 아직 없어요."
             />
 
             <UpcomingSection songs={upcomingSongs} />
-
-            {popularSongs.length > 0 ? (
-                <SongSection
-                    eyebrow="KIDS' FAVORITES"
-                    title="💛 아이들이 좋아해요"
-                    description="아이들이 특히 좋아하는 노래를 모았어요."
-                    songs={popularSongs}
-                    emptyText=""
-                />
-            ) : null}
-
-            <section className="section song-club-all-songs-section">
-                <div className="section-head home-section-head">
-                    <div>
-                        <p className="eyebrow">ALL SONGS</p>
-                        <h2>📁 전체 노래</h2>
-                        <p className="muted home-section-description">
-                            주제별로 다양한 노래를 들어보세요.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="song-club-category-grid">
-                    {CATEGORY_TILES.map((item) => (
-                        <Link
-                            key={item.title}
-                            href={`/library?category=${encodeURIComponent(item.category)}`}
-                            className={`song-club-category-card tone-${item.tone}`}
-                        >
-                            <span className="song-club-category-icon" aria-hidden="true">
-                                {item.icon}
-                            </span>
-                            <strong>{item.title}</strong>
-                            <small>{item.subtitle}</small>
-                            <em aria-hidden="true">›</em>
-                        </Link>
-                    ))}
-
-                    <Link
-                        href="/library"
-                        className="song-club-category-card tone-blue"
-                    >
-                        <span className="song-club-category-icon" aria-hidden="true">
-                            🎵
-                        </span>
-                        <strong>All Songs</strong>
-                        <small>전체 보기</small>
-                        <em aria-hidden="true">›</em>
-                    </Link>
-                </div>
-            </section>
         </div>
     );
 }
