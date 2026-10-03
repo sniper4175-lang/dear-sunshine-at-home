@@ -308,9 +308,6 @@ export default async function HomePage() {
                     {
                         ascending: true
                     }
-                )
-                .limit(
-                    12
                 );
 
         if (songClubUpcomingError) {
@@ -347,7 +344,6 @@ export default async function HomePage() {
                                 song.program
                             )
                     )
-                    .slice(0, 4)
                 : [];
 
         return (

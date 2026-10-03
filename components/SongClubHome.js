@@ -206,7 +206,7 @@ function UpcomingSection({ songs = [] }) {
             </div>
 
             <div className="home-next-list">
-                {songs.slice(0, 3).map((song) => (
+                {songs.map((song) => (
                     <article
                         key={song.id || song.slug}
                         className="content-card home-next-card"
@@ -255,8 +255,7 @@ export default function SongClubHome({
             }
 
             return String(a.title || '').localeCompare(String(b.title || ''), 'ko');
-        })
-        .slice(0, 3);
+        });
 
     const basicSongKeys = new Set(
         basicSongs.map((song) => song.id || song.slug)
@@ -272,8 +271,7 @@ export default function SongClubHome({
                 song.releaseDate &&
                 String(song.releaseDate).startsWith(currentMonthKey) &&
                 !basicSongKeys.has(song.id || song.slug)
-        )
-        .slice(0, 3);
+        );
 
     const endLabel = formatDate(accessEnd(membership));
     const progress = progressPercent(membership);
