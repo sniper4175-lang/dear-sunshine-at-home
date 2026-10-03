@@ -62,10 +62,22 @@ function canAccessSong(
             ? membership.home_package_unlocked_song_ids
             : [];
 
+    const accountBonusSongIds =
+        Array.isArray(
+            membership.account_bonus_song_ids
+        )
+            ? membership.account_bonus_song_ids
+            : [];
+
     if (
         song?.id &&
-        homePackageSongIds.includes(
-            song.id
+        (
+            homePackageSongIds.includes(
+                song.id
+            ) ||
+            accountBonusSongIds.includes(
+                song.id
+            )
         )
     ) {
         return true;
@@ -116,6 +128,10 @@ function monthLabel(
 
     if (key === 'basic') {
         return '기본곡';
+    }
+
+    if (key === 'bonus') {
+        return '보너스곡';
     }
 
     if (
@@ -261,11 +277,13 @@ export default function LibraryClient({
                     song => {
 
                         const key =
-                            song.basic
-                                ? 'basic'
-                                : monthKey(
-                                    song.releaseDate
-                                );
+                            song.bonus
+                                ? 'bonus'
+                                : song.basic
+                                    ? 'basic'
+                                    : monthKey(
+                                        song.releaseDate
+                                    );
 
                         if (
                             !groups.has(
@@ -290,11 +308,25 @@ export default function LibraryClient({
                     groups.entries()
                 ).sort(
                     ([keyA], [keyB]) => {
-                        if (keyA === 'basic') {
+                        const specialOrder = {
+                            basic: 0,
+                            bonus: 1
+                        };
+
+                        const orderA =
+                            specialOrder[keyA];
+
+                        const orderB =
+                            specialOrder[keyB];
+
+                        if (orderA !== undefined) {
+                            if (orderB !== undefined) {
+                                return orderA - orderB;
+                            }
                             return -1;
                         }
 
-                        if (keyB === 'basic') {
+                        if (orderB !== undefined) {
                             return 1;
                         }
 

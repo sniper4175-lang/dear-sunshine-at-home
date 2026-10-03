@@ -45,7 +45,10 @@ const LIBRARY_SONG_FIELDS = `
 `;
 
 
-function mapSong(row) {
+function mapSong(
+    row,
+    accountBonusIdSet = new Set()
+) {
     return {
         id: row.id,
         slug: row.slug,
@@ -54,6 +57,7 @@ function mapSong(row) {
         category: row.category,
         emoji: row.emoji,
         basic: Boolean(row.is_basic),
+        bonus: accountBonusIdSet.has(row.id),
         releaseDate: row.release_date,
         isPublished: Boolean(row.is_published)
     };
@@ -279,7 +283,13 @@ export default async function LibraryPage() {
 
     const mergedSongs = Array.from(
         mergedById.values()
-    ).map(mapSong);
+    ).map(
+        row =>
+            mapSong(
+                row,
+                accountBonusIdSet
+            )
+    );
 
     let songs;
 
@@ -323,7 +333,9 @@ export default async function LibraryPage() {
             home_package_program:
                 membership.home_package_program || null,
             home_package_unlocked_song_ids:
-                homePackageUnlockedSongIds
+                homePackageUnlockedSongIds,
+            account_bonus_song_ids:
+                accountBonusSongIds
         }
         : null;
 
