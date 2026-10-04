@@ -277,10 +277,10 @@ export default function LibraryClient({
                     song => {
 
                         const key =
-                            song.bonus
-                                ? 'bonus'
-                                : song.basic
-                                    ? 'basic'
+                            song.basic
+                                ? 'basic'
+                                : song.bonus
+                                    ? 'bonus'
                                     : monthKey(
                                         song.releaseDate
                                     );
