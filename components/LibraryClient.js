@@ -411,6 +411,19 @@ export default function LibraryClient({
             return;
         }
 
+        /*
+         * 같은 곡이 Song Club과 Home Package에 동시에 포함되어 있으면
+         * Home Package 전용 상세화면을 우선합니다.
+         */
+        if (
+            song?.homePackagePreferred
+        ) {
+            router.push(
+                `/home-package/song/${song.slug}`
+            );
+            return;
+        }
+
         router.push(
             `/song/${song.slug}`
         );

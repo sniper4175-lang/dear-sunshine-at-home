@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import {
-    getSongs,
-    getUpcomingSongs
+    getSongs
 } from '../lib/content';
 
 import {
@@ -12,6 +11,9 @@ import {
     canAccessSong
 } from '../lib/content-access';
 
+import {
+    createAdminSupabase
+} from '../lib/supabase-server';
 
 import {
     getUserPrograms
@@ -200,14 +202,13 @@ export default async function HomePage() {
 
     if (
         loggedIn &&
-        homePackage &&
-        !songClubMembership
+        homePackage
     ) {
         /*
-         * Home Package 전용 회원은 /home-package로 다시 이동시키지 않고
-         * 홈 주소(/)에서 바로 같은 홈 화면을 렌더링합니다.
-         * 이렇게 하면 / 로딩 -> /home-package 로딩처럼
-         * 로딩 화면이 두 번 연속 바뀌지 않습니다.
+         * Home Package가 활성화되어 있으면 Song Club도 동시에 활성화된
+         * combined 계정이라도 홈 화면은 Home Package 로직을 우선합니다.
+         * 같은 곡이 두 상품에 동시에 포함될 수 있으므로, 사용자가 보는
+         * 홈 화면의 기준을 Home Package로 통일해 중복/상이한 노출을 막습니다.
          */
         return (
             <HomePackageHome
@@ -217,41 +218,38 @@ export default async function HomePage() {
     }
 
 
-    /*
-     * 홈 화면에 필요한 공개곡 / 프로그램 권한 / COMING UP NEXT는
-     * 서로 독립적인 조회이므로 한 번에 시작합니다.
-     * 기존에는 이 세 조회가 순서대로 이어져 탭 이동 시 대기시간이
-     * 누적될 수 있었습니다.
-     */
-    const userProgramsPromise =
-        user
-            ? getUserPrograms(
-                null,
-                user.id
-            ).catch((error) => {
-                console.error(
-                    'Home program access error:',
-                    error
+    const songs =
+        await songsPromise;
+
+
+    const db =
+        createAdminSupabase();
+
+
+    let userPrograms =
+        [];
+
+
+    if (user) {
+
+        try {
+
+            userPrograms =
+                await getUserPrograms(
+                    db,
+                    user.id
                 );
 
-                return [];
-            })
-            : Promise.resolve([]);
+        } catch (error) {
 
+            console.error(
+                'Home program access error:',
+                error
+            );
 
-    const upcomingPromise =
-        getUpcomingSongs();
+        }
 
-
-    const [
-        songs,
-        userPrograms,
-        allUpcomingRows
-    ] = await Promise.all([
-        songsPromise,
-        userProgramsPromise,
-        upcomingPromise
-    ]);
+    }
 
 
     /*
@@ -283,8 +281,43 @@ export default async function HomePage() {
          * 아직 공개 전이어도 Song Club 홈의 예고 영역에 표시합니다.
          * 실제 음원 경로나 자료는 조회하지 않습니다.
          */
+        const {
+            data: songClubUpcomingRows,
+            error: songClubUpcomingError
+        } =
+            await db
+                .from(
+                    'ds_content_songs'
+                )
+                .select(
+                    'id,slug,title,subtitle,program,category,emoji,release_date,is_upcoming'
+                )
+                .eq(
+                    'is_upcoming',
+                    true
+                )
+                .order(
+                    'release_date',
+                    {
+                        ascending: true
+                    }
+                )
+                .order(
+                    'title',
+                    {
+                        ascending: true
+                    }
+                );
+
+        if (songClubUpcomingError) {
+            console.error(
+                'Song Club upcoming songs load error:',
+                songClubUpcomingError
+            );
+        }
+
         let songClubUpcomingSongs =
-            (allUpcomingRows || [])
+            (songClubUpcomingRows || [])
                 .map(
                     row => ({
                         id: row.id,
@@ -384,9 +417,53 @@ export default async function HomePage() {
      * 예고 영역에는 표시합니다. 실제 음원/자료 공개 여부는
      * 기존 공개일 및 is_published 규칙을 그대로 따릅니다.
      */
+    const {
+        data: upcomingRows,
+        error: upcomingError
+    } =
+        await db
+            .from(
+                'ds_content_songs'
+            )
+            .select(
+                'id,slug,title,subtitle,program,category,emoji,release_date,is_upcoming'
+            )
+            .eq(
+                'is_upcoming',
+                true
+            )
+            .order(
+                'release_date',
+                {
+                    ascending:
+                        true
+                }
+            )
+            .order(
+                'title',
+                {
+                    ascending:
+                        true
+                }
+            )
+            .limit(
+                8
+            );
+
+
+    if (upcomingError) {
+
+        console.error(
+            'Upcoming songs load error:',
+            upcomingError
+        );
+
+    }
+
+
     let upcomingSongs =
         (
-            allUpcomingRows ||
+            upcomingRows ||
             []
         )
             .map(

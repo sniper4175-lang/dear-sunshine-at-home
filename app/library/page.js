@@ -47,7 +47,9 @@ const LIBRARY_SONG_FIELDS = `
 
 function mapSong(
     row,
+    homePackageIdSet = new Set(),
     homePackageBasicIdSet = new Set(),
+    homePackageBonusIdSet = new Set(),
     accountBonusIdSet = new Set()
 ) {
     return {
@@ -57,10 +59,18 @@ function mapSong(
         program: row.program,
         category: row.category,
         emoji: row.emoji,
+        /*
+         * 같은 곡이 Song Club과 Home Package에 동시에 포함되어도
+         * Home Package의 분류/상세화면 로직을 우선합니다.
+         */
+        homePackagePreferred:
+            homePackageIdSet.has(row.id),
         basic:
             Boolean(row.is_basic) ||
             homePackageBasicIdSet.has(row.id),
-        bonus: accountBonusIdSet.has(row.id),
+        bonus:
+            homePackageBonusIdSet.has(row.id) ||
+            accountBonusIdSet.has(row.id),
         releaseDate: row.release_date,
         isPublished: Boolean(row.is_published)
     };
@@ -133,6 +143,15 @@ export default async function LibraryPage() {
             membership?.account_bonus_song_ids
         )
             ? membership.account_bonus_song_ids
+            : []
+    );
+
+
+    const homePackageBonusSongIds = unique(
+        Array.isArray(
+            membership?.home_package_bonus_song_ids
+        )
+            ? membership.home_package_bonus_song_ids
             : []
     );
 
@@ -314,13 +333,19 @@ export default async function LibraryPage() {
         homePackageBasicSongIds
     );
 
+    const homePackageBonusIdSet = new Set(
+        homePackageBonusSongIds
+    );
+
     const mergedSongs = Array.from(
         mergedById.values()
     ).map(
         row =>
             mapSong(
                 row,
+                homePackageIdSet,
                 homePackageBasicIdSet,
+                homePackageBonusIdSet,
                 accountBonusIdSet
             )
     );
@@ -368,6 +393,8 @@ export default async function LibraryPage() {
                 membership.home_package_program || null,
             home_package_unlocked_song_ids:
                 homePackageUnlockedSongIds,
+            home_package_bonus_song_ids:
+                homePackageBonusSongIds,
             account_bonus_song_ids:
                 accountBonusSongIds
         }
