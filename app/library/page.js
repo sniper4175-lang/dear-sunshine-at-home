@@ -48,10 +48,43 @@ const LIBRARY_SONG_FIELDS = `
 function mapSong(
     row,
     homePackageIdSet = new Set(),
-    homePackageBasicIdSet = new Set(),
+    homePackageTrackMap = new Map(),
     homePackageBonusIdSet = new Set(),
     accountBonusIdSet = new Set()
 ) {
+    const homePackagePreferred =
+        homePackageIdSet.has(row.id);
+
+    const track =
+        homePackageTrackMap.get(row.id) ||
+        null;
+
+    const unlockWeek =
+        track
+            ? Number(track.unlock_week ?? 0)
+            : null;
+
+    const position =
+        track
+            ? Number(track.position ?? 1)
+            : null;
+
+    let homePackageKind =
+        null;
+
+    if (homePackagePreferred) {
+        if (track && unlockWeek === 0) {
+            homePackageKind =
+                'basic';
+        } else if (track && unlockWeek > 0) {
+            homePackageKind =
+                'weekly';
+        } else if (homePackageBonusIdSet.has(row.id)) {
+            homePackageKind =
+                'bonus';
+        }
+    }
+
     return {
         id: row.id,
         slug: row.slug,
@@ -59,18 +92,35 @@ function mapSong(
         program: row.program,
         category: row.category,
         emoji: row.emoji,
+
         /*
-         * 같은 곡이 Song Club과 Home Package에 동시에 포함되어도
-         * Home Package의 분류/상세화면 로직을 우선합니다.
+         * 같은 곡이 Song Club과 Home Package에 동시에 포함되면
+         * Home Package의 분류와 상세화면을 우선합니다.
          */
-        homePackagePreferred:
-            homePackageIdSet.has(row.id),
+        homePackagePreferred,
+        homePackageKind,
+        homePackageUnlockWeek:
+            unlockWeek,
+        homePackagePosition:
+            position,
+
+        /*
+         * Home Package에 포함된 곡은 Home Package 분류가 우선입니다.
+         * 따라서 Song Club의 is_basic / release_date가 Home Package 주차곡을
+         * 기본곡 또는 월별곡으로 다시 분류하지 않습니다.
+         */
         basic:
-            Boolean(row.is_basic) ||
-            homePackageBasicIdSet.has(row.id),
+            homePackageKind === 'basic' ||
+            (
+                !homePackagePreferred &&
+                Boolean(row.is_basic)
+            ),
         bonus:
-            homePackageBonusIdSet.has(row.id) ||
-            accountBonusIdSet.has(row.id),
+            homePackageKind === 'bonus' ||
+            (
+                !homePackagePreferred &&
+                accountBonusIdSet.has(row.id)
+            ),
         releaseDate: row.release_date,
         isPublished: Boolean(row.is_published)
     };
@@ -156,30 +206,82 @@ export default async function LibraryPage() {
     );
 
     /*
-     * Home Package 곡 구성에서 unlock_week = 0으로 지정된 곡은
-     * 공통 기본곡뿐 아니라 12회/20회 옵션 기본곡까지 모두
-     * 노래 탭에서 "기본곡"으로 우선 표시합니다.
+     * Home Package 곡은 Song Club 공개월(release_date)이 아니라
+     * Home Package의 unlock_week / position을 기준으로 분류합니다.
      *
-     * 같은 곡이 보너스곡 또는 월별 음원 조건에도 해당하더라도
-     * 기본곡 분류가 최우선입니다.
+     * - unlock_week = 0  → 기본곡
+     * - unlock_week > 0  → 해당 주차 공개곡
+     * - schedule에 없고 bonus_song_ids에 있음 → 보너스곡
+     *
+     * 한 곡이 Song Club 월별곡과 중복되어도 Home Package 분류가 우선합니다.
      */
-    const homePackageBasicSongIds = unique(
+    const homePackageSchedule =
         Array.isArray(
             membership?.home_package?.schedule
         )
             ? membership.home_package.schedule
-                .filter(
-                    row =>
-                        Number(
-                            row?.unlock_week ?? 0
-                        ) === 0
-                )
-                .map(
-                    row =>
-                        row?.song_id
-                )
-            : []
-    );
+            : [];
+
+    const homePackageTrackMap =
+        new Map();
+
+    for (const row of homePackageSchedule) {
+        if (!row?.song_id) {
+            continue;
+        }
+
+        const normalized = {
+            song_id: row.song_id,
+            unlock_week:
+                Number(row.unlock_week ?? 0),
+            position:
+                Number(row.position ?? 1)
+        };
+
+        const existing =
+            homePackageTrackMap.get(
+                row.song_id
+            );
+
+        if (!existing) {
+            homePackageTrackMap.set(
+                row.song_id,
+                normalized
+            );
+            continue;
+        }
+
+        /*
+         * 같은 곡이 여러 슬롯에 있을 경우
+         * 기본곡(week 0)을 최우선, 그 다음 가장 이른 주차/position을 사용합니다.
+         */
+        const existingWeek =
+            Number(existing.unlock_week ?? 0);
+
+        const nextWeek =
+            normalized.unlock_week;
+
+        const shouldReplace =
+            (nextWeek === 0 && existingWeek !== 0) ||
+            (
+                nextWeek === existingWeek &&
+                normalized.position <
+                    Number(existing.position ?? 1)
+            ) ||
+            (
+                nextWeek > 0 &&
+                existingWeek > 0 &&
+                nextWeek < existingWeek
+            );
+
+        if (shouldReplace) {
+            homePackageTrackMap.set(
+                row.song_id,
+                normalized
+            );
+        }
+    }
+
 
     const hasSongClub = Boolean(
         membership?.song_club_active ||
@@ -329,10 +431,6 @@ export default async function LibraryPage() {
         accountBonusSongIds
     );
 
-    const homePackageBasicIdSet = new Set(
-        homePackageBasicSongIds
-    );
-
     const homePackageBonusIdSet = new Set(
         homePackageBonusSongIds
     );
@@ -344,7 +442,7 @@ export default async function LibraryPage() {
             mapSong(
                 row,
                 homePackageIdSet,
-                homePackageBasicIdSet,
+                homePackageTrackMap,
                 homePackageBonusIdSet,
                 accountBonusIdSet
             )

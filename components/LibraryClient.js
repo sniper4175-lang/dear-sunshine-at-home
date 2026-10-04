@@ -122,7 +122,7 @@ function monthKey(
 }
 
 
-function monthLabel(
+function groupLabel(
     key
 ) {
 
@@ -132,6 +132,25 @@ function monthLabel(
 
     if (key === 'bonus') {
         return '보너스곡';
+    }
+
+    if (
+        typeof key === 'string' &&
+        key.startsWith(
+            'hp-week-'
+        )
+    ) {
+        const week =
+            Number(
+                key.replace(
+                    'hp-week-',
+                    ''
+                )
+            );
+
+        return Number.isFinite(week)
+            ? `${week}주차 공개곡`
+            : 'Home Package 공개곡';
     }
 
     if (
@@ -157,6 +176,99 @@ function monthLabel(
     }
 
     return `${Number(month)}월 노래`;
+}
+
+
+function groupKeyForSong(
+    song
+) {
+
+    /*
+     * Home Package가 포함된 곡은 Song Club 공개월보다
+     * Home Package 분류를 우선합니다.
+     */
+    if (song?.homePackagePreferred) {
+        if (song.homePackageKind === 'basic') {
+            return 'basic';
+        }
+
+        if (
+            song.homePackageKind === 'weekly' &&
+            Number(song.homePackageUnlockWeek) > 0
+        ) {
+            return `hp-week-${Number(song.homePackageUnlockWeek)}`;
+        }
+
+        if (song.homePackageKind === 'bonus') {
+            return 'bonus';
+        }
+    }
+
+    if (song?.basic) {
+        return 'basic';
+    }
+
+    if (song?.bonus) {
+        return 'bonus';
+    }
+
+    return monthKey(
+        song?.releaseDate
+    );
+}
+
+
+function compareGroupKeys(
+    keyA,
+    keyB
+) {
+    if (keyA === keyB) {
+        return 0;
+    }
+
+    if (keyA === 'basic') {
+        return -1;
+    }
+
+    if (keyB === 'basic') {
+        return 1;
+    }
+
+    const weekA =
+        typeof keyA === 'string' &&
+        keyA.startsWith('hp-week-')
+            ? Number(keyA.replace('hp-week-', ''))
+            : null;
+
+    const weekB =
+        typeof keyB === 'string' &&
+        keyB.startsWith('hp-week-')
+            ? Number(keyB.replace('hp-week-', ''))
+            : null;
+
+    if (weekA !== null && weekB !== null) {
+        return weekA - weekB;
+    }
+
+    if (weekA !== null) {
+        return -1;
+    }
+
+    if (weekB !== null) {
+        return 1;
+    }
+
+    if (keyA === 'bonus') {
+        return -1;
+    }
+
+    if (keyB === 'bonus') {
+        return 1;
+    }
+
+    return String(keyB).localeCompare(
+        String(keyA)
+    );
 }
 
 
@@ -277,13 +389,9 @@ export default function LibraryClient({
                     song => {
 
                         const key =
-                            song.basic
-                                ? 'basic'
-                                : song.bonus
-                                    ? 'bonus'
-                                    : monthKey(
-                                        song.releaseDate
-                                    );
+                            groupKeyForSong(
+                                song
+                            );
 
                         if (
                             !groups.has(
@@ -304,42 +412,49 @@ export default function LibraryClient({
                     }
                 );
 
-                return Array.from(
-                    groups.entries()
-                ).sort(
-                    ([keyA], [keyB]) => {
-                        const specialOrder = {
-                            basic: 0,
-                            bonus: 1
-                        };
+                const entries =
+                    Array.from(
+                        groups.entries()
+                    );
 
-                        const orderA =
-                            specialOrder[keyA];
-
-                        const orderB =
-                            specialOrder[keyB];
-
-                        if (orderA !== undefined) {
-                            if (orderB !== undefined) {
-                                return orderA - orderB;
-                            }
-                            return -1;
+                /*
+                 * Home Package 주차곡은 release_date가 아니라
+                 * 관리자에서 지정한 position 순서로 표시합니다.
+                 */
+                entries.forEach(
+                    ([key, groupSongs]) => {
+                        if (
+                            typeof key === 'string' &&
+                            key.startsWith(
+                                'hp-week-'
+                            )
+                        ) {
+                            groupSongs.sort(
+                                (a, b) =>
+                                    Number(
+                                        a.homePackagePosition ?? 999
+                                    ) -
+                                    Number(
+                                        b.homePackagePosition ?? 999
+                                    )
+                            );
                         }
-
-                        if (orderB !== undefined) {
-                            return 1;
-                        }
-
-                        return keyB.localeCompare(
-                            keyA
-                        );
                     }
+                );
+
+                return entries.sort(
+                    ([keyA], [keyB]) =>
+                        compareGroupKeys(
+                            keyA,
+                            keyB
+                        )
                 );
             },
             [
                 filteredSongs
             ]
         );
+
 
     const accessibleSlugs =
         useMemo(
@@ -603,7 +718,7 @@ export default function LibraryClient({
                                                         22
                                                 }}
                                             >
-                                                {monthLabel(key)}
+                                                {groupLabel(key)}
                                             </h2>
 
                                             <span
@@ -719,6 +834,35 @@ export default function LibraryClient({
                                                                         ? ` · ${song.category}`
                                                                         : ''}
                                                                 </span>
+
+                                                                {
+                                                                    song.homePackagePreferred &&
+                                                                    song.homePackageKind === 'weekly' &&
+                                                                    Number(
+                                                                        song.homePackagePosition
+                                                                    ) > 1 && (
+                                                                        <span
+                                                                            style={{
+                                                                                width:
+                                                                                    'fit-content',
+                                                                                padding:
+                                                                                    '3px 7px',
+                                                                                borderRadius:
+                                                                                    999,
+                                                                                background:
+                                                                                    '#fff1c9',
+                                                                                color:
+                                                                                    '#9a6500',
+                                                                                fontSize:
+                                                                                    10,
+                                                                                fontWeight:
+                                                                                    800
+                                                                            }}
+                                                                        >
+                                                                            추가곡 {Number(song.homePackagePosition) - 1}
+                                                                        </span>
+                                                                    )
+                                                                }
                                                             </span>
 
                                                             <span

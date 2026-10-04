@@ -200,24 +200,6 @@ export default async function HomePage() {
         );
 
 
-    if (
-        loggedIn &&
-        homePackage
-    ) {
-        /*
-         * Home Package가 활성화되어 있으면 Song Club도 동시에 활성화된
-         * combined 계정이라도 홈 화면은 Home Package 로직을 우선합니다.
-         * 같은 곡이 두 상품에 동시에 포함될 수 있으므로, 사용자가 보는
-         * 홈 화면의 기준을 Home Package로 통일해 중복/상이한 노출을 막습니다.
-         */
-        return (
-            <HomePackageHome
-                homePackage={homePackage}
-            />
-        );
-    }
-
-
     const songs =
         await songsPromise;
 
@@ -249,6 +231,155 @@ export default async function HomePage() {
 
         }
 
+    }
+
+
+    /*
+     * =====================================
+     * Home Package + Song Club 동시 이용
+     * =====================================
+     *
+     * 홈의 기본 화면과 중복곡의 노출 기준은 Home Package가 우선합니다.
+     * 다만 Song Club에만 지정된 '이번 달 곡'과 'COMING UP NEXT'는
+     * Home Package 홈 아래에 추가로 보여줍니다.
+     */
+    if (
+        loggedIn &&
+        homePackage
+    ) {
+        const homePackageSongIds =
+            new Set(
+                Array.isArray(
+                    homePackage.all_song_ids
+                )
+                    ? homePackage.all_song_ids
+                    : []
+            );
+
+        let songClubCurrentMonthSongs =
+            [];
+
+        let songClubUpcomingSongs =
+            [];
+
+
+        if (songClubMembership) {
+            const currentMonth =
+                monthInfoKST(
+                    0
+                );
+
+            /*
+             * Song Club에서 이번 달 공개된 곡 중
+             * Home Package에도 포함된 곡은 제외합니다.
+             * 따라서 중복곡은 Home Package 영역에서만 보입니다.
+             */
+            songClubCurrentMonthSongs =
+                songs
+                    .filter(
+                        song =>
+                            userPrograms.includes(
+                                song.program
+                            )
+                    )
+                    .filter(
+                        song =>
+                            song.releaseDate &&
+                            song.releaseDate.startsWith(
+                                currentMonth.key
+                            )
+                    )
+                    .filter(
+                        song =>
+                            !song.basic
+                    )
+                    .filter(
+                        song =>
+                            !homePackageSongIds.has(
+                                song.id
+                            )
+                    )
+                    .slice(
+                        0,
+                        4
+                    );
+
+
+            const {
+                data: combinedUpcomingRows,
+                error: combinedUpcomingError
+            } =
+                await db
+                    .from(
+                        'ds_content_songs'
+                    )
+                    .select(
+                        'id,slug,title,subtitle,program,category,emoji,release_date,is_upcoming'
+                    )
+                    .eq(
+                        'is_upcoming',
+                        true
+                    )
+                    .order(
+                        'release_date',
+                        {
+                            ascending: true
+                        }
+                    )
+                    .order(
+                        'title',
+                        {
+                            ascending: true
+                        }
+                    );
+
+            if (combinedUpcomingError) {
+                console.error(
+                    'Combined Song Club upcoming songs load error:',
+                    combinedUpcomingError
+                );
+            }
+
+            songClubUpcomingSongs =
+                (combinedUpcomingRows || [])
+                    .map(
+                        row => ({
+                            id: row.id,
+                            slug: row.slug,
+                            title: row.title,
+                            subtitle: row.subtitle,
+                            program: row.program,
+                            category: row.category,
+                            emoji: row.emoji,
+                            releaseDate: row.release_date
+                        })
+                    )
+                    .filter(
+                        song =>
+                            userPrograms.includes(
+                                song.program
+                            )
+                    )
+                    .filter(
+                        song =>
+                            !homePackageSongIds.has(
+                                song.id
+                            )
+                    )
+                    .slice(
+                        0,
+                        4
+                    );
+        }
+
+
+        return (
+            <HomePackageHome
+                homePackage={homePackage}
+                songClubCurrentMonthSongs={songClubCurrentMonthSongs}
+                songClubUpcomingSongs={songClubUpcomingSongs}
+            />
+        );
     }
 
 
