@@ -6,52 +6,10 @@ import {
     useState
 } from 'react';
 
+import {
+    usePathname
+} from 'next/navigation';
 
-
-const signedAudioUrlCache = new Map();
-const signedAudioRequestCache = new Map();
-
-async function getSignedAudioUrl(slug) {
-    if (!slug) return null;
-
-    if (signedAudioUrlCache.has(slug)) {
-        return signedAudioUrlCache.get(slug);
-    }
-
-    if (signedAudioRequestCache.has(slug)) {
-        return signedAudioRequestCache.get(slug);
-    }
-
-    const request = (async () => {
-        const response = await fetch(
-            `/api/audio-url?slug=${encodeURIComponent(slug)}`,
-            { cache: 'no-store' }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(
-                data.error || '음원을 불러오지 못했습니다.'
-            );
-        }
-
-        if (!data.url) {
-            throw new Error('음원 주소가 없습니다.');
-        }
-
-        signedAudioUrlCache.set(slug, data.url);
-        return data.url;
-    })();
-
-    signedAudioRequestCache.set(slug, request);
-
-    try {
-        return await request;
-    } finally {
-        signedAudioRequestCache.delete(slug);
-    }
-}
 
 export default function AudioPlayer({
     title,
@@ -60,6 +18,20 @@ export default function AudioPlayer({
 
     const audioRef =
         useRef(null);
+
+
+    const pathname =
+        usePathname();
+
+
+    /*
+     * 한 번의 실제 재생 세션에서
+     * 동일 곡이 여러 번 기록되지 않도록 합니다.
+     * 일시정지 후 이어듣기는 같은 세션으로 보고,
+     * 곡이 끝난 뒤 다시 재생하면 새 이력으로 기록합니다.
+     */
+    const playLoggedRef =
+        useRef(false);
 
 
     const [
@@ -103,6 +75,100 @@ export default function AudioPlayer({
     ] =
         useState(false);
 
+
+
+    /*
+     * 상세 페이지가 같은 컴포넌트를 재사용하더라도
+     * 곡이 바뀌면 새 재생 세션으로 기록할 수 있게 초기화합니다.
+     */
+    useEffect(
+        () => {
+
+            playLoggedRef.current =
+                false;
+
+        },
+        [
+            slug
+        ]
+    );
+
+
+    function playSource() {
+
+        return pathname?.startsWith(
+            '/home-package/'
+        )
+            ? 'home_package'
+            : 'song_club';
+
+    }
+
+
+    function logPlayOnce() {
+
+        if (
+            !slug ||
+            playLoggedRef.current
+        ) {
+            return;
+        }
+
+
+        playLoggedRef.current =
+            true;
+
+
+        void fetch(
+            '/api/play-history',
+            {
+                method:
+                    'POST',
+
+                headers: {
+                    'Content-Type':
+                        'application/json'
+                },
+
+                body:
+                    JSON.stringify({
+                        slug,
+                        source:
+                            playSource()
+                    }),
+
+                keepalive:
+                    true
+            }
+        )
+            .then(
+                response => {
+
+                    if (
+                        !response.ok
+                    ) {
+
+                        playLoggedRef.current =
+                            false;
+
+                    }
+
+                }
+            )
+            .catch(
+                () => {
+
+                    /*
+                     * 이력 저장 실패가 음원 재생을 막으면 안 됩니다.
+                     * 다음 재생 때 다시 기록할 수 있도록 플래그만 되돌립니다.
+                     */
+                    playLoggedRef.current =
+                        false;
+
+                }
+            );
+
+    }
 
 
     /*
@@ -188,67 +254,6 @@ export default function AudioPlayer({
 
 
     /*
-     * 상세 화면이 열린 직후 signed URL을 백그라운드에서 미리 준비합니다.
-     * 화면 렌더링은 막지 않고, 사용자가 재생 버튼을 누를 때의 첫 대기 시간을 줄입니다.
-     */
-    useEffect(
-        () => {
-            if (!slug || audioUrl) {
-                return undefined;
-            }
-
-            let cancelled = false;
-            let timerId = null;
-            let idleId = null;
-
-            const warmup = async () => {
-                try {
-                    const url = await getSignedAudioUrl(slug);
-                    if (!cancelled && url) {
-                        setAudioUrl(url);
-                    }
-                } catch {
-                    // 백그라운드 준비 실패는 사용자에게 표시하지 않습니다.
-                    // 실제 재생 버튼을 눌렀을 때 기존 오류 처리로 다시 시도합니다.
-                }
-            };
-
-            if (
-                typeof window !== 'undefined' &&
-                typeof window.requestIdleCallback === 'function'
-            ) {
-                idleId = window.requestIdleCallback(
-                    warmup,
-                    { timeout: 700 }
-                );
-            } else {
-                timerId = window.setTimeout(
-                    warmup,
-                    250
-                );
-            }
-
-            return () => {
-                cancelled = true;
-
-                if (
-                    idleId !== null &&
-                    typeof window !== 'undefined' &&
-                    typeof window.cancelIdleCallback === 'function'
-                ) {
-                    window.cancelIdleCallback(idleId);
-                }
-
-                if (timerId !== null) {
-                    window.clearTimeout(timerId);
-                }
-            };
-        },
-        [slug, audioUrl]
-    );
-
-
-    /*
      * Supabase signed URL 가져오기
      */
     async function loadAudio() {
@@ -280,25 +285,47 @@ export default function AudioPlayer({
 
         try {
 
-            const url =
-                await getSignedAudioUrl(
-                    slug
+            const response =
+                await fetch(
+                    `/api/audio-url?slug=${encodeURIComponent(
+                        slug
+                    )}`,
+                    {
+                        cache:
+                            'no-store'
+                    }
                 );
 
 
-            if (!url) {
+            const data =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.error ||
+                    '음원을 불러오지 못했습니다.'
+                );
+
+            }
+
+
+            if (!data.url) {
+
                 throw new Error(
                     '음원 주소가 없습니다.'
                 );
+
             }
 
 
             setAudioUrl(
-                url
+                data.url
             );
 
 
-            return url;
+            return data.url;
 
 
         } catch (e) {
@@ -477,7 +504,7 @@ export default function AudioPlayer({
                         audioUrl ||
                         undefined
                     }
-                    preload="metadata"
+                    preload="none"
                     loop={
                         looping
                     }
@@ -491,6 +518,8 @@ export default function AudioPlayer({
                         setError(
                             ''
                         );
+
+                        logPlayOnce();
 
                     }}
 
@@ -507,6 +536,9 @@ export default function AudioPlayer({
                             setPlaying(
                                 false
                             );
+
+                            playLoggedRef.current =
+                                false;
 
                         }
 

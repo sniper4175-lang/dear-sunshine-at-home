@@ -260,6 +260,15 @@ export default function PlaylistPlayer({
         useRef(false);
 
 
+    /*
+     * 현재 재생 세션에서 이미 기록한 곡.
+     * pause -> play 이어듣기는 중복 기록하지 않고,
+     * ended 후 같은 곡이 다시 시작되면 새 재생으로 기록합니다.
+     */
+    const playLoggedSlugRef =
+        useRef('');
+
+
 
     /*
      * =================================================
@@ -1917,6 +1926,82 @@ export default function PlaylistPlayer({
 
 
 
+    function logPlaylistPlayOnce() {
+
+        const slug =
+            currentSlugRef.current;
+
+
+        if (
+            !slug ||
+            playLoggedSlugRef.current ===
+                slug
+        ) {
+            return;
+        }
+
+
+        playLoggedSlugRef.current =
+            slug;
+
+
+        void fetch(
+            '/api/play-history',
+            {
+                method:
+                    'POST',
+
+                headers: {
+                    'Content-Type':
+                        'application/json'
+                },
+
+                body:
+                    JSON.stringify({
+                        slug,
+                        source:
+                            'playlist'
+                    }),
+
+                keepalive:
+                    true
+            }
+        )
+            .then(
+                response => {
+
+                    if (
+                        !response.ok &&
+                        playLoggedSlugRef.current ===
+                            slug
+                    ) {
+
+                        playLoggedSlugRef.current =
+                            '';
+
+                    }
+
+                }
+            )
+            .catch(
+                () => {
+
+                    if (
+                        playLoggedSlugRef.current ===
+                        slug
+                    ) {
+
+                        playLoggedSlugRef.current =
+                            '';
+
+                    }
+
+                }
+            );
+
+    }
+
+
     /*
      * =================================================
      * AUDIO 이벤트 직접 연결
@@ -1945,6 +2030,9 @@ export default function PlaylistPlayer({
             const handleEnded =
                 () => {
 
+                    playLoggedSlugRef.current =
+                        '';
+
                     void handleEndedDirect();
 
                 };
@@ -1956,6 +2044,8 @@ export default function PlaylistPlayer({
                     setPlaying(
                         true
                     );
+
+                    logPlaylistPlayOnce();
 
 
                     try {
