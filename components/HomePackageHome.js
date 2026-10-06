@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import IntentLink from './IntentLink';
 
 import {
     getHomePackageDashboard,
@@ -48,7 +49,7 @@ function sectionIcon(eyebrow) {
 
 function HomePackageSongCard({ song }) {
     return (
-        <Link
+        <IntentLink
             href={`/home-package/song/${encodeURIComponent(song.slug)}`}
             className="content-card home-package-song-card"
         >
@@ -69,7 +70,7 @@ function HomePackageSongCard({ song }) {
             <span className="home-song-play" aria-hidden="true">
                 ▶
             </span>
-        </Link>
+        </IntentLink>
     );
 }
 
@@ -107,127 +108,7 @@ function SongSection({ eyebrow, title, description, songs }) {
     );
 }
 
-function SongClubOnlySongCard({ song }) {
-    return (
-        <Link
-            href={`/song/${encodeURIComponent(song.slug)}`}
-            className="content-card home-package-song-card"
-        >
-            <div className="home-song-art">
-                {song.emoji || '🎵'}
-            </div>
-
-            <div className="home-song-copy">
-                <p className="eyebrow">
-                    {song.program || 'SONG CLUB'}
-                </p>
-                <strong>{song.title}</strong>
-                <span className="muted">
-                    {song.category || song.subtitle || 'Dear Sunshine Song'}
-                </span>
-            </div>
-
-            <span className="home-song-play" aria-hidden="true">
-                ▶
-            </span>
-        </Link>
-    );
-}
-
-function SongClubOnlySection({ songs = [] }) {
-    if (!songs.length) return null;
-
-    return (
-        <section className="section home-song-section">
-            <div className="section-head home-section-head">
-                <div>
-                    <p className="eyebrow">SONG CLUB · THIS MONTH</p>
-                    <h2>
-                        <span className="home-section-icon" aria-hidden="true">
-                            ☀️
-                        </span>
-                        Song Club 이번 달 곡
-                    </h2>
-                    <p className="muted home-section-description">
-                        Home Package에 포함되지 않은 Song Club 전용 곡이에요.
-                    </p>
-                </div>
-            </div>
-
-            <div className="card-grid home-song-grid">
-                {songs.map((song) => (
-                    <SongClubOnlySongCard
-                        key={song.id || song.slug}
-                        song={song}
-                    />
-                ))}
-            </div>
-        </section>
-    );
-}
-
-function upcomingDateLabel(value) {
-    if (!value) return '공개 예정';
-
-    const raw = String(value).slice(0, 10);
-    const [, month, day] = raw.split('-').map(Number);
-
-    if (!month || !day) return '공개 예정';
-
-    return `${month}월 ${day}일 공개 예정`;
-}
-
-function SongClubUpcomingSection({ songs = [] }) {
-    if (!songs.length) return null;
-
-    return (
-        <section className="section home-next-section">
-            <div className="section-head home-section-head">
-                <div>
-                    <p className="eyebrow">SONG CLUB · COMING UP NEXT</p>
-                    <h2>
-                        <span className="home-section-icon">✨</span>
-                        Song Club 다음에 만나요
-                    </h2>
-                    <p className="muted home-section-description">
-                        Home Package와 겹치지 않는 Song Club 공개 예정곡이에요.
-                    </p>
-                </div>
-            </div>
-
-            <div className="home-next-list">
-                {songs.map((song) => (
-                    <article
-                        key={song.id || song.slug}
-                        className="content-card home-next-card"
-                    >
-                        <div className="home-song-art muted-art">
-                            {song.emoji || '🎵'}
-                            <span className="home-lock">✨</span>
-                        </div>
-
-                        <div className="home-song-copy">
-                            <p className="eyebrow">
-                                {song.program || 'SONG CLUB'}
-                            </p>
-                            <strong>{song.title}</strong>
-                            <span className="muted">
-                                {upcomingDateLabel(song.releaseDate)}
-                                {song.category ? ` · ${song.category}` : ''}
-                            </span>
-                        </div>
-                    </article>
-                ))}
-            </div>
-        </section>
-    );
-}
-
-export default async function HomePackageHome({
-    homePackage,
-    songClubCurrentMonthSongs = [],
-    songClubUpcomingSongs = []
-}) {
+export default async function HomePackageHome({ homePackage }) {
     const db = createAdminSupabase();
     const dashboard = await getHomePackageDashboard(db, homePackage);
 
@@ -328,7 +209,7 @@ export default async function HomePackageHome({
             <SongSection
                 eyebrow="YOUR NEW SONGS"
                 title="지금까지 열린 신곡"
-                description="시작일을 기준으로 주차별로 지정된 노래가 차례로 열려요."
+                description="활성화일이 포함된 주의 월요일을 기준으로 주차별 노래가 차례로 열려요."
                 songs={dashboard.weeklySongs}
             />
 
@@ -375,14 +256,6 @@ export default async function HomePackageHome({
                     </div>
                 </section>
             ) : null}
-
-            <SongClubOnlySection
-                songs={songClubCurrentMonthSongs}
-            />
-
-            <SongClubUpcomingSection
-                songs={songClubUpcomingSongs}
-            />
 
             <section className="home-cheer-banner" aria-label="Dear Sunshine message">
                 <div>
