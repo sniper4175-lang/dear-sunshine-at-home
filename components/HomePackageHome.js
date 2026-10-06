@@ -111,8 +111,38 @@ function SongClubOnlySongCard({ song }) {
     return (
         <Link
             href={`/song/${encodeURIComponent(song.slug)}`}
-            className="content-card home-package-song-card"
+            className="content-card home-package-song-card song-club-home-song-card"
+            style={{ position: 'relative' }}
         >
+            {/*
+             * Home Package에 포함되지 않은 Song Club 전용곡에는
+             * 기존 Song Club 홈과 동일하게 인기곡 배지를 적용합니다.
+             * Home Package 곡은 이 컴포넌트로 들어오지 않으므로
+             * 같은 곡이 두 상품에 동시에 지정된 경우에는
+             * Home Package 표시 로직이 그대로 우선합니다.
+             */}
+            {song.popular ? (
+                <span
+                    className="song-club-popular-badge"
+                    style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        zIndex: 2,
+                        padding: '4px 8px',
+                        borderRadius: 999,
+                        background: '#fff3c4',
+                        border: '1px solid #f4cd69',
+                        color: '#9a6500',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        lineHeight: 1.2
+                    }}
+                >
+                    인기곡
+                </span>
+            ) : null}
+
             <div className="home-song-art">
                 {song.emoji || '🎵'}
             </div>
