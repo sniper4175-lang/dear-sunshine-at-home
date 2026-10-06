@@ -247,15 +247,6 @@ export default async function HomePage() {
         loggedIn &&
         homePackage
     ) {
-        const homePackageSongIds =
-            new Set(
-                Array.isArray(
-                    homePackage.all_song_ids
-                )
-                    ? homePackage.all_song_ids
-                    : []
-            );
-
         let songClubCurrentMonthSongs =
             [];
 
@@ -270,9 +261,13 @@ export default async function HomePage() {
                 );
 
             /*
-             * Song Club에서 이번 달 공개된 곡 중
-             * Home Package에도 포함된 곡은 제외합니다.
-             * 따라서 중복곡은 Home Package 영역에서만 보입니다.
+             * Song Club에서 이번 달 공개된 곡을 먼저 모두 전달합니다.
+             * 실제 Home Package 홈에 현재 노출되는 곡과의 중복 제거는
+             * HomePackageHome에서 dashboard를 만든 뒤 처리합니다.
+             *
+             * 중요:
+             * Home Package의 미래 주차에 예약되어 있다는 이유만으로
+             * 지금 이용 가능한 Song Club 곡을 숨기지 않습니다.
              */
             songClubCurrentMonthSongs =
                 songs
@@ -292,16 +287,6 @@ export default async function HomePage() {
                     .filter(
                         song =>
                             !song.basic
-                    )
-                    .filter(
-                        song =>
-                            !homePackageSongIds.has(
-                                song.id
-                            )
-                    )
-                    .slice(
-                        0,
-                        4
                     );
 
 
@@ -359,16 +344,6 @@ export default async function HomePage() {
                             userPrograms.includes(
                                 song.program
                             )
-                    )
-                    .filter(
-                        song =>
-                            !homePackageSongIds.has(
-                                song.id
-                            )
-                    )
-                    .slice(
-                        0,
-                        4
                     );
         }
 
