@@ -73,7 +73,7 @@ export default function SignupPage() {
                 email: cleanEmail,
                 password,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/login`,
+                    emailRedirectTo: 'https://songclub.dearsunshine.co.kr/login',
                     data: {
                         student_name: cleanStudentName,
                         terms_version: '2026-09-06',
