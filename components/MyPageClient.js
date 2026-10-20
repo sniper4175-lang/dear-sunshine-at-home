@@ -1,6 +1,11 @@
 'use client';
 
 import {
+    useEffect,
+    useState
+} from 'react';
+
+import {
     useRouter
 } from 'next/navigation';
 
@@ -9,6 +14,230 @@ import Link from 'next/link';
 import {
     createBrowserSupabase
 } from '../lib/supabase-browser';
+
+
+const ONE_SIGNAL_APP_ID =
+    process.env
+        .NEXT_PUBLIC_ONESIGNAL_APP_ID;
+
+
+function isIosDevice() {
+
+    if (
+        typeof navigator ===
+        'undefined'
+    ) {
+        return false;
+    }
+
+
+    return (
+        /iPad|iPhone|iPod/.test(
+            navigator.userAgent
+        ) ||
+        (
+            navigator.platform ===
+                'MacIntel' &&
+            navigator.maxTouchPoints >
+                1
+        )
+    );
+
+}
+
+
+function isStandaloneMode() {
+
+    if (
+        typeof window ===
+        'undefined'
+    ) {
+        return false;
+    }
+
+
+    return (
+        window.matchMedia?.(
+            '(display-mode: standalone)'
+        )?.matches ||
+        window.navigator?.standalone ===
+            true
+    );
+
+}
+
+
+function loadOneSignal() {
+
+    if (
+        typeof window ===
+        'undefined' ||
+        !ONE_SIGNAL_APP_ID
+    ) {
+        return Promise.resolve(
+            null
+        );
+    }
+
+
+    if (
+        window.__dearSunshineOneSignalPromise
+    ) {
+        return window
+            .__dearSunshineOneSignalPromise;
+    }
+
+
+    window.OneSignalDeferred =
+        window.OneSignalDeferred ||
+        [];
+
+
+    window.__dearSunshineOneSignalPromise =
+        new Promise(
+            (resolve, reject) => {
+
+                window.OneSignalDeferred.push(
+                    async OneSignal => {
+
+                        try {
+
+                            if (
+                                !window
+                                    .__dearSunshineOneSignalInitialized
+                            ) {
+
+                                await OneSignal.init({
+                                    appId:
+                                        ONE_SIGNAL_APP_ID,
+
+                                    serviceWorkerPath:
+                                        '/OneSignalSDKWorker.js',
+
+                                    serviceWorkerParam: {
+                                        scope:
+                                            '/'
+                                    },
+
+                                    notifyButton: {
+                                        enable:
+                                            false
+                                    }
+                                });
+
+
+                                window
+                                    .__dearSunshineOneSignalInitialized =
+                                    true;
+
+                            }
+
+
+                            resolve(
+                                OneSignal
+                            );
+
+                        } catch (error) {
+
+                            reject(
+                                error
+                            );
+
+                        }
+
+                    }
+                );
+
+
+                if (
+                    !document.querySelector(
+                        'script[data-dear-sunshine-onesignal]'
+                    )
+                ) {
+
+                    const script =
+                        document.createElement(
+                            'script'
+                        );
+
+
+                    script.src =
+                        'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+
+                    script.defer =
+                        true;
+
+                    script.dataset
+                        .dearSunshineOnesignal =
+                        'true';
+
+
+                    script.onerror =
+                        () => {
+
+                            window
+                                .__dearSunshineOneSignalPromise =
+                                null;
+
+
+                            reject(
+                                new Error(
+                                    'OneSignal SDK를 불러오지 못했습니다.'
+                                )
+                            );
+
+                        };
+
+
+                    document.head
+                        .appendChild(
+                            script
+                        );
+
+                }
+
+            }
+        );
+
+
+    return window
+        .__dearSunshineOneSignalPromise;
+
+}
+
+
+async function identifyOneSignalUser(
+    OneSignal
+) {
+
+    const supabase =
+        createBrowserSupabase();
+
+
+    const {
+        data: {
+            user
+        }
+    } =
+        await supabase.auth
+            .getUser();
+
+
+    if (
+        user?.id
+    ) {
+
+        await OneSignal.login(
+            user.id
+        );
+
+    }
+
+
+    return user ||
+        null;
+
+}
 
 
 function formatDate(
@@ -215,7 +444,379 @@ export default function MyPageClient({
         useRouter();
 
 
+    const [
+        pushStatus,
+        setPushStatus
+    ] =
+        useState(
+            'loading'
+        );
+
+
+    const [
+        pushBusy,
+        setPushBusy
+    ] =
+        useState(
+            false
+        );
+
+
+    useEffect(
+        () => {
+
+            if (
+                !loggedIn
+            ) {
+                return;
+            }
+
+
+            let disposed =
+                false;
+
+
+            async function syncPushStatus() {
+
+                if (
+                    !ONE_SIGNAL_APP_ID
+                ) {
+
+                    if (!disposed) {
+                        setPushStatus(
+                            'unconfigured'
+                        );
+                    }
+
+                    return;
+                }
+
+
+                if (
+                    isIosDevice() &&
+                    !isStandaloneMode()
+                ) {
+
+                    if (!disposed) {
+                        setPushStatus(
+                            'ios-install-required'
+                        );
+                    }
+
+                    return;
+                }
+
+
+                try {
+
+                    const OneSignal =
+                        await loadOneSignal();
+
+
+                    if (
+                        !OneSignal
+                    ) {
+
+                        if (!disposed) {
+                            setPushStatus(
+                                'unconfigured'
+                            );
+                        }
+
+                        return;
+                    }
+
+
+                    if (
+                        !OneSignal.Notifications
+                            .isPushSupported()
+                    ) {
+
+                        if (!disposed) {
+                            setPushStatus(
+                                'unsupported'
+                            );
+                        }
+
+                        return;
+                    }
+
+
+                    await identifyOneSignalUser(
+                        OneSignal
+                    );
+
+
+                    const permission =
+                        Boolean(
+                            OneSignal.Notifications
+                                .permission
+                        );
+
+                    const optedIn =
+                        Boolean(
+                            OneSignal.User
+                                ?.PushSubscription
+                                ?.optedIn
+                        );
+
+
+                    if (!disposed) {
+
+                        setPushStatus(
+                            permission &&
+                            optedIn
+                                ? 'enabled'
+                                : OneSignal.Notifications
+                                    .permissionNative ===
+                                    'denied'
+                                    ? 'denied'
+                                    : 'ready'
+                        );
+
+                    }
+
+
+                    const permissionListener =
+                        granted => {
+
+                            if (!disposed) {
+
+                                setPushStatus(
+                                    granted
+                                        ? 'enabled'
+                                        : 'denied'
+                                );
+
+                            }
+
+                        };
+
+
+                    OneSignal.Notifications
+                        .addEventListener(
+                            'permissionChange',
+                            permissionListener
+                        );
+
+
+                    return () => {
+
+                        OneSignal.Notifications
+                            .removeEventListener(
+                                'permissionChange',
+                                permissionListener
+                            );
+
+                    };
+
+                } catch (error) {
+
+                    console.error(
+                        'OneSignal init error:',
+                        error
+                    );
+
+
+                    if (!disposed) {
+                        setPushStatus(
+                            'error'
+                        );
+                    }
+
+                }
+
+            }
+
+
+            let cleanup;
+
+
+            syncPushStatus()
+                .then(
+                    result => {
+                        cleanup =
+                            result;
+                    }
+                );
+
+
+            return () => {
+
+                disposed =
+                    true;
+
+
+                if (
+                    typeof cleanup ===
+                    'function'
+                ) {
+                    cleanup();
+                }
+
+            };
+
+        },
+        [
+            loggedIn
+        ]
+    );
+
+
+    async function enablePushNotifications() {
+
+        if (
+            pushBusy
+        ) {
+            return;
+        }
+
+
+        if (
+            isIosDevice() &&
+            !isStandaloneMode()
+        ) {
+
+            alert(
+                'iPhone에서는 Safari에서 홈 화면에 추가한 뒤, 설치된 Dear Sunshine Home을 열어서 알림을 켜주세요.'
+            );
+
+            setPushStatus(
+                'ios-install-required'
+            );
+
+            return;
+        }
+
+
+        setPushBusy(
+            true
+        );
+
+
+        try {
+
+            const OneSignal =
+                await loadOneSignal();
+
+
+            if (
+                !OneSignal
+            ) {
+                throw new Error(
+                    '알림 설정이 아직 완료되지 않았습니다.'
+                );
+            }
+
+
+            if (
+                !OneSignal.Notifications
+                    .isPushSupported()
+            ) {
+
+                setPushStatus(
+                    'unsupported'
+                );
+
+                return;
+            }
+
+
+            await identifyOneSignalUser(
+                OneSignal
+            );
+
+
+            const granted =
+                await OneSignal.Notifications
+                    .requestPermission();
+
+
+            if (
+                granted ||
+                OneSignal.Notifications
+                    .permission
+            ) {
+
+                await OneSignal.User
+                    .PushSubscription
+                    .optIn();
+
+
+                setPushStatus(
+                    'enabled'
+                );
+
+            } else {
+
+                setPushStatus(
+                    OneSignal.Notifications
+                        .permissionNative ===
+                        'denied'
+                        ? 'denied'
+                        : 'ready'
+                );
+
+            }
+
+        } catch (error) {
+
+            console.error(
+                'Push opt-in error:',
+                error
+            );
+
+
+            setPushStatus(
+                'error'
+            );
+
+
+            alert(
+                error?.message ||
+                '알림 설정 중 오류가 발생했습니다.'
+            );
+
+        } finally {
+
+            setPushBusy(
+                false
+            );
+
+        }
+
+    }
+
+
     async function logout() {
+
+        try {
+
+            if (
+                ONE_SIGNAL_APP_ID
+            ) {
+
+                const OneSignal =
+                    await loadOneSignal();
+
+
+                if (
+                    OneSignal
+                ) {
+                    await OneSignal.logout();
+                }
+
+            }
+
+        } catch (error) {
+
+            console.warn(
+                'OneSignal logout skipped:',
+                error
+            );
+
+        }
+
 
         const supabase =
             createBrowserSupabase();
@@ -632,6 +1233,164 @@ export default function MyPageClient({
                         </Link>
 
                     </div>
+
+                )}
+
+            </section>
+
+
+            <section
+                className="content-card"
+                style={{
+                    marginBottom:
+                        18
+                }}
+            >
+
+                <p className="eyebrow">
+                    NOTIFICATIONS
+                </p>
+
+                <h2>
+                    신곡 알림 🔔
+                </h2>
+
+                <p className="page-copy">
+                    매주 화요일 새로운 수업곡이 공개되면 알려드려요.
+                </p>
+
+                {pushStatus === 'enabled' ? (
+
+                    <div
+                        style={{
+                            padding:
+                                '12px 14px',
+
+                            borderRadius:
+                                14,
+
+                            background:
+                                '#eef8ef',
+
+                            fontSize:
+                                13,
+
+                            fontWeight:
+                                800
+                        }}
+                    >
+                        🔔 신곡 알림을 받고 있어요.
+                    </div>
+
+                ) : (
+
+                    <>
+
+                        <button
+                            type="button"
+                            className="primary-button wide"
+                            onClick={
+                                enablePushNotifications
+                            }
+                            disabled={
+                                pushBusy ||
+                                pushStatus ===
+                                    'loading' ||
+                                pushStatus ===
+                                    'unconfigured' ||
+                                pushStatus ===
+                                    'unsupported'
+                            }
+                        >
+                            {pushBusy
+                                ? '알림 설정 중...'
+                                : pushStatus === 'loading'
+                                    ? '알림 확인 중...'
+                                    : '🔔 신곡 알림 받기'}
+                        </button>
+
+                        {pushStatus === 'ios-install-required' && (
+                            <p
+                                className="muted"
+                                style={{
+                                    margin:
+                                        '10px 0 0',
+
+                                    fontSize:
+                                        12,
+
+                                    lineHeight:
+                                        1.6
+                                }}
+                            >
+                                iPhone은 Safari에서 홈 화면에 추가한 뒤 설치된 Dear Sunshine Home에서 알림을 켜주세요.
+                            </p>
+                        )}
+
+                        {pushStatus === 'denied' && (
+                            <p
+                                className="muted"
+                                style={{
+                                    margin:
+                                        '10px 0 0',
+
+                                    fontSize:
+                                        12,
+
+                                    lineHeight:
+                                        1.6
+                                }}
+                            >
+                                브라우저에서 알림이 차단되어 있어요. 사이트 설정에서 알림을 허용한 뒤 다시 눌러주세요.
+                            </p>
+                        )}
+
+                        {pushStatus === 'unsupported' && (
+                            <p
+                                className="muted"
+                                style={{
+                                    margin:
+                                        '10px 0 0',
+
+                                    fontSize:
+                                        12
+                                }}
+                            >
+                                현재 브라우저에서는 웹 푸시 알림을 지원하지 않아요.
+                            </p>
+                        )}
+
+                        {pushStatus === 'unconfigured' && (
+                            <p
+                                className="muted"
+                                style={{
+                                    margin:
+                                        '10px 0 0',
+
+                                    fontSize:
+                                        12
+                                }}
+                            >
+                                알림 서비스 설정을 준비 중이에요.
+                            </p>
+                        )}
+
+                        {pushStatus === 'error' && (
+                            <p
+                                className="muted"
+                                style={{
+                                    margin:
+                                        '10px 0 0',
+
+                                    fontSize:
+                                        12
+                                }}
+                            >
+                                알림 설정을 불러오지 못했어요. 잠시 후 다시 시도해주세요.
+                            </p>
+                        )}
+
+                    </>
 
                 )}
 

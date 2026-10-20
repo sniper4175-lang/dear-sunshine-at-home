@@ -1,10 +1,12 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["icn1"],
   "crons": [
     {
       "path": "/api/cron/billing-renew",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/song-release-notifications",
+      "schedule": "0 0 * * 2"
     }
   ]
 }
